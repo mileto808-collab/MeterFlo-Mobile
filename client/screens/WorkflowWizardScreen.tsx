@@ -290,6 +290,63 @@ export default function WorkflowWizardScreen() {
     }
   };
 
+  const launchExternalScanner = async () => {
+    if (Platform.OS === "web") {
+      Alert.alert("Not Available", "External scanner apps are not available on web. Please use the built-in camera scanner.");
+      return;
+    }
+
+    try {
+      const IntentLauncher = require("expo-intent-launcher");
+      const Linking = require("expo-linking");
+      
+      if (Platform.OS === "android") {
+        try {
+          const result = await IntentLauncher.startActivityAsync(
+            "com.google.zxing.client.android.SCAN",
+            {
+              extra: { SCAN_MODE: "ONE_D_MODE,QR_CODE_MODE" },
+            }
+          );
+          
+          if (result.resultCode === IntentLauncher.ResultCode.Success && result.data) {
+            const scannedData = result.data;
+            setFormData(prev => ({ ...prev, newMeterId: scannedData }));
+            Alert.alert("Scanned Successfully", scannedData);
+          }
+        } catch (intentError) {
+          Alert.alert(
+            "External Scanner",
+            "No compatible scanner app found. You can install a barcode scanner app from the Play Store, or use the built-in camera scanner.",
+            [
+              { text: "Use Camera", onPress: () => { setScannerType("barcode"); setShowScanner(true); } },
+              { text: "OK", style: "cancel" },
+            ]
+          );
+        }
+      } else {
+        Alert.alert(
+          "External Scanner",
+          "External scanner apps work best on Android. On iOS, please use the built-in camera scanner.",
+          [
+            { text: "Use Camera", onPress: () => { setScannerType("barcode"); setShowScanner(true); } },
+            { text: "OK", style: "cancel" },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error("External scanner error:", error);
+      Alert.alert(
+        "Scanner Not Available",
+        "Could not launch external scanner. Please use the built-in camera scanner instead.",
+        [
+          { text: "Use Camera", onPress: () => { setScannerType("barcode"); setShowScanner(true); } },
+          { text: "OK", style: "cancel" },
+        ]
+      );
+    }
+  };
+
   const captureGps = async () => {
     setIsCapturingGps(true);
     try {
@@ -314,14 +371,23 @@ export default function WorkflowWizardScreen() {
       }
 
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
+        accuracy: Location.Accuracy.Highest,
+        mayShowUserSettingsDialog: true,
       });
 
       const coords = `${location.coords.latitude.toFixed(6)},${location.coords.longitude.toFixed(6)}`;
+      const accuracy = location.coords.accuracy ? ` (${location.coords.accuracy.toFixed(1)}m)` : "";
       setFormData(prev => ({ ...prev, gpsCoordinates: coords }));
+      
+      if (Platform.OS !== "web") {
+        Alert.alert(
+          "GPS Captured",
+          `Coordinates: ${coords}${accuracy ? `\nAccuracy: ${location.coords.accuracy?.toFixed(1)}m` : ""}`
+        );
+      }
     } catch (error) {
       if (Platform.OS !== "web") {
-        Alert.alert("GPS Error", "Could not get location. Please try again or enter manually.");
+        Alert.alert("GPS Error", "Could not get location from device GPS. Please try again or enter manually.");
       }
     } finally {
       setIsCapturingGps(false);
@@ -702,6 +768,9 @@ export default function WorkflowWizardScreen() {
               Scan or enter the new meter ID
             </ThemedText>
             
+            <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+              Use built-in camera:
+            </ThemedText>
             <View style={styles.scanButtonsRow}>
               <Pressable
                 style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
@@ -719,6 +788,23 @@ export default function WorkflowWizardScreen() {
                 <ThemedText type="small" style={{ marginTop: Spacing.xs }}>Scan QR Code</ThemedText>
               </Pressable>
             </View>
+            
+            {Platform.OS === "android" ? (
+              <View style={{ marginTop: Spacing.md }}>
+                <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+                  Or use external scanner app:
+                </ThemedText>
+                <Pressable
+                  style={[styles.externalScannerButton, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
+                  onPress={launchExternalScanner}
+                >
+                  <Feather name="external-link" size={20} color={theme.primary} />
+                  <ThemedText type="body" style={{ marginLeft: Spacing.sm, color: theme.text }}>
+                    Launch Scanner App
+                  </ThemedText>
+                </Pressable>
+              </View>
+            ) : null}
             
             <ThemedText type="caption" style={{ color: theme.textSecondary, marginVertical: Spacing.md, textAlign: "center" }}>
               or enter manually
@@ -1233,6 +1319,14 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderRadius: BorderRadius.md,
     alignItems: "center",
+  },
+  externalScannerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
   },
   gpsResult: {
     flexDirection: "row",
