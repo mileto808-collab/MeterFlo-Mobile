@@ -208,16 +208,16 @@ export default function WorkOrderDetailScreen() {
               onPress={handleOpenMaps}
               style={({ pressed }) => [styles.quickInfoItem, { opacity: pressed ? 0.6 : 1 }]}
             >
-              <Feather name="map-pin" size={14} color={theme.primary} />
-              <ThemedText type="small" style={{ color: theme.primary, flex: 1 }} numberOfLines={1}>
+              <Feather name="map-pin" size={14} color={theme.primary} style={styles.quickInfoIcon} />
+              <ThemedText type="small" style={{ color: theme.primary, flex: 1 }}>
                 {fullAddress || "No address"}
               </ThemedText>
             </Pressable>
 
             {workOrder.customerName ? (
               <View style={styles.quickInfoItem}>
-                <Feather name="user" size={14} color={theme.textSecondary} />
-                <ThemedText type="small" style={{ color: theme.textSecondary }} numberOfLines={1}>
+                <Feather name="user" size={14} color={theme.textSecondary} style={styles.quickInfoIcon} />
+                <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
                   {workOrder.customerName}
                 </ThemedText>
               </View>
@@ -225,8 +225,8 @@ export default function WorkOrderDetailScreen() {
 
             {workOrder.scheduledDate ? (
               <View style={styles.quickInfoItem}>
-                <Feather name="calendar" size={14} color={theme.textSecondary} />
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                <Feather name="calendar" size={14} color={theme.textSecondary} style={styles.quickInfoIcon} />
+                <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
                   {formatDate(workOrder.scheduledDate)}
                 </ThemedText>
               </View>
@@ -234,8 +234,8 @@ export default function WorkOrderDetailScreen() {
 
             {workOrder.assignedUserDisplayName || workOrder.assignedUserUsername ? (
               <View style={styles.quickInfoItem}>
-                <Feather name="user-check" size={14} color={theme.textSecondary} />
-                <ThemedText type="small" style={{ color: theme.textSecondary }} numberOfLines={1}>
+                <Feather name="user-check" size={14} color={theme.textSecondary} style={styles.quickInfoIcon} />
+                <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
                   {workOrder.assignedUserDisplayName || workOrder.assignedUserUsername}
                 </ThemedText>
               </View>
@@ -508,8 +508,11 @@ const styles = StyleSheet.create({
   },
   quickInfoItem: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: Spacing.sm,
+  },
+  quickInfoIcon: {
+    marginTop: 2,
   },
   attachmentInfo: {
     flexDirection: "row",
