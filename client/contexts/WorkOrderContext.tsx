@@ -189,6 +189,17 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       
+      console.log("=== MeterFlo Server Response ===");
+      console.log("Full response:", JSON.stringify(data, null, 2));
+      if (data.workOrders && data.workOrders.length > 0) {
+        console.log("Sample work order fields:", Object.keys(data.workOrders[0]));
+        console.log("Sample work order:", JSON.stringify(data.workOrders[0], null, 2));
+      }
+      if (data.referenceData) {
+        console.log("Reference data:", JSON.stringify(data.referenceData, null, 2));
+      }
+      console.log("=== End MeterFlo Response ===");
+      
       const newWorkOrders: WorkOrder[] = data.workOrders || [];
       const newReferenceData: ReferenceData = data.referenceData || null;
       const newServerTimestamp: string = data.serverTimestamp;
