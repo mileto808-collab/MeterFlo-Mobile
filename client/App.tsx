@@ -1,12 +1,13 @@
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View, ActivityIndicator } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { useFonts } from "expo-font";
-import { Ionicons } from "@expo/vector-icons";
+import * as SplashScreen from "expo-splash-screen";
+import * as Font from "expo-font";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/query-client";
@@ -17,12 +18,31 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import { WorkOrderProvider } from "@/contexts/WorkOrderContext";
 
-export default function App() {
-  const [fontsLoaded] = useFonts({
-    ...Ionicons.font,
-  });
+SplashScreen.preventAutoHideAsync();
 
-  if (!fontsLoaded) {
+export default function App() {
+  const [appIsReady, setAppIsReady] = useState(false);
+
+  useEffect(() => {
+    async function prepare() {
+      try {
+        await Font.loadAsync(Ionicons.font);
+      } catch (e) {
+        console.warn("Error loading fonts:", e);
+      } finally {
+        setAppIsReady(true);
+      }
+    }
+    prepare();
+  }, []);
+
+  const onLayoutRootView = useCallback(async () => {
+    if (appIsReady) {
+      await SplashScreen.hideAsync();
+    }
+  }, [appIsReady]);
+
+  if (!appIsReady) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
@@ -37,7 +57,7 @@ export default function App() {
           <OfflineProvider>
             <WorkOrderProvider>
               <SafeAreaProvider>
-                <GestureHandlerRootView style={styles.root}>
+                <GestureHandlerRootView style={styles.root} onLayout={onLayoutRootView}>
                   <KeyboardProvider>
                     <NavigationContainer>
                       <RootStackNavigator />
