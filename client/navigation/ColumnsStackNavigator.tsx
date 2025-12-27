@@ -1,25 +1,24 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-
-import ProfileScreen from "@/screens/ProfileScreen";
+import ColumnsScreen from "@/screens/ColumnsScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 
-export type ProfileStackParamList = {
-  Profile: undefined;
+export type ColumnsStackParamList = {
+  Columns: undefined;
 };
 
-const Stack = createNativeStackNavigator<ProfileStackParamList>();
+const Stack = createNativeStackNavigator<ColumnsStackParamList>();
 
-export default function ProfileStackNavigator() {
+export default function ColumnsStackNavigator() {
   const screenOptions = useScreenOptions();
 
   return (
     <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen
-        name="Profile"
-        component={ProfileScreen}
+        name="Columns"
+        component={ColumnsScreen}
         options={{
-          title: "Profile",
+          headerTitle: "Columns",
         }}
       />
     </Stack.Navigator>
