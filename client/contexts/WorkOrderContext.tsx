@@ -5,11 +5,16 @@ import { useAuth } from "@/contexts/AuthContext";
 export interface WorkOrder {
   id: number;
   customerWoId: string;
+  customerId?: string;
   status: string;
   oldMeterId: string;
   newMeterId?: string;
   oldMeterReading?: string;
   newMeterReading?: string;
+  oldMeterType?: string;
+  newMeterType?: string;
+  oldGps?: string;
+  newGps?: string;
   serviceAddress: string;
   city?: string;
   state?: string;
@@ -18,9 +23,10 @@ export interface WorkOrder {
   customerPhone?: string;
   customerEmail?: string;
   meterType?: string;
-  newMeterType?: string;
   serviceType?: string;
   scheduledDate?: string;
+  scheduledBy?: string;
+  scheduledByUsername?: string;
   notes?: string;
   route?: string;
   zone?: string;
@@ -28,14 +34,21 @@ export interface WorkOrder {
   assignedGroupId?: string;
   assignedUserUsername?: string;
   assignedUserDisplayName?: string;
+  assignedGroupName?: string;
   troubleCode?: string;
   troubleNote?: string;
+  signatureData?: string;
+  signatureName?: string;
+  attachments?: string[];
   completedAt?: string;
   completedBy?: string;
+  completedByUsername?: string;
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
+  createdByUsername?: string;
   updatedBy?: string;
+  updatedByUsername?: string;
   syncPending?: boolean;
   localUpdatedAt?: string;
 }
@@ -128,11 +141,16 @@ function mapServerWorkOrder(serverWo: ServerWorkOrder): WorkOrder {
   return {
     id: serverWo.id,
     customerWoId: serverWo.customer_wo_id || "",
+    customerId: serverWo.customer_id || undefined,
     status: serverWo.status || "Unknown",
     oldMeterId: serverWo.old_meter_id || "",
     newMeterId: serverWo.new_meter_id || undefined,
     oldMeterReading: serverWo.old_meter_reading != null ? String(serverWo.old_meter_reading) : undefined,
     newMeterReading: serverWo.new_meter_reading != null ? String(serverWo.new_meter_reading) : undefined,
+    oldMeterType: serverWo.old_meter_type || undefined,
+    newMeterType: serverWo.new_meter_type || undefined,
+    oldGps: serverWo.old_gps || undefined,
+    newGps: serverWo.new_gps || undefined,
     serviceAddress: serverWo.address || "",
     city: serverWo.city || undefined,
     state: serverWo.state || undefined,
@@ -141,9 +159,10 @@ function mapServerWorkOrder(serverWo: ServerWorkOrder): WorkOrder {
     customerPhone: serverWo.phone || undefined,
     customerEmail: serverWo.email || undefined,
     meterType: serverWo.old_meter_type || undefined,
-    newMeterType: serverWo.new_meter_type || undefined,
     serviceType: serverWo.service_type || undefined,
     scheduledDate: serverWo.scheduled_at || undefined,
+    scheduledBy: serverWo.scheduled_by || undefined,
+    scheduledByUsername: serverWo.scheduled_by_username || undefined,
     notes: serverWo.notes || undefined,
     route: serverWo.route || undefined,
     zone: serverWo.zone || undefined,
@@ -152,8 +171,12 @@ function mapServerWorkOrder(serverWo: ServerWorkOrder): WorkOrder {
     assignedUserUsername: serverWo.assigned_user_username || undefined,
     assignedUserDisplayName: serverWo.assigned_user_display_name || undefined,
     troubleCode: serverWo.trouble || undefined,
+    signatureData: serverWo.signature_data || undefined,
+    signatureName: serverWo.signature_name || undefined,
+    attachments: serverWo.attachments || undefined,
     completedAt: serverWo.completed_at || undefined,
     completedBy: serverWo.completed_by || undefined,
+    completedByUsername: serverWo.completed_by_username || undefined,
     createdAt: serverWo.created_at || new Date().toISOString(),
     updatedAt: serverWo.updated_at || new Date().toISOString(),
     createdBy: serverWo.created_by || undefined,
