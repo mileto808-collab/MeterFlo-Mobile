@@ -294,7 +294,7 @@ export default function WorkOrderDetailScreen() {
             </View>
           </View>
 
-          {workOrder.newMeterId || workOrder.newMeterReading ? (
+          {workOrder.newMeterId || workOrder.newMeterReading || workOrder.newMeterType || workOrder.newGps ? (
             <View style={[styles.meterSection, { borderLeftColor: theme.success }]}>
               <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.success }]}>
                 New Meter
@@ -370,6 +370,61 @@ export default function WorkOrderDetailScreen() {
             <ThemedText type="body" style={{ color: theme.textSecondary }}>
               {workOrder.notes}
             </ThemedText>
+          </Accordion>
+        ) : null}
+
+        {attachmentCount > 0 ? (
+          <Accordion title={`Attachments (${attachmentCount})`} icon="paperclip">
+            <View style={styles.attachmentList}>
+              {workOrder.attachments?.map((attachment, index) => {
+                let url = "";
+                let filename = `Attachment ${index + 1}`;
+                
+                if (typeof attachment === "string") {
+                  url = attachment;
+                  filename = attachment.split("/").pop() || filename;
+                } else if (attachment && typeof attachment === "object") {
+                  const attachObj = attachment as { url?: string; filename?: string; name?: string; id?: string };
+                  url = attachObj.url || "";
+                  filename = attachObj.filename || attachObj.name || attachObj.id || filename;
+                }
+                
+                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(filename);
+                
+                return (
+                  <Pressable
+                    key={index}
+                    onPress={() => {
+                      if (url) {
+                        Linking.openURL(url);
+                      } else {
+                        if (Platform.OS === "web") {
+                          alert("Unable to open attachment - no URL available");
+                        } else {
+                          Alert.alert("Error", "Unable to open attachment - no URL available");
+                        }
+                      }
+                    }}
+                    style={({ pressed }) => [
+                      styles.attachmentItem,
+                      { backgroundColor: theme.backgroundSecondary, opacity: pressed ? 0.7 : 1 },
+                    ]}
+                  >
+                    <Feather 
+                      name={isImage ? "image" : "file"} 
+                      size={18} 
+                      color={theme.primary} 
+                    />
+                    <View style={styles.attachmentContent}>
+                      <ThemedText type="body" numberOfLines={1} style={{ flex: 1 }}>
+                        {filename}
+                      </ThemedText>
+                    </View>
+                    <Feather name="external-link" size={16} color={theme.textSecondary} />
+                  </Pressable>
+                );
+              })}
+            </View>
           </Accordion>
         ) : null}
 
@@ -609,5 +664,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+  },
+  attachmentList: {
+    gap: Spacing.sm,
+  },
+  attachmentItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    gap: Spacing.sm,
+  },
+  attachmentContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
   },
 });
