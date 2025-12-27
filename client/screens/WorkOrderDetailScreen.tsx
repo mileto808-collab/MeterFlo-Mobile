@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useHeaderHeight } from "@react-navigation/elements";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders } from "@/contexts/WorkOrderContext";
@@ -25,7 +25,7 @@ function InfoRow({
   value, 
   onPress,
 }: { 
-  icon: keyof typeof Feather.glyphMap; 
+  icon: keyof typeof Ionicons.glyphMap; 
   label: string; 
   value?: string | null;
   onPress?: () => void;
@@ -35,7 +35,7 @@ function InfoRow({
 
   const content = (
     <View style={styles.infoRow}>
-      <Feather name={icon} size={16} color={theme.textSecondary} style={styles.infoIcon} />
+      <Ionicons name={icon} size={16} color={theme.textSecondary} style={styles.infoIcon} />
       <View style={styles.infoContent}>
         <ThemedText type="caption" style={{ color: theme.textSecondary }}>{label}</ThemedText>
         <ThemedText type="body" style={onPress ? { color: theme.primary } : undefined}>{value}</ThemedText>
@@ -200,7 +200,7 @@ export default function WorkOrderDetailScreen() {
                 ) : null}
                 {workOrder.syncPending ? (
                   <View style={[styles.syncBadge, { backgroundColor: theme.warning }]}>
-                    <Feather name="upload-cloud" size={12} color="#FFFFFF" />
+                    <Ionicons name="cloud-upload-outline" size={12} color="#FFFFFF" />
                     <ThemedText style={styles.syncBadgeText}>Pending</ThemedText>
                   </View>
                 ) : null}
@@ -213,7 +213,7 @@ export default function WorkOrderDetailScreen() {
               onPress={handleOpenMaps}
               style={({ pressed }) => [styles.quickInfoItem, { opacity: pressed ? 0.6 : 1 }]}
             >
-              <Feather name="map-pin" size={14} color={theme.primary} style={styles.quickInfoIcon} />
+              <Ionicons name="location-outline" size={14} color={theme.primary} style={styles.quickInfoIcon} />
               <ThemedText type="small" style={{ color: theme.primary, flex: 1 }}>
                 {fullAddress || "No address"}
               </ThemedText>
@@ -221,7 +221,7 @@ export default function WorkOrderDetailScreen() {
 
             {workOrder.customerName ? (
               <View style={styles.quickInfoItem}>
-                <Feather name="user" size={14} color={theme.textSecondary} style={styles.quickInfoIcon} />
+                <Ionicons name="person-outline" size={14} color={theme.textSecondary} style={styles.quickInfoIcon} />
                 <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
                   {workOrder.customerName}
                 </ThemedText>
@@ -230,7 +230,7 @@ export default function WorkOrderDetailScreen() {
 
             {workOrder.scheduledDate ? (
               <View style={styles.quickInfoItem}>
-                <Feather name="calendar" size={14} color={theme.textSecondary} style={styles.quickInfoIcon} />
+                <Ionicons name="calendar-outline" size={14} color={theme.textSecondary} style={styles.quickInfoIcon} />
                 <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
                   {formatDate(workOrder.scheduledDate)}
                 </ThemedText>
@@ -239,7 +239,7 @@ export default function WorkOrderDetailScreen() {
 
             {workOrder.assignedUserDisplayName || workOrder.assignedUserUsername ? (
               <View style={styles.quickInfoItem}>
-                <Feather name="user-check" size={14} color={theme.textSecondary} style={styles.quickInfoIcon} />
+                <Ionicons name="person-outline" size={14} color={theme.textSecondary} style={styles.quickInfoIcon} />
                 <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
                   {workOrder.assignedUserDisplayName || workOrder.assignedUserUsername}
                 </ThemedText>
@@ -249,7 +249,7 @@ export default function WorkOrderDetailScreen() {
 
           {attachmentCount > 0 ? (
             <View style={styles.attachmentInfo}>
-              <Feather name="paperclip" size={14} color={theme.textSecondary} />
+              <Ionicons name="attach-outline" size={14} color={theme.textSecondary} />
               <ThemedText type="small" style={{ color: theme.textSecondary }}>
                 {attachmentCount} attachment{attachmentCount !== 1 ? "s" : ""}
               </ThemedText>
@@ -257,29 +257,29 @@ export default function WorkOrderDetailScreen() {
           ) : null}
         </View>
 
-        <Accordion title="Customer & Site" icon="home" defaultExpanded>
-          <InfoRow icon="hash" label="Customer ID" value={workOrder.customerId} />
-          <InfoRow icon="user" label="Customer Name" value={workOrder.customerName} />
+        <Accordion title="Customer & Site" icon="home-outline" defaultExpanded>
+          <InfoRow icon="pricetag-outline" label="Customer ID" value={workOrder.customerId} />
+          <InfoRow icon="person-outline" label="Customer Name" value={workOrder.customerName} />
           <InfoRow 
-            icon="map-pin" 
+            icon="location-outline" 
             label="Address" 
             value={fullAddress}
             onPress={handleOpenMaps}
           />
           <InfoRow 
-            icon="phone" 
+            icon="call-outline" 
             label="Phone" 
             value={workOrder.customerPhone}
             onPress={workOrder.customerPhone ? handleCallPhone : undefined}
           />
-          <InfoRow icon="mail" label="Email" value={workOrder.customerEmail} />
+          <InfoRow icon="mail-outline" label="Email" value={workOrder.customerEmail} />
           <View style={styles.gridRow}>
             <GridItem label="Route" value={workOrder.route} />
             <GridItem label="Zone" value={workOrder.zone} />
           </View>
         </Accordion>
 
-        <Accordion title="Meter Details" icon="cpu" defaultExpanded>
+        <Accordion title="Meter Details" icon="hardware-chip-outline" defaultExpanded>
           <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
             <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
               Old Meter
@@ -318,7 +318,7 @@ export default function WorkOrderDetailScreen() {
               ) : null}
               {workOrder.signatureData ? (
                 <View style={[styles.signatureIndicator, { backgroundColor: theme.success + "20" }]}>
-                  <Feather name="check-circle" size={16} color={theme.success} />
+                  <Ionicons name="checkmark-circle-outline" size={16} color={theme.success} />
                   <ThemedText type="small" style={{ color: theme.success }}>Signature captured</ThemedText>
                 </View>
               ) : null}
@@ -326,36 +326,36 @@ export default function WorkOrderDetailScreen() {
           ) : null}
         </Accordion>
 
-        <Accordion title="Scheduling & Assignment" icon="calendar">
+        <Accordion title="Scheduling & Assignment" icon="calendar-outline">
           <InfoRow 
-            icon="flag" 
+            icon="flag-outline" 
             label="Status" 
             value={workOrder.status} 
           />
           <InfoRow 
-            icon="calendar" 
+            icon="calendar-outline" 
             label="Scheduled Date" 
             value={formatDateTime(workOrder.scheduledDate)} 
           />
           <InfoRow 
-            icon="user" 
+            icon="person-outline" 
             label="Scheduled By" 
             value={workOrder.scheduledByUsername} 
           />
           <InfoRow 
-            icon="user-check" 
+            icon="person-outline" 
             label="Assigned User" 
             value={workOrder.assignedUserDisplayName || workOrder.assignedUserUsername} 
           />
           <InfoRow 
-            icon="users" 
+            icon="people-outline" 
             label="Assigned Group" 
             value={workOrder.assignedGroupName || workOrder.assignedGroupId} 
           />
           {workOrder.troubleCode ? (
             <View style={[styles.troubleSection, { backgroundColor: theme.error + "10" }]}>
               <View style={styles.troubleHeader}>
-                <Feather name="alert-triangle" size={16} color={theme.error} />
+                <Ionicons name="warning-outline" size={16} color={theme.error} />
                 <ThemedText type="body" style={{ color: theme.error, fontWeight: "600" }}>
                   Trouble Code
                 </ThemedText>
@@ -366,7 +366,7 @@ export default function WorkOrderDetailScreen() {
         </Accordion>
 
         {workOrder.notes ? (
-          <Accordion title="Notes" icon="file-text">
+          <Accordion title="Notes" icon="document-text-outline">
             <ThemedText type="body" style={{ color: theme.textSecondary }}>
               {workOrder.notes}
             </ThemedText>
@@ -374,7 +374,7 @@ export default function WorkOrderDetailScreen() {
         ) : null}
 
         {attachmentCount > 0 ? (
-          <Accordion title={`Attachments (${attachmentCount})`} icon="paperclip">
+          <Accordion title={`Attachments (${attachmentCount})`} icon="attach-outline">
             <View style={styles.attachmentList}>
               {workOrder.attachments?.map((attachment, index) => {
                 let url = "";
@@ -410,8 +410,8 @@ export default function WorkOrderDetailScreen() {
                       { backgroundColor: theme.backgroundSecondary, opacity: pressed ? 0.7 : 1 },
                     ]}
                   >
-                    <Feather 
-                      name={isImage ? "image" : "file"} 
+                    <Ionicons 
+                      name={isImage ? "image-outline" : "document-outline"} 
                       size={18} 
                       color={theme.primary} 
                     />
@@ -420,7 +420,7 @@ export default function WorkOrderDetailScreen() {
                         {filename}
                       </ThemedText>
                     </View>
-                    <Feather name="external-link" size={16} color={theme.textSecondary} />
+                    <Ionicons name="open-outline" size={16} color={theme.textSecondary} />
                   </Pressable>
                 );
               })}
@@ -428,7 +428,7 @@ export default function WorkOrderDetailScreen() {
           </Accordion>
         ) : null}
 
-        <Accordion title="Audit Information" icon="clock">
+        <Accordion title="Audit Information" icon="time-outline">
           <View style={styles.auditGrid}>
             <View style={styles.auditItem}>
               <ThemedText type="caption" style={{ color: theme.textSecondary }}>Created By</ThemedText>
@@ -483,7 +483,7 @@ export default function WorkOrderDetailScreen() {
               <ActivityIndicator size="small" color={theme.text} />
             ) : (
               <>
-                <Feather name="user-plus" size={16} color={theme.text} />
+                <Ionicons name="person-add-outline" size={16} color={theme.text} />
                 <ThemedText style={{ marginLeft: Spacing.sm }}>Claim</ThemedText>
               </>
             )}
@@ -494,8 +494,8 @@ export default function WorkOrderDetailScreen() {
           style={[styles.processButton, { backgroundColor: isCompleted || isCancelled ? theme.backgroundSecondary : theme.primary }]}
           disabled={isCompleted || isCancelled}
         >
-          <Feather 
-            name={isCompleted ? "check-circle" : isCancelled ? "x-circle" : "play-circle"} 
+          <Ionicons 
+            name={isCompleted ? "checkmark-circle-outline" : isCancelled ? "close-circle-outline" : "play-circle-outline"} 
             size={18} 
             color={isCompleted || isCancelled ? theme.textSecondary : "#FFFFFF"} 
           />

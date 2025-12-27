@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet, Modal, Image, Pressable, Dimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
@@ -39,7 +39,7 @@ export function PhotoViewer({ visible, photoUri, onClose, onDelete }: PhotoViewe
               { opacity: pressed ? 0.7 : 1 }
             ]}
           >
-            <Feather name="x" size={24} color="#FFFFFF" />
+            <Ionicons name="close-outline" size={24} color="#FFFFFF" />
           </Pressable>
           
           <Pressable
@@ -49,7 +49,7 @@ export function PhotoViewer({ visible, photoUri, onClose, onDelete }: PhotoViewe
               { backgroundColor: theme.error, opacity: pressed ? 0.7 : 1 }
             ]}
           >
-            <Feather name="trash-2" size={20} color="#FFFFFF" />
+            <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
             <ThemedText style={{ color: "#FFFFFF", marginLeft: Spacing.xs }}>Delete</ThemedText>
           </Pressable>
         </View>

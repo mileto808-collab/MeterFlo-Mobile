@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet, FlatList, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useTheme } from "@/hooks/useTheme";
@@ -27,7 +27,7 @@ export default function ProjectSelectScreen() {
     >
       <View style={styles.projectInfo}>
         <View style={[styles.projectIcon, { backgroundColor: theme.primary + "20" }]}>
-          <Feather name="folder" size={24} color={theme.primary} />
+          <Ionicons name="folder-outline" size={24} color={theme.primary} />
         </View>
         <View style={styles.projectDetails}>
           <ThemedText type="body" style={styles.projectName}>
@@ -40,7 +40,7 @@ export default function ProjectSelectScreen() {
           ) : null}
         </View>
       </View>
-      <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+      <Ionicons name="chevron-forward-outline" size={20} color={theme.textSecondary} />
     </Pressable>
   );
 
@@ -76,7 +76,7 @@ export default function ProjectSelectScreen() {
           onPress={logout}
           style={[styles.logoutButton, { borderColor: theme.border }]}
         >
-          <Feather name="log-out" size={18} color={theme.textSecondary} />
+          <Ionicons name="log-out-outline" size={18} color={theme.textSecondary} />
           <ThemedText type="body" style={[styles.logoutText, { color: theme.textSecondary }]}>
             Sign out
           </ThemedText>
