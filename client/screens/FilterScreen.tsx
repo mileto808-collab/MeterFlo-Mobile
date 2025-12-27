@@ -3,7 +3,7 @@ import { View, ScrollView, StyleSheet, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { HeaderButton } from "@react-navigation/elements";
+import { HeaderButton, useHeaderHeight } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
@@ -24,6 +24,7 @@ const DEFAULT_STATUS_OPTIONS = [
 
 export default function FilterScreen() {
   const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const { filters, setFilters, referenceData } = useWorkOrders();
@@ -49,12 +50,14 @@ export default function FilterScreen() {
   }, [navigation]);
 
   const handleReset = useCallback(() => {
-    setLocalFilters({
+    const clearedFilters = {
       status: [],
       assignedTo: "",
-      searchQuery: filters.searchQuery,
-    });
-  }, [filters.searchQuery]);
+      searchQuery: "",
+    };
+    setLocalFilters(clearedFilters);
+    setFilters(clearedFilters);
+  }, [setFilters]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -90,11 +93,12 @@ export default function FilterScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
       <ScrollView
+        style={{ marginTop: headerHeight }}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + Spacing["5xl"] + 60 },
         ]}
-        showsVerticalScrollIndicator={false}
+        scrollIndicatorInsets={{ bottom: insets.bottom }}
       >
         <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
           <ThemedText type="h4" style={styles.sectionTitle}>Status</ThemedText>
