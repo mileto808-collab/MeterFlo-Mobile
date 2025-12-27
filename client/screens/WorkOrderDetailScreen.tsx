@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View, ScrollView, StyleSheet, Pressable, Alert, Platform, ActivityIndicator } from "react-native";
+import { View, ScrollView, StyleSheet, Pressable, Alert, Platform, ActivityIndicator, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -12,17 +12,63 @@ import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { ThemedText } from "@/components/ThemedText";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/Button";
+import { Accordion } from "@/components/Accordion";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 type RouteProps = RouteProp<RootStackParamList, "WorkOrderDetail">;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+function InfoRow({ 
+  icon, 
+  label, 
+  value, 
+  onPress,
+}: { 
+  icon: keyof typeof Feather.glyphMap; 
+  label: string; 
+  value?: string | null;
+  onPress?: () => void;
+}) {
+  const { theme } = useTheme();
+  if (!value) return null;
+
+  const content = (
+    <View style={styles.infoRow}>
+      <Feather name={icon} size={16} color={theme.textSecondary} style={styles.infoIcon} />
+      <View style={styles.infoContent}>
+        <ThemedText type="caption" style={{ color: theme.textSecondary }}>{label}</ThemedText>
+        <ThemedText type="body" style={onPress ? { color: theme.primary } : undefined}>{value}</ThemedText>
+      </View>
+    </View>
+  );
+
+  if (onPress) {
+    return (
+      <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+        {content}
+      </Pressable>
+    );
+  }
+
+  return content;
+}
+
+function GridItem({ label, value }: { label: string; value?: string | null }) {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.gridItem}>
+      <ThemedText type="caption" style={{ color: theme.textSecondary }}>{label}</ThemedText>
+      <ThemedText type="body">{value || "N/A"}</ThemedText>
+    </View>
+  );
+}
 
 export default function WorkOrderDetailScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { workOrders, claimWorkOrder } = useWorkOrders();
+  const { workOrders, referenceData, claimWorkOrder } = useWorkOrders();
   const { user } = useAuth();
   const [isClaiming, setIsClaiming] = useState(false);
 
@@ -33,15 +79,34 @@ export default function WorkOrderDetailScreen() {
   const isAssignedToMe = workOrder.assignedUserId === user?.id;
   const canClaim = !workOrder.assignedUserId || !isAssignedToMe;
   const isCompleted = workOrder.status.toLowerCase() === "completed";
+  const isCancelled = workOrder.status.toLowerCase() === "cancelled";
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return "Not set";
+    if (!dateString) return null;
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, { 
       month: "short", 
       day: "numeric", 
       year: "numeric" 
     });
+  };
+
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return date.toLocaleString(undefined, { 
+      month: "short", 
+      day: "numeric", 
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
+  const getTroubleCodeLabel = (code?: string) => {
+    if (!code) return null;
+    const found = referenceData?.troubleCodes.find(tc => tc.code === code);
+    return found ? `${found.code} - ${found.description}` : code;
   };
 
   const handleClaim = async () => {
@@ -79,6 +144,30 @@ export default function WorkOrderDetailScreen() {
     navigation.navigate("WorkflowWizard", { workOrder });
   };
 
+  const handleCallPhone = () => {
+    if (workOrder.customerPhone) {
+      Linking.openURL(`tel:${workOrder.customerPhone}`);
+    }
+  };
+
+  const handleOpenMaps = () => {
+    const address = `${workOrder.serviceAddress}, ${workOrder.city || ""} ${workOrder.state || ""} ${workOrder.zip || ""}`.trim();
+    const encodedAddress = encodeURIComponent(address);
+    if (Platform.OS === "ios") {
+      Linking.openURL(`maps:?q=${encodedAddress}`);
+    } else {
+      Linking.openURL(`https://maps.google.com/?q=${encodedAddress}`);
+    }
+  };
+
+  const fullAddress = [
+    workOrder.serviceAddress,
+    workOrder.city,
+    workOrder.state ? `${workOrder.state} ${workOrder.zip || ""}`.trim() : workOrder.zip,
+  ].filter(Boolean).join(", ");
+
+  const attachmentCount = workOrder.attachments?.length || 0;
+
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
       <ScrollView
@@ -89,159 +178,232 @@ export default function WorkOrderDetailScreen() {
         scrollIndicatorInsets={{ bottom: insets.bottom }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View style={styles.badgeRow}>
-            <StatusBadge status={workOrder.status} />
-            {workOrder.syncPending ? (
-              <View style={[styles.syncBadge, { backgroundColor: theme.warning }]}>
-                <Feather name="upload-cloud" size={12} color="#FFFFFF" />
-                <ThemedText style={styles.syncBadgeText}>Pending Sync</ThemedText>
+        <View style={[styles.summaryCard, { backgroundColor: theme.backgroundDefault, borderLeftColor: theme.primary }]}>
+          <View style={styles.summaryHeader}>
+            <View style={styles.summaryLeft}>
+              <ThemedText type="h3" style={styles.woTitle}>
+                {workOrder.customerWoId || `WO #${workOrder.id}`}
+              </ThemedText>
+              <View style={styles.badgeRow}>
+                <StatusBadge status={workOrder.status} />
+                {workOrder.serviceType ? (
+                  <View style={[styles.serviceTypeBadge, { backgroundColor: theme.primary + "20" }]}>
+                    <ThemedText type="caption" style={{ color: theme.primary, fontWeight: "600" }}>
+                      {workOrder.serviceType}
+                    </ThemedText>
+                  </View>
+                ) : null}
+                {workOrder.syncPending ? (
+                  <View style={[styles.syncBadge, { backgroundColor: theme.warning }]}>
+                    <Feather name="upload-cloud" size={12} color="#FFFFFF" />
+                    <ThemedText style={styles.syncBadgeText}>Pending</ThemedText>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.quickInfo}>
+            <Pressable 
+              onPress={handleOpenMaps}
+              style={({ pressed }) => [styles.quickInfoItem, { opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Feather name="map-pin" size={14} color={theme.primary} />
+              <ThemedText type="small" style={{ color: theme.primary, flex: 1 }} numberOfLines={1}>
+                {fullAddress || "No address"}
+              </ThemedText>
+            </Pressable>
+
+            {workOrder.customerName ? (
+              <View style={styles.quickInfoItem}>
+                <Feather name="user" size={14} color={theme.textSecondary} />
+                <ThemedText type="small" style={{ color: theme.textSecondary }} numberOfLines={1}>
+                  {workOrder.customerName}
+                </ThemedText>
               </View>
             ) : null}
-          </View>
-          <ThemedText type="h3" style={styles.title}>{workOrder.serviceAddress}</ThemedText>
-          <ThemedText type="small" style={[styles.id, { color: theme.textSecondary }]}>
-            {workOrder.customerWoId}
-          </ThemedText>
-        </View>
 
-        <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
-          <ThemedText type="h4" style={styles.sectionTitle}>Customer</ThemedText>
-          
-          {workOrder.customerName ? (
-            <View style={styles.detailItem}>
-              <Feather name="user" size={16} color={theme.textSecondary} />
-              <View style={styles.detailContent}>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Name</ThemedText>
-                <ThemedText type="body">{workOrder.customerName}</ThemedText>
+            {workOrder.scheduledDate ? (
+              <View style={styles.quickInfoItem}>
+                <Feather name="calendar" size={14} color={theme.textSecondary} />
+                <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                  {formatDate(workOrder.scheduledDate)}
+                </ThemedText>
               </View>
-            </View>
-          ) : null}
+            ) : null}
 
-          {workOrder.customerPhone ? (
-            <View style={styles.detailItem}>
-              <Feather name="phone" size={16} color={theme.textSecondary} />
-              <View style={styles.detailContent}>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Phone</ThemedText>
-                <ThemedText type="body">{workOrder.customerPhone}</ThemedText>
-              </View>
-            </View>
-          ) : null}
-
-          <View style={styles.detailItem}>
-            <Feather name="map-pin" size={16} color={theme.textSecondary} />
-            <View style={styles.detailContent}>
-              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Address</ThemedText>
-              <ThemedText type="body">
-                {workOrder.serviceAddress}
-                {workOrder.city ? `, ${workOrder.city}` : ""}
-                {workOrder.state ? `, ${workOrder.state}` : ""}
-                {workOrder.zip ? ` ${workOrder.zip}` : ""}
-              </ThemedText>
-            </View>
-          </View>
-        </View>
-
-        <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
-          <ThemedText type="h4" style={styles.sectionTitle}>Meter Information</ThemedText>
-          
-          <View style={styles.meterRow}>
-            <View style={styles.meterItem}>
-              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Old Meter ID</ThemedText>
-              <ThemedText type="body">{workOrder.oldMeterId || "N/A"}</ThemedText>
-            </View>
-            {workOrder.newMeterId ? (
-              <View style={styles.meterItem}>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>New Meter ID</ThemedText>
-                <ThemedText type="body">{workOrder.newMeterId}</ThemedText>
+            {workOrder.assignedUserDisplayName || workOrder.assignedUserUsername ? (
+              <View style={styles.quickInfoItem}>
+                <Feather name="user-check" size={14} color={theme.textSecondary} />
+                <ThemedText type="small" style={{ color: theme.textSecondary }} numberOfLines={1}>
+                  {workOrder.assignedUserDisplayName || workOrder.assignedUserUsername}
+                </ThemedText>
               </View>
             ) : null}
           </View>
 
-          {workOrder.meterType ? (
-            <View style={styles.detailItem}>
-              <Feather name="box" size={16} color={theme.textSecondary} />
-              <View style={styles.detailContent}>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Meter Type</ThemedText>
-                <ThemedText type="body">{workOrder.meterType}</ThemedText>
-              </View>
-            </View>
-          ) : null}
-
-          {workOrder.serviceType ? (
-            <View style={styles.detailItem}>
-              <Feather name="settings" size={16} color={theme.textSecondary} />
-              <View style={styles.detailContent}>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Service Type</ThemedText>
-                <ThemedText type="body">{workOrder.serviceType}</ThemedText>
-              </View>
-            </View>
-          ) : null}
-        </View>
-
-        <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
-          <ThemedText type="h4" style={styles.sectionTitle}>Assignment</ThemedText>
-          
-          <View style={styles.detailItem}>
-            <Feather name="user" size={16} color={theme.textSecondary} />
-            <View style={styles.detailContent}>
-              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Assigned To</ThemedText>
-              <ThemedText type="body">
-                {workOrder.assignedUserDisplayName || workOrder.assignedUserUsername || "Unassigned"}
+          {attachmentCount > 0 ? (
+            <View style={styles.attachmentInfo}>
+              <Feather name="paperclip" size={14} color={theme.textSecondary} />
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                {attachmentCount} attachment{attachmentCount !== 1 ? "s" : ""}
               </ThemedText>
             </View>
-          </View>
+          ) : null}
+        </View>
 
-          <View style={styles.detailItem}>
-            <Feather name="calendar" size={16} color={theme.textSecondary} />
-            <View style={styles.detailContent}>
-              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Scheduled Date</ThemedText>
-              <ThemedText type="body">{formatDate(workOrder.scheduledDate)}</ThemedText>
+        <Accordion title="Customer & Site" icon="home" defaultExpanded>
+          <InfoRow icon="hash" label="Customer ID" value={workOrder.customerId} />
+          <InfoRow icon="user" label="Customer Name" value={workOrder.customerName} />
+          <InfoRow 
+            icon="map-pin" 
+            label="Address" 
+            value={fullAddress}
+            onPress={handleOpenMaps}
+          />
+          <InfoRow 
+            icon="phone" 
+            label="Phone" 
+            value={workOrder.customerPhone}
+            onPress={workOrder.customerPhone ? handleCallPhone : undefined}
+          />
+          <InfoRow icon="mail" label="Email" value={workOrder.customerEmail} />
+          <View style={styles.gridRow}>
+            <GridItem label="Route" value={workOrder.route} />
+            <GridItem label="Zone" value={workOrder.zone} />
+          </View>
+        </Accordion>
+
+        <Accordion title="Meter Details" icon="cpu" defaultExpanded>
+          <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
+            <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
+              Old Meter
+            </ThemedText>
+            <View style={styles.gridRow}>
+              <GridItem label="Meter ID" value={workOrder.oldMeterId} />
+              <GridItem label="Reading" value={workOrder.oldMeterReading} />
+            </View>
+            <View style={styles.gridRow}>
+              <GridItem label="Type" value={workOrder.oldMeterType || workOrder.meterType} />
+              <GridItem label="GPS" value={workOrder.oldGps} />
             </View>
           </View>
-        </View>
+
+          {workOrder.newMeterId || workOrder.newMeterReading ? (
+            <View style={[styles.meterSection, { borderLeftColor: theme.success }]}>
+              <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.success }]}>
+                New Meter
+              </ThemedText>
+              <View style={styles.gridRow}>
+                <GridItem label="Meter ID" value={workOrder.newMeterId} />
+                <GridItem label="Reading" value={workOrder.newMeterReading} />
+              </View>
+              <View style={styles.gridRow}>
+                <GridItem label="Type" value={workOrder.newMeterType} />
+                <GridItem label="GPS" value={workOrder.newGps} />
+              </View>
+            </View>
+          ) : null}
+
+          {workOrder.signatureName || workOrder.signatureData ? (
+            <View style={styles.signatureSection}>
+              <ThemedText type="h4" style={styles.meterSectionTitle}>Signature</ThemedText>
+              {workOrder.signatureName ? (
+                <ThemedText type="body">{workOrder.signatureName}</ThemedText>
+              ) : null}
+              {workOrder.signatureData ? (
+                <View style={[styles.signatureIndicator, { backgroundColor: theme.success + "20" }]}>
+                  <Feather name="check-circle" size={16} color={theme.success} />
+                  <ThemedText type="small" style={{ color: theme.success }}>Signature captured</ThemedText>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+        </Accordion>
+
+        <Accordion title="Scheduling & Assignment" icon="calendar">
+          <InfoRow 
+            icon="flag" 
+            label="Status" 
+            value={workOrder.status} 
+          />
+          <InfoRow 
+            icon="calendar" 
+            label="Scheduled Date" 
+            value={formatDateTime(workOrder.scheduledDate)} 
+          />
+          <InfoRow 
+            icon="user" 
+            label="Scheduled By" 
+            value={workOrder.scheduledByUsername} 
+          />
+          <InfoRow 
+            icon="user-check" 
+            label="Assigned User" 
+            value={workOrder.assignedUserDisplayName || workOrder.assignedUserUsername} 
+          />
+          <InfoRow 
+            icon="users" 
+            label="Assigned Group" 
+            value={workOrder.assignedGroupName || workOrder.assignedGroupId} 
+          />
+          {workOrder.troubleCode ? (
+            <View style={[styles.troubleSection, { backgroundColor: theme.error + "10" }]}>
+              <View style={styles.troubleHeader}>
+                <Feather name="alert-triangle" size={16} color={theme.error} />
+                <ThemedText type="body" style={{ color: theme.error, fontWeight: "600" }}>
+                  Trouble Code
+                </ThemedText>
+              </View>
+              <ThemedText type="body">{getTroubleCodeLabel(workOrder.troubleCode)}</ThemedText>
+            </View>
+          ) : null}
+        </Accordion>
 
         {workOrder.notes ? (
-          <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
-            <ThemedText type="h4" style={styles.sectionTitle}>Notes</ThemedText>
+          <Accordion title="Notes" icon="file-text">
             <ThemedText type="body" style={{ color: theme.textSecondary }}>
               {workOrder.notes}
             </ThemedText>
-          </View>
+          </Accordion>
         ) : null}
 
-        {workOrder.troubleCode || workOrder.troubleNote ? (
-          <View style={[styles.section, { backgroundColor: theme.error + "10" }]}>
-            <ThemedText type="h4" style={[styles.sectionTitle, { color: theme.error }]}>
-              Trouble Report
-            </ThemedText>
-            {workOrder.troubleCode ? (
-              <ThemedText type="body">Code: {workOrder.troubleCode}</ThemedText>
-            ) : null}
-            {workOrder.troubleNote ? (
-              <ThemedText type="body" style={{ color: theme.textSecondary }}>
-                {workOrder.troubleNote}
-              </ThemedText>
+        <Accordion title="Audit Information" icon="clock">
+          <View style={styles.auditGrid}>
+            <View style={styles.auditItem}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Created By</ThemedText>
+              <ThemedText type="small">{workOrder.createdByUsername || workOrder.createdBy || "N/A"}</ThemedText>
+            </View>
+            <View style={styles.auditItem}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Created At</ThemedText>
+              <ThemedText type="small">{formatDateTime(workOrder.createdAt) || "N/A"}</ThemedText>
+            </View>
+            <View style={styles.auditItem}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Updated By</ThemedText>
+              <ThemedText type="small">{workOrder.updatedByUsername || workOrder.updatedBy || "N/A"}</ThemedText>
+            </View>
+            <View style={styles.auditItem}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Updated At</ThemedText>
+              <ThemedText type="small">{formatDateTime(workOrder.updatedAt) || "N/A"}</ThemedText>
+            </View>
+            {workOrder.completedAt ? (
+              <>
+                <View style={styles.auditItem}>
+                  <ThemedText type="caption" style={{ color: theme.success }}>Completed By</ThemedText>
+                  <ThemedText type="small" style={{ color: theme.success }}>
+                    {workOrder.completedByUsername || workOrder.completedBy || "N/A"}
+                  </ThemedText>
+                </View>
+                <View style={styles.auditItem}>
+                  <ThemedText type="caption" style={{ color: theme.success }}>Completed At</ThemedText>
+                  <ThemedText type="small" style={{ color: theme.success }}>
+                    {formatDateTime(workOrder.completedAt)}
+                  </ThemedText>
+                </View>
+              </>
             ) : null}
           </View>
-        ) : null}
-
-        <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
-          <ThemedText type="h4" style={styles.sectionTitle}>Timestamps</ThemedText>
-          <View style={styles.timestampRow}>
-            <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              Created: {formatDate(workOrder.createdAt)}
-            </ThemedText>
-            <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              Updated: {formatDate(workOrder.updatedAt)}
-            </ThemedText>
-          </View>
-          {workOrder.completedAt ? (
-            <ThemedText type="small" style={{ color: theme.success }}>
-              Completed: {formatDate(workOrder.completedAt)}
-            </ThemedText>
-          ) : null}
-        </View>
+        </Accordion>
       </ScrollView>
 
       <View style={[
@@ -251,7 +413,7 @@ export default function WorkOrderDetailScreen() {
           paddingBottom: insets.bottom + Spacing.lg,
         }
       ]}>
-        {canClaim && !isCompleted ? (
+        {canClaim && !isCompleted && !isCancelled ? (
           <Button
             onPress={handleClaim}
             style={[styles.claimButton, { backgroundColor: theme.backgroundSecondary }]}
@@ -269,10 +431,23 @@ export default function WorkOrderDetailScreen() {
         ) : null}
         <Button
           onPress={handleProcess}
-          style={[styles.processButton, { backgroundColor: theme.primary }]}
-          disabled={isCompleted}
+          style={[styles.processButton, { backgroundColor: isCompleted || isCancelled ? theme.backgroundSecondary : theme.primary }]}
+          disabled={isCompleted || isCancelled}
         >
-          {isCompleted ? "Completed" : "Start Meter Changeout"}
+          <Feather 
+            name={isCompleted ? "check-circle" : isCancelled ? "x-circle" : "play-circle"} 
+            size={18} 
+            color={isCompleted || isCancelled ? theme.textSecondary : "#FFFFFF"} 
+          />
+          <ThemedText 
+            style={{ 
+              marginLeft: Spacing.sm, 
+              color: isCompleted || isCancelled ? theme.textSecondary : "#FFFFFF",
+              fontWeight: "600",
+            }}
+          >
+            {isCompleted ? "Completed" : isCancelled ? "Cancelled" : "Start Meter Changeout"}
+          </ThemedText>
         </Button>
       </View>
     </View>
@@ -285,14 +460,35 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.lg,
-    gap: Spacing.lg,
+    gap: Spacing.md,
   },
-  header: {
+  summaryCard: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    borderLeftWidth: 4,
+    gap: Spacing.md,
+  },
+  summaryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  summaryLeft: {
+    flex: 1,
     gap: Spacing.sm,
+  },
+  woTitle: {
+    fontWeight: "700",
   },
   badgeRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: Spacing.sm,
+  },
+  serviceTypeBadge: {
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.xs,
   },
   syncBadge: {
     flexDirection: "row",
@@ -307,40 +503,82 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
   },
-  title: {
-    marginTop: Spacing.sm,
+  quickInfo: {
+    gap: Spacing.xs,
   },
-  id: {},
-  section: {
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.md,
-    gap: Spacing.md,
+  quickInfoItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
   },
-  sectionTitle: {
-    marginBottom: Spacing.xs,
+  attachmentInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.05)",
   },
-  detailItem: {
+  infoRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: Spacing.sm,
   },
-  detailContent: {
+  infoIcon: {
+    marginTop: 2,
+  },
+  infoContent: {
     flex: 1,
     gap: 2,
   },
-  meterRow: {
+  gridRow: {
     flexDirection: "row",
-    gap: Spacing.xl,
+    gap: Spacing.lg,
   },
-  meterItem: {
+  gridItem: {
     flex: 1,
     gap: 2,
   },
-  timestampRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
+  meterSection: {
+    paddingLeft: Spacing.md,
+    borderLeftWidth: 3,
     gap: Spacing.sm,
+  },
+  meterSectionTitle: {
+    marginBottom: Spacing.xs,
+  },
+  signatureSection: {
+    gap: Spacing.sm,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.05)",
+  },
+  signatureIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    alignSelf: "flex-start",
+  },
+  troubleSection: {
+    padding: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    gap: Spacing.xs,
+  },
+  troubleHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  auditGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.md,
+  },
+  auditItem: {
+    width: "45%",
+    gap: 2,
   },
   bottomAction: {
     position: "absolute",
@@ -360,5 +598,8 @@ const styles = StyleSheet.create({
   },
   processButton: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
