@@ -1,0 +1,184 @@
+MeterFlo Theme Specification for React Native
+Design System Overview
+Style: Modern Enterprise Dashboard (inspired by Linear, Notion, Carbon)
+Typography: Inter (primary), JetBrains Mono (monospace for IDs/data)
+Border Radius: 8px (0.5rem) - use consistently
+Focus on: Data readability, quick task completion, minimal cognitive load
+Color Palette (HSL Format)
+Light Mode
+const lightTheme = {
+  // Base
+  background: 'hsl(0, 0%, 100%)',           // Pure white
+  foreground: 'hsl(220, 10%, 15%)',         // Near black text
+  
+  // Cards & Surfaces
+  card: 'hsl(0, 0%, 98%)',                  // Slightly off-white
+  cardForeground: 'hsl(220, 10%, 15%)',
+  cardBorder: 'hsl(220, 4%, 94%)',
+  
+  // Borders
+  border: 'hsl(220, 5%, 88%)',
+  
+  // Primary (Blue)
+  primary: 'hsl(217, 91%, 45%)',            // Vibrant blue
+  primaryForeground: 'hsl(217, 91%, 98%)',  // White text on primary
+  
+  // Secondary (Gray)
+  secondary: 'hsl(220, 8%, 92%)',
+  secondaryForeground: 'hsl(220, 10%, 15%)',
+  
+  // Muted (Subtle backgrounds)
+  muted: 'hsl(220, 10%, 94%)',
+  mutedForeground: 'hsl(220, 10%, 35%)',    // Secondary text color
+  
+  // Accent (Interactive highlights)
+  accent: 'hsl(220, 12%, 93%)',
+  accentForeground: 'hsl(220, 10%, 15%)',
+  
+  // Destructive (Errors/Delete)
+  destructive: 'hsl(0, 84%, 42%)',          // Red
+  destructiveForeground: 'hsl(0, 84%, 98%)',
+  
+  // Input fields
+  input: 'hsl(220, 10%, 70%)',
+  
+  // Focus ring
+  ring: 'hsl(217, 91%, 45%)',
+  
+  // Sidebar-specific
+  sidebar: 'hsl(220, 4%, 96%)',
+  sidebarForeground: 'hsl(220, 10%, 15%)',
+  sidebarBorder: 'hsl(220, 5%, 92%)',
+  sidebarPrimary: 'hsl(217, 91%, 45%)',
+  sidebarAccent: 'hsl(220, 8%, 90%)',
+  
+  // Elevation overlays
+  elevate1: 'rgba(0, 0, 0, 0.03)',          // Subtle hover
+  elevate2: 'rgba(0, 0, 0, 0.08)',          // Active/pressed
+};
+Dark Mode
+const darkTheme = {
+  // Base
+  background: 'hsl(220, 6%, 8%)',           // Near black
+  foreground: 'hsl(220, 6%, 92%)',          // Light text
+  
+  // Cards & Surfaces
+  card: 'hsl(220, 6%, 10%)',
+  cardForeground: 'hsl(220, 6%, 92%)',
+  cardBorder: 'hsl(220, 6%, 14%)',
+  
+  // Borders
+  border: 'hsl(220, 6%, 18%)',
+  
+  // Primary (Blue - slightly brighter for dark mode)
+  primary: 'hsl(217, 91%, 55%)',
+  primaryForeground: 'hsl(217, 91%, 98%)',
+  
+  // Secondary
+  secondary: 'hsl(220, 8%, 18%)',
+  secondaryForeground: 'hsl(220, 6%, 92%)',
+  
+  // Muted
+  muted: 'hsl(220, 10%, 16%)',
+  mutedForeground: 'hsl(220, 10%, 65%)',
+  
+  // Accent
+  accent: 'hsl(220, 12%, 18%)',
+  accentForeground: 'hsl(220, 6%, 92%)',
+  
+  // Destructive
+  destructive: 'hsl(0, 84%, 48%)',
+  destructiveForeground: 'hsl(0, 84%, 98%)',
+  
+  // Input fields
+  input: 'hsl(220, 10%, 30%)',
+  
+  // Focus ring
+  ring: 'hsl(217, 91%, 55%)',
+  
+  // Sidebar-specific
+  sidebar: 'hsl(220, 6%, 12%)',
+  sidebarForeground: 'hsl(220, 6%, 92%)',
+  sidebarBorder: 'hsl(220, 6%, 16%)',
+  sidebarPrimary: 'hsl(217, 91%, 55%)',
+  sidebarAccent: 'hsl(220, 8%, 16%)',
+  
+  // Elevation overlays
+  elevate1: 'rgba(255, 255, 255, 0.04)',
+  elevate2: 'rgba(255, 255, 255, 0.09)',
+};
+Status Badge Colors
+const statusColors = {
+  // Light Mode
+  light: {
+    Open: { bg: 'transparent', border: 'hsl(220, 5%, 88%)', text: 'hsl(220, 10%, 35%)' },
+    Scheduled: { bg: 'hsl(214, 95%, 93%)', text: 'hsl(214, 95%, 30%)' },      // Blue tint
+    'In Progress': { bg: 'hsl(48, 96%, 89%)', text: 'hsl(32, 95%, 30%)' },    // Yellow/amber tint
+    Completed: { bg: 'hsl(142, 69%, 90%)', text: 'hsl(142, 69%, 25%)' },      // Green tint
+    Cancelled: { bg: 'hsl(0, 84%, 95%)', text: 'hsl(0, 84%, 42%)' },          // Red tint
+    Trouble: { bg: 'hsl(38, 92%, 90%)', text: 'hsl(32, 95%, 30%)' },          // Amber tint
+  },
+  // Dark Mode
+  dark: {
+    Open: { bg: 'transparent', border: 'hsl(220, 6%, 18%)', text: 'hsl(220, 10%, 65%)' },
+    Scheduled: { bg: 'hsl(214, 95%, 15%)', text: 'hsl(214, 95%, 80%)' },
+    'In Progress': { bg: 'hsl(48, 96%, 15%)', text: 'hsl(48, 96%, 80%)' },
+    Completed: { bg: 'hsl(142, 69%, 12%)', text: 'hsl(142, 69%, 75%)' },
+    Cancelled: { bg: 'hsl(0, 84%, 15%)', text: 'hsl(0, 84%, 75%)' },
+    Trouble: { bg: 'hsl(38, 92%, 15%)', text: 'hsl(38, 92%, 75%)' },
+  },
+};
+Typography Scale
+const typography = {
+  // Font families
+  fontSans: 'Inter',                    // Primary UI font
+  fontMono: 'JetBrains Mono',           // For IDs, readings, timestamps
+  
+  // Font sizes (in pixels for React Native)
+  pageTitle: { size: 30, weight: '700' },           // text-3xl bold
+  sectionHeader: { size: 20, weight: '600' },       // text-xl semibold
+  cardTitle: { size: 18, weight: '500' },           // text-lg medium
+  body: { size: 16, weight: '400' },                // text-base
+  label: { size: 14, weight: '500', color: 'mutedForeground' },  // text-sm
+  caption: { size: 12, weight: '400', color: 'mutedForeground' }, // text-xs
+};
+Spacing System (in pixels)
+const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
+};
+Component Styling Guidelines
+Buttons:
+
+Height: 36px (default), 32px (small), 40px (large), 36x36px (icon)
+Border radius: 6px
+Primary: primary background, primaryForeground text
+Secondary: secondary background, secondaryForeground text
+Ghost: transparent background, foreground text
+Destructive: destructive background, destructiveForeground text
+Hover: Apply elevate1 overlay
+Pressed: Apply elevate2 overlay
+Cards:
+
+Background: card
+Border: 1px solid cardBorder
+Border radius: 8px
+Padding: 16px (or 24px for larger cards)
+Inputs:
+
+Height: 40px
+Border: 1px solid input
+Border radius: 6px
+Background: background
+Focus: 2px ring with ring color
+Badges/Pills:
+
+Padding: 4px horizontal, 2px vertical
+Border radius: 9999px (full pill shape) or 6px
+Font size: 12px
+Dark Mode Detection
+Sync with system preference or provide a toggle. The web app uses a class-based toggle (dark class on root element).

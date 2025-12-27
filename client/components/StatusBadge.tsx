@@ -1,55 +1,82 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, useColorScheme } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
-import { Spacing, BorderRadius } from "@/constants/theme";
+import { Spacing, BorderRadius, StatusBadgeColors, Colors } from "@/constants/theme";
 
 interface StatusBadgeProps {
   status: string;
 }
 
-const getStatusColor = (status: string): string => {
-  const normalizedStatus = status.toLowerCase().replace(/\s+/g, "_");
+type StatusKey = "Open" | "Scheduled" | "In Progress" | "Completed" | "Cancelled" | "Trouble";
+
+const normalizeStatus = (status: string): StatusKey | null => {
+  const normalized = status.toLowerCase().replace(/_/g, " ").trim();
   
-  switch (normalizedStatus) {
+  switch (normalized) {
     case "open":
     case "pending":
-      return "#3B82F6";
-    case "in_progress":
+      return "Open";
+    case "scheduled":
+      return "Scheduled";
     case "in progress":
-      return "#F59E0B";
+    case "in_progress":
+      return "In Progress";
     case "completed":
     case "complete":
-      return "#10B981";
+      return "Completed";
+    case "cancelled":
+    case "canceled":
+      return "Cancelled";
     case "trouble":
-    case "on_hold":
     case "on hold":
-      return "#EF4444";
-    case "scheduled":
-      return "#8B5CF6";
+    case "on_hold":
+      return "Trouble";
     default:
-      return "#6B7280";
+      return null;
   }
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const color = getStatusColor(status);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const statusKey = normalizeStatus(status);
+  
+  // Use neutral fallback for unknown statuses
+  const colors = statusKey 
+    ? (isDark ? StatusBadgeColors.dark[statusKey] : StatusBadgeColors.light[statusKey])
+    : {
+        bg: "transparent",
+        border: isDark ? Colors.dark.border : Colors.light.border,
+        text: isDark ? Colors.dark.textSecondary : Colors.light.textSecondary,
+      };
+
+  const hasBorder = colors.border !== "transparent";
 
   return (
-    <View style={[styles.badge, { backgroundColor: color }]}>
-      <ThemedText style={styles.text}>{status}</ThemedText>
+    <View 
+      style={[
+        styles.badge, 
+        { 
+          backgroundColor: colors.bg,
+          borderColor: hasBorder ? colors.border : "transparent",
+          borderWidth: hasBorder ? 1 : 0,
+        }
+      ]}
+    >
+      <ThemedText style={[styles.text, { color: colors.text }]}>{status}</ThemedText>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   badge: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: BorderRadius.xs,
+    paddingVertical: 2,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+    alignSelf: "flex-start",
   },
   text: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "500",
   },
 });

@@ -157,60 +157,106 @@
 
 ## Design System
 
-### Color Palette
-- **Primary**: #2563EB (Blue 600) - Professional, trustworthy for enterprise work order app
-- **Secondary**: #059669 (Emerald 600) - Success states, online indicator, sync success
-- **Accent**: #DC2626 (Red 600) - Urgent priority, errors, destructive actions
-- **Background**: #F9FAFB (Gray 50) for app background, #FFFFFF for cards
-- **Surface**: #FFFFFF for elevated cards and modals
-- **Text Primary**: #111827 (Gray 900)
-- **Text Secondary**: #6B7280 (Gray 500)
-- **Border**: #E5E7EB (Gray 200)
-- **Offline Warning**: #F59E0B (Amber 500)
-- **Sync Pending**: #8B5CF6 (Violet 500)
+**Style**: Modern Enterprise Dashboard (inspired by Linear, Notion, Carbon)  
+**Typography**: Inter (primary), JetBrains Mono (monospace for IDs/data)  
+**Border Radius**: 8px (0.5rem) - use consistently  
+**Focus on**: Data readability, quick task completion, minimal cognitive load
 
-### Typography
-- **Header Large**: 28px, Bold - Screen titles
-- **Header Medium**: 20px, Semibold - Section headers
+### Color Palette (HSL Format)
+
+#### Light Mode
+- **Background**: hsl(0, 0%, 100%) - Pure white
+- **Card/Surface**: hsl(0, 0%, 98%) - Slightly off-white
+- **Muted**: hsl(220, 10%, 94%) - Subtle backgrounds
+- **Primary**: hsl(217, 91%, 45%) - Vibrant blue
+- **Text Primary**: hsl(220, 10%, 15%) - Near black
+- **Text Secondary**: hsl(220, 10%, 35%) - Muted foreground
+- **Border**: hsl(220, 5%, 88%)
+- **Success**: hsl(142, 69%, 35%) - Green
+- **Error/Destructive**: hsl(0, 84%, 42%) - Red
+- **Warning**: hsl(38, 92%, 50%) - Amber
+
+#### Dark Mode
+- **Background**: hsl(220, 6%, 8%) - Near black
+- **Card/Surface**: hsl(220, 6%, 10%)
+- **Muted**: hsl(220, 10%, 16%)
+- **Primary**: hsl(217, 91%, 55%) - Brighter blue for dark mode
+- **Text Primary**: hsl(220, 6%, 92%) - Light text
+- **Text Secondary**: hsl(220, 10%, 65%)
+- **Border**: hsl(220, 6%, 18%)
+- **Success**: hsl(142, 69%, 45%)
+- **Error/Destructive**: hsl(0, 84%, 48%)
+- **Warning**: hsl(38, 92%, 55%)
+
+#### Status Badge Colors
+Status badges use tinted backgrounds with contrasting text:
+- **Open**: Transparent bg, border visible, muted text
+- **Scheduled**: Blue tint bg, dark blue text
+- **In Progress**: Yellow/amber tint bg, dark amber text
+- **Completed**: Green tint bg, dark green text
+- **Cancelled**: Red tint bg, dark red text
+- **Trouble**: Amber tint bg, dark amber text
+
+### Typography Scale
+- **Page Title**: 30px, Bold - Main screen headings
+- **Section Header**: 20px, Semibold - Section headings
+- **Card Title**: 18px, Medium - Card headings
 - **Body**: 16px, Regular - Main content, readable for field workers
-- **Body Small**: 14px, Regular - Secondary info, metadata
-- **Caption**: 12px, Regular - Timestamps, labels
+- **Label**: 14px, Medium - Form labels
+- **Small**: 14px, Regular - Secondary info, metadata
+- **Caption**: 12px, Regular - Timestamps, badges
 - **Button**: 16px, Semibold - Call-to-action text
+- **Mono**: 14px, Regular - IDs, readings, timestamps (JetBrains Mono)
 
 ### Component Specifications
 
-**Work Order Cards**:
-- White background with 1px border (Border color)
-- 12px corner radius
-- 16px padding
-- NO drop shadow (flat design for data density)
-- Tap feedback: slight opacity change (0.7) and scale (0.98)
-- Status badge: pill-shaped, colored background with white text
+**Buttons**:
+- Height: 36px (default), 32px (small), 40px (large), 36x36px (icon)
+- Border radius: 6px
+- Primary: Primary background, white text
+- Secondary: Secondary background, foreground text
+- Ghost: Transparent background, foreground text
+- Destructive: Destructive background, white text
+- Hover: Apply elevate1 overlay
+- Pressed: Apply elevate2 overlay
 
-**Floating Action Button** (if used for quick workflow):
-- 56x56px circle
-- Primary color background
-- White icon
-- Drop shadow: shadowOffset {width: 0, height: 2}, shadowOpacity: 0.10, shadowRadius: 2
-- Position: 16px from bottom and right edges
-- Tap feedback: scale to 0.95
+**Cards**:
+- Background: Card color
+- Border: 1px solid cardBorder
+- Border radius: 8px
+- Padding: 16px (or 24px for larger cards)
+- NO drop shadow (flat design for data density)
+
+**Inputs**:
+- Height: 40px
+- Border: 1px solid input border color
+- Border radius: 6px
+- Background: Background color
+- Focus: 2px ring with ring color
+
+**Work Order Cards**:
+- Card background with 1px border (cardBorder color)
+- 8px corner radius (BorderRadius.md)
+- 16px padding
+- Tap feedback: slight opacity change (0.7) and scale (0.98)
+
+**Status Badges**:
+- Padding: 4px horizontal, 2px vertical
+- Border radius: 6px (or full for pill shape)
+- Font size: 12px, weight 500
+- Tinted backgrounds with contrasting text (see Status Badge Colors)
+- "Open" status has visible border instead of colored background
 
 **Search Bar**:
 - 40px height
-- Light gray background (#F3F4F6)
+- Muted background
 - 8px corner radius
 - Magnifying glass icon left, clear button right
 - 14px placeholder text
 
-**Status Badges**:
-- Small pills with colored backgrounds
-- 6px corner radius
-- 6px vertical, 10px horizontal padding
-- Colors: Green (Complete), Blue (In Progress), Gray (Pending), Red (Urgent)
-
 **Offline Indicator Banner**:
 - Full-width bar at top of screen
-- Amber background (#F59E0B)
+- Warning color background
 - White text: "Offline Mode - Changes will sync when connected"
 - 8px vertical padding
 - Icon left (wifi-off)
