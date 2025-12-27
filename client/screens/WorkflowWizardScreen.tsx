@@ -55,14 +55,16 @@ export default function WorkflowWizardScreen() {
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { updateWorkOrder, referenceData } = useWorkOrders();
-  const { serverUrl, projectId } = useAuth();
+  const { updateWorkOrder, referenceData, claimWorkOrder } = useWorkOrders();
+  const { serverUrl, projectId, user } = useAuth();
   const { isOnline, addPendingAction } = useOffline();
 
   const workOrder = route.params.workOrder;
   
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [hasClaimed, setHasClaimed] = useState(false);
   const [formData, setFormData] = useState<MeterChangeoutData>({
     locationConfirmed: false,
     canChange: null,
@@ -74,6 +76,52 @@ export default function WorkflowWizardScreen() {
     gpsCoordinates: "",
     signatureName: "",
   });
+
+  const [claimError, setClaimError] = useState<string | null>(null);
+
+  useEffect(() => {
+    claimWorkOrderOnStart();
+  }, []);
+
+  const claimWorkOrderOnStart = async () => {
+    const isAlreadyAssignedToMe = workOrder.assignedUserId === user?.id && !workOrder.assignedGroupId;
+    if (isAlreadyAssignedToMe) {
+      setHasClaimed(true);
+      return;
+    }
+
+    if (!isOnline) {
+      await addPendingAction({
+        type: "claim",
+        workOrderId: String(workOrder.id),
+        workOrderTitle: workOrder.serviceAddress,
+        data: {},
+      });
+      setHasClaimed(true);
+      return;
+    }
+
+    if (!serverUrl || !projectId) {
+      setClaimError("Server not configured");
+      return;
+    }
+
+    setIsClaiming(true);
+    try {
+      await claimWorkOrder(workOrder.id);
+      setHasClaimed(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to claim work order";
+      setClaimError(message);
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
+  const handleRetryClaimOrCancel = () => {
+    setClaimError(null);
+    navigation.goBack();
+  };
 
   const steps = formData.canChange === false ? TROUBLE_STEPS : WIZARD_STEPS;
   const currentStep = steps[currentStepIndex];
@@ -163,28 +211,42 @@ export default function WorkflowWizardScreen() {
     setIsSubmitting(true);
 
     const canChange = formData.canChange === true;
+    const completedAt = new Date().toISOString();
     
-    const changeoutPayload = {
-      canChange,
-      troubleCode: canChange ? null : formData.troubleCode,
-      troubleNote: canChange ? null : formData.troubleNote,
-      oldMeterReading: formData.oldMeterReading,
-      newMeterId: canChange ? formData.newMeterId : null,
-      newMeterReading: canChange ? formData.newMeterReading : null,
-      gpsCoordinates: formData.gpsCoordinates || null,
-      signatureData: null,
-      signatureName: formData.signatureName,
+    const parseReading = (value: string): number | null => {
+      if (!value.trim()) return null;
+      const parsed = parseFloat(value);
+      return Number.isNaN(parsed) ? null : parsed;
+    };
+
+    const patchPayload = canChange ? {
+      status: "Completed",
+      old_meter_reading: parseReading(formData.oldMeterReading) ?? 0,
+      new_meter_reading: parseReading(formData.newMeterReading) ?? 0,
+      new_meter_id: formData.newMeterId,
+      new_gps: formData.gpsCoordinates || null,
+      signature_data: null,
+      signature_name: formData.signatureName,
+      trouble: null,
+      notes: null,
+      completed_at: completedAt,
+    } : {
+      status: "Trouble",
+      old_meter_reading: parseReading(formData.oldMeterReading),
+      trouble: formData.troubleCode,
+      notes: formData.troubleNote || null,
+      completed_at: completedAt,
     };
 
     try {
       if (isOnline && serverUrl && projectId) {
         const response = await fetch(
-          `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}/meter-changeout`,
+          `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}`,
           {
-            method: "POST",
+            method: "PATCH",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify(changeoutPayload),
+            body: JSON.stringify(patchPayload),
           }
         );
 
@@ -202,6 +264,7 @@ export default function WorkflowWizardScreen() {
           oldMeterReading: formData.oldMeterReading,
           troubleCode: canChange ? undefined : formData.troubleCode,
           troubleNote: canChange ? undefined : formData.troubleNote,
+          completedAt: completedAt,
           syncPending: false,
         });
       } else {
@@ -209,7 +272,7 @@ export default function WorkflowWizardScreen() {
           type: "complete",
           workOrderId: String(workOrder.id),
           workOrderTitle: workOrder.serviceAddress,
-          data: changeoutPayload,
+          data: patchPayload,
         });
         
         updateWorkOrder(workOrder.id, {
@@ -220,6 +283,7 @@ export default function WorkflowWizardScreen() {
           oldMeterReading: formData.oldMeterReading,
           troubleCode: canChange ? undefined : formData.troubleCode,
           troubleNote: canChange ? undefined : formData.troubleNote,
+          completedAt: completedAt,
         });
       }
 
@@ -335,6 +399,37 @@ export default function WorkflowWizardScreen() {
     }
   };
 
+  if (isClaiming) {
+    return (
+      <View style={[styles.container, styles.loadingContainer, { backgroundColor: theme.backgroundRoot }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <ThemedText type="body" style={{ marginTop: Spacing.lg, color: theme.textSecondary }}>
+          Claiming work order...
+        </ThemedText>
+      </View>
+    );
+  }
+
+  if (claimError) {
+    return (
+      <View style={[styles.container, styles.loadingContainer, { backgroundColor: theme.backgroundRoot }]}>
+        <Feather name="alert-circle" size={48} color={theme.error} />
+        <ThemedText type="h4" style={{ marginTop: Spacing.lg, color: theme.error, textAlign: "center" }}>
+          Could not claim work order
+        </ThemedText>
+        <ThemedText type="body" style={{ marginTop: Spacing.sm, color: theme.textSecondary, textAlign: "center", paddingHorizontal: Spacing.xl }}>
+          {claimError}
+        </ThemedText>
+        <Button
+          onPress={handleRetryClaimOrCancel}
+          style={{ marginTop: Spacing.xl, backgroundColor: theme.primary }}
+        >
+          Go Back
+        </Button>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
       <View style={[styles.progressContainer, { backgroundColor: theme.backgroundDefault }]}>
@@ -430,6 +525,10 @@ export default function WorkflowWizardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
   },
   progressContainer: {
     padding: Spacing.lg,

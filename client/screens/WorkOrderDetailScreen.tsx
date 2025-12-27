@@ -272,7 +272,7 @@ export default function WorkOrderDetailScreen() {
           style={[styles.processButton, { backgroundColor: theme.primary }]}
           disabled={isCompleted}
         >
-          {isCompleted ? "Completed" : "Process Work Order"}
+          {isCompleted ? "Completed" : "Start Meter Changeout"}
         </Button>
       </View>
     </View>

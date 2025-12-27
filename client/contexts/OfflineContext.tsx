@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface PendingAction {
   id: string;
-  type: "update" | "complete" | "workflow";
+  type: "update" | "complete" | "workflow" | "claim";
   workOrderId: string;
   workOrderTitle: string;
   data: any;
