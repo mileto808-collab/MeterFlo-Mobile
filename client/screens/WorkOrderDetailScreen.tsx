@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, Pressable, Alert, Platform, ActivityIndic
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useHeaderHeight } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
@@ -65,6 +66,7 @@ function GridItem({ label, value }: { label: string; value?: string | null }) {
 
 export default function WorkOrderDetailScreen() {
   const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
@@ -173,7 +175,10 @@ export default function WorkOrderDetailScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: insets.bottom + Spacing["5xl"] + 60 },
+          { 
+            paddingTop: headerHeight + Spacing.md,
+            paddingBottom: insets.bottom + Spacing["5xl"] + 60,
+          },
         ]}
         scrollIndicatorInsets={{ bottom: insets.bottom }}
         showsVerticalScrollIndicator={false}
