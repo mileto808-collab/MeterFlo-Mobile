@@ -1,0 +1,117 @@
+ the relevant code to explain the meter changeout wizard flow:
+
+Here's a comprehensive explanation of the Meter Changeout Wizard flow for the MeterFlo Mobile team:
+
+Meter Changeout Wizard - Complete Flow
+1. Entry Points (Two Ways to Launch)
+A. From Work Order Detail Page
+When viewing a single work order, there's a "Start Meter Changeout" button in the Meter Changeout section.
+
+B. From Work Orders List Page
+The work orders table has an action menu with a "Start Wizard" option for each row.
+
+2. Claim Endpoint (Called Before Wizard Opens)
+Endpoint: POST /api/projects/:projectId/work-orders/:workOrderId/claim
+
+Purpose: Assigns the work order to the current user before starting the wizard.
+
+Behavior:
+
+// If already assigned to this user AND no group assignment -> skip claim
+if (workOrder.assignedUserId === currentUser.id && !workOrder.assignedGroupId) {
+  return { message: "Already assigned to you", workOrder, claimed: false };
+}
+// Otherwise, ALWAYS perform claim:
+// 1. Set assigned_user_id to current user
+// 2. Clear assigned_group_id (set to null)
+const updatedWorkOrder = await updateWorkOrder(workOrderId, {
+  assignedUserId: currentUser.id,
+  assignedGroupId: null  // IMPORTANT: clears group assignment
+});
+return { message: "Work order assigned to you", workOrder: updatedWorkOrder, claimed: true };
+Key Points:
+
+Even if the work order is assigned to the user's group, claiming still happens
+Claiming removes the group assignment and directly assigns to the user
+The updated_by field is set to the user's username (FK constraint)
+updated_at is automatically updated
+3. Wizard Props (Data Passed to Wizard)
+When the wizard opens, it receives this data from the parent:
+
+<MeterChangeoutWizard
+  isOpen={showMeterChangeoutWizard}
+  onClose={() => setShowMeterChangeoutWizard(false)}
+  workOrderId={workOrder.id}
+  customerWoId={workOrder.customerWoId || `WO-${workOrder.id}`}
+  address={workOrder.address}
+  oldMeterId={workOrder.oldMeterId}
+  status={workOrder.status}
+  trouble={workOrder.trouble}
+  notes={workOrder.notes}
+  projectId={projectId}
+  troubleCodes={troubleCodes}
+  existingOldReading={workOrder.oldMeterReading}
+  existingNewReading={workOrder.newMeterReading}
+  existingGps={workOrder.gps}
+  onComplete={async (data) => { /* handle completion */ }}
+/>
+4. Wizard Steps (Inside the Wizard)
+The wizard guides the technician through these steps:
+
+Verify Location - Confirm GPS coordinates
+Old Meter Reading - Capture the final reading of the old meter
+Photo Capture - Take photos of old meter, new meter, installation
+New Meter Installation - Enter new meter ID and initial reading
+Trouble Codes - Select any issues encountered (optional)
+Customer Signature - Capture digital signature
+Notes - Add any additional notes
+Review & Submit - Final review before completion
+5. Completion (onComplete Callback)
+When the wizard completes, it calls the onComplete callback with:
+
+{
+  oldMeterReading: number,
+  newMeterReading: number,
+  newMeterId: string,
+  gps: string,  // "lat,lng" format
+  photos: File[],
+  signatureData: string,  // Base64 encoded signature image
+  signatureName: string,  // Customer name
+  trouble: string | null,
+  notes: string,
+  completedAt: string  // ISO timestamp
+}
+The parent component then:
+
+Creates a FormData object with all the data
+Sends PATCH /api/projects/:projectId/work-orders/:workOrderId with the completion data
+Sets status to "Completed"
+Sets completed_by to the current user's ID
+Triggers webhook if configured on the project
+6. Mobile Implementation Notes
+For the mobile app, you'll want to:
+
+Call claim first:
+
+POST /api/projects/{projectId}/work-orders/{workOrderId}/claim
+Use the response to populate wizard state:
+
+The claim response includes the full workOrder object
+Use snake_case field names: customer_wo_id, old_meter_id, etc.
+On completion, send PATCH:
+
+PATCH /api/projects/{projectId}/work-orders/{workOrderId}
+Content-Type: multipart/form-data (if including photos)
+{
+  "status": "Completed",
+  "old_meter_reading": 12345,
+  "new_meter_reading": 0,
+  "new_meter_id": "MTR-NEW-789",
+  "new_gps": "39.7817,-89.6501",
+  "signature_data": "base64...",
+  "signature_name": "John Doe",
+  "trouble": null,
+  "notes": "Installed successfully",
+  "completed_at": "2024-12-27T15:30:00.000Z"
+}
+Offline support: Store all wizard data locally, then sync when online using the mobile sync upload endpoint.
