@@ -7,7 +7,6 @@ import { HeaderButton } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import * as Linking from "expo-linking";
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
@@ -292,31 +291,6 @@ export default function WorkflowWizardScreen() {
     if (Platform.OS !== "web") {
       Alert.alert("Scanned Successfully", result.data);
     }
-  };
-
-  const launchExternalScanner = async () => {
-    if (Platform.OS === "web") {
-      Alert.alert("Not Available", "Scanner is not available on web. Please use the built-in camera scanner.");
-      return;
-    }
-
-    Alert.alert(
-      "Choose Scanner",
-      "How would you like to scan the barcode?",
-      [
-        { 
-          text: "Use Camera", 
-          onPress: () => { 
-            setScannerType("barcode"); 
-            setShowScanner(true); 
-          } 
-        },
-        {
-          text: "Enter Manually",
-          style: "cancel",
-        },
-      ]
-    );
   };
 
   const captureGps = async () => {
@@ -749,7 +723,7 @@ export default function WorkflowWizardScreen() {
             </ThemedText>
             
             <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
-              Use built-in camera:
+              Scan with camera:
             </ThemedText>
             <View style={styles.scanButtonsRow}>
               <Pressable
@@ -769,23 +743,6 @@ export default function WorkflowWizardScreen() {
               </Pressable>
             </View>
             
-            {Platform.OS === "android" ? (
-              <View style={{ marginTop: Spacing.md }}>
-                <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
-                  Or use external scanner app:
-                </ThemedText>
-                <Pressable
-                  style={[styles.externalScannerButton, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
-                  onPress={launchExternalScanner}
-                >
-                  <Feather name="external-link" size={20} color={theme.primary} />
-                  <ThemedText type="body" style={{ marginLeft: Spacing.sm, color: theme.text }}>
-                    Launch Scanner App
-                  </ThemedText>
-                </Pressable>
-              </View>
-            ) : null}
-            
             <ThemedText type="caption" style={{ color: theme.textSecondary, marginVertical: Spacing.md, textAlign: "center" }}>
               or enter manually
             </ThemedText>
@@ -793,9 +750,12 @@ export default function WorkflowWizardScreen() {
             <TextInput
               value={formData.newMeterId}
               onChangeText={(text) => setFormData(prev => ({ ...prev, newMeterId: text }))}
-              placeholder="Enter new meter ID"
+              placeholder="Type or use HID scanner"
               autoCapitalize="characters"
             />
+            <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: Spacing.xs, textAlign: "center" }}>
+              Tap field and scan with Bluetooth/USB barcode gun
+            </ThemedText>
           </View>
         );
 
@@ -1316,14 +1276,6 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderRadius: BorderRadius.md,
     alignItems: "center",
-  },
-  externalScannerButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
   },
   gpsResult: {
     flexDirection: "row",
