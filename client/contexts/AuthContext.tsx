@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
+import { proxyRequest, clearProxySession } from "@/lib/api-proxy";
 
 export interface User {
   id: string;
@@ -128,19 +129,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const normalizedUrl = serverUrl.endsWith("/") ? serverUrl.slice(0, -1) : serverUrl;
       
-      const loginResponse = await fetch(`${normalizedUrl}/api/auth/local/login`, {
+      const loginData = await proxyRequest({
+        serverUrl: normalizedUrl,
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ username, password }),
+        path: "/api/auth/local/login",
+        body: { username, password },
       });
 
-      if (!loginResponse.ok) {
-        const errorText = await loginResponse.text();
-        throw new Error(errorText || "Invalid username or password");
-      }
-
-      const loginData = await loginResponse.json();
       const user: User = {
         id: loginData.user?.id || loginData.id,
         username: loginData.user?.username || loginData.username,
@@ -148,17 +143,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: loginData.user?.role || loginData.role || "User",
       };
 
-      const projectsResponse = await fetch(`${normalizedUrl}/api/users/${user.id}/projects`, {
+      const projectsData = await proxyRequest({
+        serverUrl: normalizedUrl,
         method: "GET",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        path: `/api/users/${user.id}/projects`,
       });
 
-      if (!projectsResponse.ok) {
-        throw new Error("Failed to fetch projects");
-      }
-
-      const projectsData = await projectsResponse.json();
       const projects: Project[] = Array.isArray(projectsData) ? projectsData : projectsData.projects || [];
 
       await Promise.all([
@@ -206,6 +196,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    const storedServerUrl = await secureGet(STORAGE_KEYS.SERVER_URL);
+    if (storedServerUrl) {
+      try {
+        await clearProxySession(storedServerUrl);
+      } catch (e) {
+        console.warn("Failed to clear proxy session:", e);
+      }
+    }
+    
     await Promise.all([
       secureDelete(STORAGE_KEYS.USER),
       secureDelete(STORAGE_KEYS.PROJECT_ID),

@@ -11,6 +11,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders } from "@/contexts/WorkOrderContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOffline } from "@/contexts/OfflineContext";
+import { proxyRequest } from "@/lib/api-proxy";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { ThemedText } from "@/components/ThemedText";
 import { TextInput } from "@/components/TextInput";
@@ -178,40 +179,12 @@ export default function WorkflowWizardScreen() {
 
     try {
       if (isOnline && serverUrl && projectId) {
-        const formDataToSend = new FormData();
-        
-        formDataToSend.append("canChange", String(canChange));
-        if (!canChange && formData.troubleCode) {
-          formDataToSend.append("troubleCode", formData.troubleCode);
-        }
-        if (!canChange && formData.troubleNote) {
-          formDataToSend.append("troubleNote", formData.troubleNote);
-        }
-        formDataToSend.append("oldMeterReading", formData.oldMeterReading);
-        if (canChange) {
-          formDataToSend.append("newMeterId", formData.newMeterId);
-          formDataToSend.append("newMeterReading", formData.newMeterReading);
-        }
-        if (formData.gpsCoordinates) {
-          formDataToSend.append("gpsCoordinates", formData.gpsCoordinates);
-        }
-        formDataToSend.append("signatureName", formData.signatureName);
-
-        const response = await fetch(
-          `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}/meter-changeout`,
-          {
-            method: "POST",
-            credentials: "include",
-            body: formDataToSend,
-          }
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(errorText || "Failed to complete work order");
-        }
-
-        const result = await response.json();
+        const result = await proxyRequest({
+          serverUrl,
+          method: "POST",
+          path: `/api/projects/${projectId}/work-orders/${workOrder.id}/meter-changeout`,
+          body: changeoutPayload,
+        });
         
         updateWorkOrder(workOrder.id, {
           status: result.workOrder?.status || (canChange ? "Completed" : "Trouble"),
