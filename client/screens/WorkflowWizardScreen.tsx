@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, Alert, Platform } from "react-native";
+import { View, StyleSheet, Alert, Platform, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -8,7 +8,8 @@ import { Feather } from "@expo/vector-icons";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useTheme } from "@/hooks/useTheme";
-import { useWorkOrders, WorkflowStep } from "@/contexts/WorkOrderContext";
+import { useWorkOrders } from "@/contexts/WorkOrderContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useOffline } from "@/contexts/OfflineContext";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { ThemedText } from "@/components/ThemedText";
@@ -21,34 +22,72 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 type RouteProps = RouteProp<RootStackParamList, "WorkflowWizard">;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+interface MeterChangeoutData {
+  locationConfirmed: boolean;
+  canChange: boolean | null;
+  troubleCode: string;
+  troubleNote: string;
+  oldMeterReading: string;
+  newMeterId: string;
+  newMeterReading: string;
+  gpsCoordinates: string;
+  signatureName: string;
+}
+
+const WIZARD_STEPS = [
+  { id: "confirm", name: "Confirm Location", type: "checkbox" },
+  { id: "canChange", name: "Can Change Meter?", type: "select" },
+  { id: "oldReading", name: "Old Meter Reading", type: "number" },
+  { id: "newMeterId", name: "New Meter ID", type: "text" },
+  { id: "newReading", name: "New Meter Reading", type: "number" },
+  { id: "signature", name: "Customer Signature", type: "signature" },
+];
+
+const TROUBLE_STEPS = [
+  { id: "confirm", name: "Confirm Location", type: "checkbox" },
+  { id: "canChange", name: "Can Change Meter?", type: "select" },
+  { id: "troubleCode", name: "Trouble Code", type: "select" },
+  { id: "troubleNote", name: "Trouble Notes", type: "text" },
+];
+
 export default function WorkflowWizardScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { updateWorkOrder } = useWorkOrders();
+  const { updateWorkOrder, referenceData } = useWorkOrders();
+  const { serverUrl, projectId } = useAuth();
   const { isOnline, addPendingAction } = useOffline();
 
-  const [workOrder, setWorkOrder] = useState(route.params.workOrder);
-  const [currentStepIndex, setCurrentStepIndex] = useState(
-    workOrder.workflowSteps.findIndex(s => !s.completed)
-  );
-  const [stepValues, setStepValues] = useState<Record<string, any>>({});
+  const workOrder = route.params.workOrder;
+  
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<MeterChangeoutData>({
+    locationConfirmed: false,
+    canChange: null,
+    troubleCode: "",
+    troubleNote: "",
+    oldMeterReading: workOrder.oldMeterReading || "",
+    newMeterId: "",
+    newMeterReading: "",
+    gpsCoordinates: "",
+    signatureName: "",
+  });
 
-  const currentStep = workOrder.workflowSteps[currentStepIndex] || workOrder.workflowSteps[0];
-  const totalSteps = workOrder.workflowSteps.length;
+  const steps = formData.canChange === false ? TROUBLE_STEPS : WIZARD_STEPS;
+  const currentStep = steps[currentStepIndex];
+  const totalSteps = steps.length;
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;
 
-  useEffect(() => {
-    const initialValues: Record<string, any> = {};
-    workOrder.workflowSteps.forEach(step => {
-      if (step.value !== undefined) {
-        initialValues[step.id] = step.value;
-      }
-    });
-    setStepValues(initialValues);
-  }, []);
+  const troubleCodes = referenceData?.troubleCodes?.map(tc => tc.code) || [
+    "ACCESS_DENIED",
+    "METER_LOCKED",
+    "UNSAFE_CONDITIONS",
+    "CUSTOMER_REFUSED",
+    "OTHER",
+  ];
 
   useEffect(() => {
     navigation.setOptions({
@@ -76,20 +115,27 @@ export default function WorkflowWizardScreen() {
     );
   };
 
-  const getCurrentValue = () => stepValues[currentStep.id];
-
-  const setCurrentValue = (value: any) => {
-    setStepValues(prev => ({ ...prev, [currentStep.id]: value }));
-  };
-
-  const isCurrentStepValid = () => {
-    if (!currentStep.required) return true;
-    
-    const value = getCurrentValue();
-    if (value === undefined || value === null || value === "") return false;
-    if (currentStep.type === "checkbox" && !value) return false;
-    
-    return true;
+  const isCurrentStepValid = (): boolean => {
+    switch (currentStep.id) {
+      case "confirm": 
+        return formData.locationConfirmed === true;
+      case "canChange": 
+        return formData.canChange !== null;
+      case "oldReading": 
+        return formData.oldMeterReading.trim().length > 0;
+      case "newMeterId": 
+        return formData.newMeterId.trim().length > 0;
+      case "newReading": 
+        return formData.newMeterReading.trim().length > 0;
+      case "troubleCode": 
+        return formData.troubleCode.length > 0;
+      case "troubleNote": 
+        return true;
+      case "signature": 
+        return formData.signatureName.trim().length > 0;
+      default: 
+        return true;
+    }
   };
 
   const handleNext = () => {
@@ -100,21 +146,8 @@ export default function WorkflowWizardScreen() {
       return;
     }
 
-    const updatedSteps = [...workOrder.workflowSteps];
-    updatedSteps[currentStepIndex] = {
-      ...currentStep,
-      value: getCurrentValue(),
-      completed: true,
-    };
-
-    setWorkOrder(prev => ({
-      ...prev,
-      workflowSteps: updatedSteps,
-      currentStep: currentStepIndex + 1,
-    }));
-
     if (isLastStep) {
-      handleComplete(updatedSteps);
+      handleComplete();
     } else {
       setCurrentStepIndex(prev => prev + 1);
     }
@@ -126,90 +159,197 @@ export default function WorkflowWizardScreen() {
     }
   };
 
-  const handleComplete = async (updatedSteps: WorkflowStep[]) => {
-    const completedWorkOrder = {
-      ...workOrder,
-      status: "completed" as const,
-      workflowSteps: updatedSteps,
-      currentStep: totalSteps,
+  const handleComplete = async () => {
+    setIsSubmitting(true);
+
+    const canChange = formData.canChange === true;
+    
+    const changeoutPayload = {
+      canChange,
+      troubleCode: canChange ? null : formData.troubleCode,
+      troubleNote: canChange ? null : formData.troubleNote,
+      oldMeterReading: formData.oldMeterReading,
+      newMeterId: canChange ? formData.newMeterId : null,
+      newMeterReading: canChange ? formData.newMeterReading : null,
+      gpsCoordinates: formData.gpsCoordinates || null,
+      signatureData: null,
+      signatureName: formData.signatureName,
     };
 
-    if (isOnline) {
-      updateWorkOrder(workOrder.id, completedWorkOrder);
-    } else {
-      await addPendingAction({
-        type: "complete",
-        workOrderId: workOrder.id,
-        workOrderTitle: workOrder.title,
-        data: completedWorkOrder,
-      });
-      updateWorkOrder(workOrder.id, { ...completedWorkOrder, syncPending: true });
-    }
+    try {
+      if (isOnline && serverUrl && projectId) {
+        const formDataToSend = new FormData();
+        
+        formDataToSend.append("canChange", String(canChange));
+        if (!canChange && formData.troubleCode) {
+          formDataToSend.append("troubleCode", formData.troubleCode);
+        }
+        if (!canChange && formData.troubleNote) {
+          formDataToSend.append("troubleNote", formData.troubleNote);
+        }
+        formDataToSend.append("oldMeterReading", formData.oldMeterReading);
+        if (canChange) {
+          formDataToSend.append("newMeterId", formData.newMeterId);
+          formDataToSend.append("newMeterReading", formData.newMeterReading);
+        }
+        if (formData.gpsCoordinates) {
+          formDataToSend.append("gpsCoordinates", formData.gpsCoordinates);
+        }
+        formDataToSend.append("signatureName", formData.signatureName);
 
-    navigation.goBack();
-    navigation.goBack();
+        const response = await fetch(
+          `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}/meter-changeout`,
+          {
+            method: "POST",
+            credentials: "include",
+            body: formDataToSend,
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || "Failed to complete work order");
+        }
+
+        const result = await response.json();
+        
+        updateWorkOrder(workOrder.id, {
+          status: result.workOrder?.status || (canChange ? "Completed" : "Trouble"),
+          newMeterId: canChange ? formData.newMeterId : undefined,
+          newMeterReading: canChange ? formData.newMeterReading : undefined,
+          oldMeterReading: formData.oldMeterReading,
+          troubleCode: canChange ? undefined : formData.troubleCode,
+          troubleNote: canChange ? undefined : formData.troubleNote,
+          syncPending: false,
+        });
+      } else {
+        await addPendingAction({
+          type: "complete",
+          workOrderId: String(workOrder.id),
+          workOrderTitle: workOrder.serviceAddress,
+          data: changeoutPayload,
+        });
+        
+        updateWorkOrder(workOrder.id, {
+          status: canChange ? "Completed" : "Trouble",
+          syncPending: true,
+          newMeterId: canChange ? formData.newMeterId : undefined,
+          newMeterReading: canChange ? formData.newMeterReading : undefined,
+          oldMeterReading: formData.oldMeterReading,
+          troubleCode: canChange ? undefined : formData.troubleCode,
+          troubleNote: canChange ? undefined : formData.troubleNote,
+        });
+      }
+
+      navigation.goBack();
+      navigation.goBack();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to complete work order";
+      if (Platform.OS === "web") {
+        alert(message);
+      } else {
+        Alert.alert("Error", message);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const renderStepInput = () => {
-    switch (currentStep.type) {
-      case "checkbox":
+    switch (currentStep.id) {
+      case "confirm":
         return (
           <Checkbox
-            checked={getCurrentValue() || false}
-            onToggle={() => setCurrentValue(!getCurrentValue())}
-            label="I confirm this step is complete"
+            checked={formData.locationConfirmed}
+            onToggle={() => setFormData(prev => ({ ...prev, locationConfirmed: !prev.locationConfirmed }))}
+            label="I confirm I am at the correct location and ready to proceed"
           />
         );
       
-      case "number":
+      case "canChange":
+        return (
+          <SelectInput
+            value={formData.canChange === null ? "" : formData.canChange ? "Yes" : "No"}
+            options={["Yes", "No"]}
+            onSelect={(value) => setFormData(prev => ({ ...prev, canChange: value === "Yes" }))}
+            placeholder="Can you change the meter?"
+          />
+        );
+
+      case "oldReading":
         return (
           <TextInput
-            value={getCurrentValue()?.toString() || ""}
-            onChangeText={text => setCurrentValue(text ? parseFloat(text) : "")}
-            placeholder="Enter value"
+            value={formData.oldMeterReading}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, oldMeterReading: text }))}
+            placeholder="Enter old meter reading"
             keyboardType="numeric"
           />
         );
-      
-      case "select":
-        return (
-          <SelectInput
-            value={getCurrentValue() || ""}
-            options={currentStep.options || []}
-            onSelect={setCurrentValue}
-            placeholder="Select an option"
-          />
-        );
-      
-      case "photo":
-        return (
-          <View style={[styles.photoPlaceholder, { borderColor: theme.border }]}>
-            <Feather name="camera" size={32} color={theme.textSecondary} />
-            <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              Photo capture available in Expo Go
-            </ThemedText>
-          </View>
-        );
-      
-      case "signature":
-        return (
-          <View style={[styles.photoPlaceholder, { borderColor: theme.border }]}>
-            <Feather name="edit-3" size={32} color={theme.textSecondary} />
-            <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              Signature capture available in Expo Go
-            </ThemedText>
-          </View>
-        );
-      
-      default:
+
+      case "newMeterId":
         return (
           <TextInput
-            value={getCurrentValue() || ""}
-            onChangeText={setCurrentValue}
-            placeholder="Enter value"
-            multiline={currentStep.type === "text"}
+            value={formData.newMeterId}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, newMeterId: text }))}
+            placeholder="Scan or enter new meter ID"
+            autoCapitalize="characters"
           />
         );
+
+      case "newReading":
+        return (
+          <TextInput
+            value={formData.newMeterReading}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, newMeterReading: text }))}
+            placeholder="Enter new meter reading (usually 0)"
+            keyboardType="numeric"
+          />
+        );
+
+      case "troubleCode":
+        return (
+          <SelectInput
+            value={formData.troubleCode}
+            options={troubleCodes}
+            onSelect={(value) => setFormData(prev => ({ ...prev, troubleCode: value }))}
+            placeholder="Select trouble code"
+          />
+        );
+
+      case "troubleNote":
+        return (
+          <TextInput
+            value={formData.troubleNote}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, troubleNote: text }))}
+            placeholder="Describe the issue (optional)"
+            multiline
+          />
+        );
+
+      case "signature":
+        return (
+          <View>
+            <View style={[styles.signaturePlaceholder, { borderColor: theme.border }]}>
+              <Feather name="edit-3" size={32} color={theme.textSecondary} />
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                Signature capture available in Expo Go
+              </ThemedText>
+            </View>
+            <View style={{ marginTop: Spacing.lg }}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+                Customer Name
+              </ThemedText>
+              <TextInput
+                value={formData.signatureName}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, signatureName: text }))}
+                placeholder="Enter customer name"
+              />
+            </View>
+          </View>
+        );
+
+      default:
+        return null;
     }
   };
 
@@ -244,13 +384,21 @@ export default function WorkflowWizardScreen() {
           { paddingBottom: insets.bottom + Spacing["5xl"] + 80 },
         ]}
       >
+        <View style={[styles.woInfo, { backgroundColor: theme.backgroundSecondary }]}>
+          <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+            {workOrder.customerWoId}
+          </ThemedText>
+          <ThemedText type="body">{workOrder.serviceAddress}</ThemedText>
+          <ThemedText type="small" style={{ color: theme.textSecondary }}>
+            Old Meter: {workOrder.oldMeterId || "N/A"}
+          </ThemedText>
+        </View>
+
         <View style={[styles.stepCard, { backgroundColor: theme.backgroundDefault }]}>
           <ThemedText type="h3" style={styles.stepTitle}>{currentStep.name}</ThemedText>
-          {currentStep.required ? (
-            <ThemedText type="caption" style={[styles.requiredText, { color: theme.error }]}>
-              Required
-            </ThemedText>
-          ) : null}
+          <ThemedText type="caption" style={[styles.requiredText, { color: theme.error }]}>
+            Required
+          </ThemedText>
           
           <View style={styles.inputContainer}>
             {renderStepInput()}
@@ -270,6 +418,7 @@ export default function WorkflowWizardScreen() {
             <Button
               onPress={handlePrevious}
               style={[styles.secondaryButton, { backgroundColor: theme.backgroundSecondary }]}
+              disabled={isSubmitting}
             >
               <ThemedText style={{ color: theme.text }}>Previous</ThemedText>
             </Button>
@@ -280,9 +429,15 @@ export default function WorkflowWizardScreen() {
           <Button
             onPress={handleNext}
             style={[styles.primaryButton, { backgroundColor: theme.primary }]}
-            disabled={currentStep.required && !isCurrentStepValid()}
+            disabled={!isCurrentStepValid() || isSubmitting}
           >
-            {isLastStep ? "Complete" : "Next"}
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : isLastStep ? (
+              "Complete"
+            ) : (
+              "Next"
+            )}
           </Button>
         </View>
       </View>
@@ -317,6 +472,12 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.lg,
+    gap: Spacing.lg,
+  },
+  woInfo: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.xs,
   },
   stepCard: {
     padding: Spacing.xl,
@@ -330,14 +491,14 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginTop: Spacing.md,
   },
-  photoPlaceholder: {
-    height: 160,
+  signaturePlaceholder: {
+    height: 120,
     borderWidth: 2,
     borderStyle: "dashed",
     borderRadius: BorderRadius.md,
     justifyContent: "center",
     alignItems: "center",
-    gap: Spacing.md,
+    gap: Spacing.sm,
   },
   bottomActions: {
     position: "absolute",

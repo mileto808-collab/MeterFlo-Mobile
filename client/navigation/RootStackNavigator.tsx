@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
 import MainTabNavigator from "@/navigation/MainTabNavigator";
 import LoginScreen from "@/screens/LoginScreen";
+import ProjectSelectScreen from "@/screens/ProjectSelectScreen";
 import WorkOrderDetailScreen from "@/screens/WorkOrderDetailScreen";
 import WorkflowWizardScreen from "@/screens/WorkflowWizardScreen";
 import FilterScreen from "@/screens/FilterScreen";
@@ -14,6 +15,7 @@ import { WorkOrder } from "@/contexts/WorkOrderContext";
 
 export type RootStackParamList = {
   Login: undefined;
+  ProjectSelect: undefined;
   Main: undefined;
   WorkOrderDetail: { workOrder: WorkOrder };
   WorkflowWizard: { workOrder: WorkOrder };
@@ -24,7 +26,7 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootStackNavigator() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, needsProjectSelection } = useAuth();
   const { theme } = useTheme();
   const screenOptions = useScreenOptions();
 
@@ -38,10 +40,16 @@ export default function RootStackNavigator() {
 
   return (
     <Stack.Navigator screenOptions={screenOptions}>
-      {!isAuthenticated ? (
+      {!isAuthenticated && !needsProjectSelection ? (
         <Stack.Screen
           name="Login"
           component={LoginScreen}
+          options={{ headerShown: false }}
+        />
+      ) : needsProjectSelection ? (
+        <Stack.Screen
+          name="ProjectSelect"
+          component={ProjectSelectScreen}
           options={{ headerShown: false }}
         />
       ) : (

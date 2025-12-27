@@ -6,7 +6,6 @@ import { useTheme } from "@/hooks/useTheme";
 import { WorkOrder } from "@/contexts/WorkOrderContext";
 import { ThemedText } from "@/components/ThemedText";
 import { StatusBadge } from "@/components/StatusBadge";
-import { PriorityBadge } from "@/components/PriorityBadge";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 interface WorkOrderCardProps {
@@ -39,13 +38,14 @@ export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
     scale.value = withSpring(1, springConfig);
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Not scheduled";
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   };
 
-  const completedSteps = workOrder.workflowSteps.filter(s => s.completed).length;
-  const totalSteps = workOrder.workflowSteps.length;
+  const displayAddress = workOrder.serviceAddress || "No address";
+  const displayAssignee = workOrder.assigned_user_display_name || workOrder.assigned_user_username || "Unassigned";
 
   return (
     <AnimatedPressable
@@ -64,7 +64,6 @@ export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
       <View style={styles.header}>
         <View style={styles.badges}>
           <StatusBadge status={workOrder.status} />
-          <PriorityBadge priority={workOrder.priority} />
         </View>
         {workOrder.syncPending ? (
           <View style={[styles.syncPending, { backgroundColor: theme.syncPending }]}>
@@ -74,46 +73,33 @@ export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
       </View>
 
       <ThemedText type="h4" numberOfLines={2} style={styles.title}>
-        {workOrder.title}
+        {displayAddress}
       </ThemedText>
 
       <ThemedText type="caption" style={[styles.id, { color: theme.textSecondary }]}>
-        {workOrder.id}
+        {workOrder.customerWoId} - {workOrder.oldMeterId || "No meter ID"}
       </ThemedText>
+
+      {workOrder.customerName ? (
+        <ThemedText type="small" style={{ color: theme.textSecondary }} numberOfLines={1}>
+          {workOrder.customerName}
+        </ThemedText>
+      ) : null}
 
       <View style={styles.footer}>
         <View style={styles.footerItem}>
           <Feather name="user" size={14} color={theme.textSecondary} />
           <ThemedText type="small" style={{ color: theme.textSecondary }} numberOfLines={1}>
-            {workOrder.assignedTo}
+            {displayAssignee}
           </ThemedText>
         </View>
         <View style={styles.footerItem}>
           <Feather name="calendar" size={14} color={theme.textSecondary} />
           <ThemedText type="small" style={{ color: theme.textSecondary }}>
-            {formatDate(workOrder.dueDate)}
+            {formatDate(workOrder.scheduledDate)}
           </ThemedText>
         </View>
       </View>
-
-      {totalSteps > 0 ? (
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${(completedSteps / totalSteps) * 100}%`,
-                  backgroundColor: completedSteps === totalSteps ? theme.success : theme.primary,
-                },
-              ]}
-            />
-          </View>
-          <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-            {completedSteps}/{totalSteps}
-          </ThemedText>
-        </View>
-      ) : null}
     </AnimatedPressable>
   );
 }
@@ -154,21 +140,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.xs,
-  },
-  progressContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
-  },
-  progressBar: {
     flex: 1,
-    height: 4,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 2,
   },
 });

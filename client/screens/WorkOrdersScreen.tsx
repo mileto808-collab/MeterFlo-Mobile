@@ -25,7 +25,7 @@ export default function WorkOrdersScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { filters, setFilters, getFilteredWorkOrders, isLoading, refreshWorkOrders } = useWorkOrders();
+  const { filters, setFilters, getFilteredWorkOrders, isLoading, refreshWorkOrders, error } = useWorkOrders();
   const { isOnline } = useOffline();
 
   const filteredWorkOrders = useMemo(() => getFilteredWorkOrders(), [getFilteredWorkOrders]);
@@ -33,7 +33,6 @@ export default function WorkOrdersScreen() {
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filters.status.length > 0) count++;
-    if (filters.priority.length > 0) count++;
     if (filters.assignedTo) count++;
     return count;
   }, [filters]);
@@ -50,21 +49,23 @@ export default function WorkOrdersScreen() {
     <WorkOrderCard workOrder={item} onPress={() => handleWorkOrderPress(item)} />
   ), [handleWorkOrderPress]);
 
-  const keyExtractor = useCallback((item: WorkOrder) => item.id, []);
+  const keyExtractor = useCallback((item: WorkOrder) => String(item.id), []);
 
   const ListEmptyComponent = useMemo(() => (
     <View style={styles.emptyContainer}>
       <Feather name="inbox" size={48} color={theme.textSecondary} />
       <ThemedText type="body" style={[styles.emptyText, { color: theme.textSecondary }]}>
-        No work orders found
+        {error ? "Failed to load work orders" : "No work orders found"}
       </ThemedText>
       <ThemedText type="small" style={[styles.emptySubtext, { color: theme.textSecondary }]}>
-        {filters.searchQuery || activeFilterCount > 0
-          ? "Try adjusting your search or filters"
-          : "Pull down to refresh"}
+        {error 
+          ? error 
+          : filters.searchQuery || activeFilterCount > 0
+            ? "Try adjusting your search or filters"
+            : "Pull down to refresh"}
       </ThemedText>
     </View>
-  ), [theme, filters.searchQuery, activeFilterCount]);
+  ), [theme, filters.searchQuery, activeFilterCount, error]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
@@ -180,5 +181,6 @@ const styles = StyleSheet.create({
   emptySubtext: {
     marginTop: Spacing.sm,
     textAlign: "center",
+    paddingHorizontal: Spacing.xl,
   },
 });

@@ -11,31 +11,38 @@ import { useWorkOrders, FilterConfig } from "@/contexts/WorkOrderContext";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
-import { Spacing, BorderRadius, StatusColors } from "@/constants/theme";
+import { Spacing, BorderRadius } from "@/constants/theme";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const STATUS_OPTIONS = [
-  { value: "pending", label: "Pending", color: StatusColors.pending },
-  { value: "in_progress", label: "In Progress", color: StatusColors.inProgress },
-  { value: "completed", label: "Completed", color: StatusColors.completed },
-  { value: "on_hold", label: "On Hold", color: StatusColors.onHold },
-];
-
-const PRIORITY_OPTIONS = [
-  { value: "low", label: "Low", color: "#6B7280" },
-  { value: "medium", label: "Medium", color: "#F59E0B" },
-  { value: "high", label: "High", color: "#EF4444" },
-  { value: "urgent", label: "Urgent", color: "#DC2626" },
+const DEFAULT_STATUS_OPTIONS = [
+  { value: "Open", color: "#3B82F6" },
+  { value: "In Progress", color: "#F59E0B" },
+  { value: "Completed", color: "#10B981" },
+  { value: "Trouble", color: "#EF4444" },
 ];
 
 export default function FilterScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { filters, setFilters } = useWorkOrders();
+  const { filters, setFilters, referenceData } = useWorkOrders();
 
   const [localFilters, setLocalFilters] = useState<FilterConfig>(filters);
+
+  const statusOptions = referenceData?.statuses?.map(status => ({
+    value: status,
+    color: getStatusColor(status),
+  })) || DEFAULT_STATUS_OPTIONS;
+
+  function getStatusColor(status: string): string {
+    const normalized = status.toLowerCase();
+    if (normalized === "open") return "#3B82F6";
+    if (normalized.includes("progress")) return "#F59E0B";
+    if (normalized === "completed") return "#10B981";
+    if (normalized === "trouble") return "#EF4444";
+    return "#6B7280";
+  }
 
   useEffect(() => {
     navigation.setOptions({
@@ -55,10 +62,8 @@ export default function FilterScreen() {
   const handleReset = () => {
     setLocalFilters({
       status: [],
-      priority: [],
       assignedTo: "",
       searchQuery: filters.searchQuery,
-      dateRange: { start: null, end: null },
     });
   };
 
@@ -76,16 +81,7 @@ export default function FilterScreen() {
     }));
   };
 
-  const togglePriority = (priority: string) => {
-    setLocalFilters(prev => ({
-      ...prev,
-      priority: prev.priority.includes(priority)
-        ? prev.priority.filter(p => p !== priority)
-        : [...prev.priority, priority],
-    }));
-  };
-
-  const activeCount = localFilters.status.length + localFilters.priority.length + (localFilters.assignedTo ? 1 : 0);
+  const activeCount = localFilters.status.length + (localFilters.assignedTo ? 1 : 0);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
@@ -99,7 +95,7 @@ export default function FilterScreen() {
         <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
           <ThemedText type="h4" style={styles.sectionTitle}>Status</ThemedText>
           <View style={styles.optionsGrid}>
-            {STATUS_OPTIONS.map(option => {
+            {statusOptions.map(option => {
               const isSelected = localFilters.status.includes(option.value);
               return (
                 <Pressable
@@ -117,39 +113,7 @@ export default function FilterScreen() {
                     type="small"
                     style={{ color: isSelected ? "#FFFFFF" : theme.text }}
                   >
-                    {option.label}
-                  </ThemedText>
-                  {isSelected ? (
-                    <Feather name="check" size={14} color="#FFFFFF" />
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
-          <ThemedText type="h4" style={styles.sectionTitle}>Priority</ThemedText>
-          <View style={styles.optionsGrid}>
-            {PRIORITY_OPTIONS.map(option => {
-              const isSelected = localFilters.priority.includes(option.value);
-              return (
-                <Pressable
-                  key={option.value}
-                  onPress={() => togglePriority(option.value)}
-                  style={({ pressed }) => [
-                    styles.optionChip,
-                    {
-                      backgroundColor: isSelected ? option.color : theme.backgroundSecondary,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}
-                >
-                  <ThemedText
-                    type="small"
-                    style={{ color: isSelected ? "#FFFFFF" : theme.text }}
-                  >
-                    {option.label}
+                    {option.value}
                   </ThemedText>
                   {isSelected ? (
                     <Feather name="check" size={14} color="#FFFFFF" />

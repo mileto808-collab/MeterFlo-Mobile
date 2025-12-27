@@ -1,31 +1,47 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface WorkOrder {
-  id: string;
-  title: string;
-  description: string;
-  status: "pending" | "in_progress" | "completed" | "on_hold";
-  priority: "low" | "medium" | "high" | "urgent";
-  assignedTo: string;
-  location: string;
-  dueDate: string;
+  id: number;
+  customerWoId: string;
+  status: string;
+  oldMeterId: string;
+  newMeterId?: string;
+  oldMeterReading?: string;
+  newMeterReading?: string;
+  serviceAddress: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  customerName?: string;
+  customerPhone?: string;
+  meterType?: string;
+  serviceType?: string;
+  scheduledDate?: string;
+  notes?: string;
+  assignedUserId?: string;
+  assignedGroupId?: string;
+  assigned_user_username?: string;
+  assigned_user_display_name?: string;
+  troubleCode?: string;
+  troubleNote?: string;
+  completedAt?: string;
   createdAt: string;
   updatedAt: string;
-  notes: string[];
-  workflowSteps: WorkflowStep[];
-  currentStep: number;
   syncPending?: boolean;
+  localUpdatedAt?: string;
 }
 
-export interface WorkflowStep {
-  id: string;
-  name: string;
-  type: "text" | "number" | "select" | "checkbox" | "photo" | "signature";
-  required: boolean;
-  options?: string[];
-  value?: any;
-  completed: boolean;
+export interface ReferenceData {
+  statuses: string[];
+  troubleCodes: { code: string; description: string }[];
+  meterTypes: string[];
+  serviceTypes: string[];
+  assignees: {
+    users: { id: string; username: string; displayName: string }[];
+    groups: { name: string; description: string }[];
+  };
 }
 
 export interface ColumnConfig {
@@ -37,10 +53,8 @@ export interface ColumnConfig {
 
 export interface FilterConfig {
   status: string[];
-  priority: string[];
   assignedTo: string;
   searchQuery: string;
-  dateRange: { start: string | null; end: string | null };
 }
 
 export interface SortConfig {
@@ -50,202 +64,215 @@ export interface SortConfig {
 
 interface WorkOrderContextType {
   workOrders: WorkOrder[];
+  referenceData: ReferenceData | null;
   columns: ColumnConfig[];
   filters: FilterConfig;
   sort: SortConfig;
   isLoading: boolean;
+  lastSyncTime: string | null;
+  error: string | null;
   setWorkOrders: (orders: WorkOrder[]) => void;
-  updateWorkOrder: (id: string, updates: Partial<WorkOrder>) => void;
+  updateWorkOrder: (id: number, updates: Partial<WorkOrder>) => void;
   setColumns: (columns: ColumnConfig[]) => Promise<void>;
   setFilters: (filters: FilterConfig) => void;
   setSort: (sort: SortConfig) => void;
   getFilteredWorkOrders: () => WorkOrder[];
   refreshWorkOrders: () => Promise<void>;
+  claimWorkOrder: (workOrderId: number) => Promise<void>;
 }
 
 const WorkOrderContext = createContext<WorkOrderContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
   WORK_ORDERS: "meterflo_work_orders",
+  REFERENCE_DATA: "meterflo_reference_data",
   COLUMNS: "meterflo_columns",
-  FILTERS: "meterflo_filters",
   SORT: "meterflo_sort",
+  LAST_SYNC: "meterflo_last_sync",
 };
 
 const defaultColumns: ColumnConfig[] = [
-  { key: "id", label: "ID", visible: true, order: 0 },
-  { key: "title", label: "Title", visible: true, order: 1 },
-  { key: "status", label: "Status", visible: true, order: 2 },
-  { key: "priority", label: "Priority", visible: true, order: 3 },
-  { key: "assignedTo", label: "Assigned To", visible: true, order: 4 },
-  { key: "location", label: "Location", visible: false, order: 5 },
-  { key: "dueDate", label: "Due Date", visible: true, order: 6 },
+  { key: "customerWoId", label: "WO #", visible: true, order: 0 },
+  { key: "status", label: "Status", visible: true, order: 1 },
+  { key: "serviceAddress", label: "Address", visible: true, order: 2 },
+  { key: "customerName", label: "Customer", visible: true, order: 3 },
+  { key: "oldMeterId", label: "Old Meter", visible: true, order: 4 },
+  { key: "meterType", label: "Meter Type", visible: false, order: 5 },
+  { key: "scheduledDate", label: "Scheduled", visible: true, order: 6 },
+  { key: "assigned_user_display_name", label: "Assigned To", visible: false, order: 7 },
 ];
 
 const defaultFilters: FilterConfig = {
   status: [],
-  priority: [],
   assignedTo: "",
   searchQuery: "",
-  dateRange: { start: null, end: null },
 };
 
 const defaultSort: SortConfig = {
-  field: "dueDate",
+  field: "customerWoId",
   direction: "asc",
 };
 
-const mockWorkOrders: WorkOrder[] = [
-  {
-    id: "WO-001",
-    title: "Replace Water Meter - 123 Main St",
-    description: "Customer reported inaccurate meter readings. Replace existing meter with new digital model.",
-    status: "pending",
-    priority: "high",
-    assignedTo: "John Smith",
-    location: "123 Main Street, Springfield",
-    dueDate: "2025-12-28",
-    createdAt: "2025-12-20T10:00:00Z",
-    updatedAt: "2025-12-20T10:00:00Z",
-    notes: ["Customer prefers morning appointments"],
-    workflowSteps: [
-      { id: "1", name: "Verify Location", type: "checkbox", required: true, completed: false },
-      { id: "2", name: "Current Meter Reading", type: "number", required: true, completed: false },
-      { id: "3", name: "New Meter Serial Number", type: "text", required: true, completed: false },
-      { id: "4", name: "Installation Photo", type: "photo", required: true, completed: false },
-      { id: "5", name: "Customer Signature", type: "signature", required: true, completed: false },
-    ],
-    currentStep: 0,
-  },
-  {
-    id: "WO-002",
-    title: "Leak Investigation - 456 Oak Ave",
-    description: "High water usage detected. Investigate potential leak in main line.",
-    status: "in_progress",
-    priority: "urgent",
-    assignedTo: "John Smith",
-    location: "456 Oak Avenue, Springfield",
-    dueDate: "2025-12-27",
-    createdAt: "2025-12-19T14:00:00Z",
-    updatedAt: "2025-12-26T09:30:00Z",
-    notes: ["Access through side gate", "Dog on property - call ahead"],
-    workflowSteps: [
-      { id: "1", name: "Confirm Address", type: "checkbox", required: true, completed: true, value: true },
-      { id: "2", name: "Leak Type", type: "select", required: true, options: ["Main Line", "Service Line", "Meter", "Other"], completed: false },
-      { id: "3", name: "Estimated Flow Rate (GPM)", type: "number", required: true, completed: false },
-      { id: "4", name: "Repair Notes", type: "text", required: false, completed: false },
-    ],
-    currentStep: 1,
-  },
-  {
-    id: "WO-003",
-    title: "New Service Installation - 789 Pine Dr",
-    description: "Install new water service for residential construction.",
-    status: "pending",
-    priority: "medium",
-    assignedTo: "Maria Garcia",
-    location: "789 Pine Drive, Springfield",
-    dueDate: "2025-12-30",
-    createdAt: "2025-12-22T11:00:00Z",
-    updatedAt: "2025-12-22T11:00:00Z",
-    notes: [],
-    workflowSteps: [
-      { id: "1", name: "Permit Verification", type: "checkbox", required: true, completed: false },
-      { id: "2", name: "Meter Size", type: "select", required: true, options: ["5/8\"", "3/4\"", "1\"", "1.5\"", "2\""], completed: false },
-      { id: "3", name: "Installation Photo", type: "photo", required: true, completed: false },
-    ],
-    currentStep: 0,
-  },
-  {
-    id: "WO-004",
-    title: "Meter Calibration - 321 Elm St",
-    description: "Annual calibration check for commercial meter.",
-    status: "completed",
-    priority: "low",
-    assignedTo: "John Smith",
-    location: "321 Elm Street, Springfield",
-    dueDate: "2025-12-25",
-    createdAt: "2025-12-15T08:00:00Z",
-    updatedAt: "2025-12-25T16:00:00Z",
-    notes: ["Calibration within spec"],
-    workflowSteps: [
-      { id: "1", name: "Initial Reading", type: "number", required: true, completed: true, value: 45678 },
-      { id: "2", name: "Calibration Check", type: "checkbox", required: true, completed: true, value: true },
-      { id: "3", name: "Final Reading", type: "number", required: true, completed: true, value: 45679 },
-    ],
-    currentStep: 3,
-  },
-  {
-    id: "WO-005",
-    title: "Backflow Prevention Test - 555 Commerce Blvd",
-    description: "Annual backflow preventer testing for commercial property.",
-    status: "on_hold",
-    priority: "medium",
-    assignedTo: "Maria Garcia",
-    location: "555 Commerce Boulevard, Springfield",
-    dueDate: "2025-12-29",
-    createdAt: "2025-12-21T13:00:00Z",
-    updatedAt: "2025-12-24T10:00:00Z",
-    notes: ["Waiting for property manager access"],
-    workflowSteps: [
-      { id: "1", name: "Device Location", type: "text", required: true, completed: false },
-      { id: "2", name: "Test Results", type: "select", required: true, options: ["Pass", "Fail", "Needs Repair"], completed: false },
-      { id: "3", name: "Test Report Photo", type: "photo", required: true, completed: false },
-    ],
-    currentStep: 0,
-  },
-];
-
 export function WorkOrderProvider({ children }: { children: ReactNode }) {
+  const { serverUrl, projectId, isAuthenticated } = useAuth();
   const [workOrders, setWorkOrdersState] = useState<WorkOrder[]>([]);
+  const [referenceData, setReferenceData] = useState<ReferenceData | null>(null);
   const [columns, setColumnsState] = useState<ColumnConfig[]>(defaultColumns);
   const [filters, setFiltersState] = useState<FilterConfig>(defaultFilters);
   const [sort, setSortState] = useState<SortConfig>(defaultSort);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadStoredData();
   }, []);
 
+  useEffect(() => {
+    if (isAuthenticated && serverUrl && projectId) {
+      refreshWorkOrders();
+    }
+  }, [isAuthenticated, serverUrl, projectId]);
+
   const loadStoredData = async () => {
     try {
-      const [storedOrders, storedColumns, storedSort] = await Promise.all([
+      const [storedOrders, storedRefData, storedColumns, storedSort, storedLastSync] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.WORK_ORDERS),
+        AsyncStorage.getItem(STORAGE_KEYS.REFERENCE_DATA),
         AsyncStorage.getItem(STORAGE_KEYS.COLUMNS),
         AsyncStorage.getItem(STORAGE_KEYS.SORT),
+        AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC),
       ]);
 
       if (storedOrders) {
         setWorkOrdersState(JSON.parse(storedOrders));
-      } else {
-        setWorkOrdersState(mockWorkOrders);
-        await AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(mockWorkOrders));
       }
-
+      if (storedRefData) {
+        setReferenceData(JSON.parse(storedRefData));
+      }
       if (storedColumns) {
         setColumnsState(JSON.parse(storedColumns));
       }
-
       if (storedSort) {
         setSortState(JSON.parse(storedSort));
       }
-    } catch (error) {
-      console.error("Failed to load work order data:", error);
-      setWorkOrdersState(mockWorkOrders);
+      if (storedLastSync) {
+        setLastSyncTime(storedLastSync);
+      }
+    } catch (err) {
+      console.error("Failed to load work order data:", err);
+    }
+  };
+
+  const refreshWorkOrders = useCallback(async () => {
+    if (!serverUrl || !projectId) return;
+    
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const url = new URL(`/api/projects/${projectId}/mobile/sync/download`, serverUrl);
+      url.searchParams.set("includeCompleted", "false");
+      
+      if (lastSyncTime) {
+        url.searchParams.set("lastSyncTimestamp", lastSyncTime);
+      }
+
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to fetch work orders");
+      }
+
+      const data = await response.json();
+      
+      const newWorkOrders: WorkOrder[] = data.workOrders || [];
+      const newReferenceData: ReferenceData = data.referenceData || null;
+      const newServerTimestamp: string = data.serverTimestamp;
+
+      if (lastSyncTime && newWorkOrders.length > 0) {
+        setWorkOrdersState(prev => {
+          const merged = [...prev];
+          newWorkOrders.forEach(newWo => {
+            const existingIndex = merged.findIndex(wo => wo.id === newWo.id);
+            if (existingIndex >= 0) {
+              if (!merged[existingIndex].syncPending) {
+                merged[existingIndex] = newWo;
+              }
+            } else {
+              merged.push(newWo);
+            }
+          });
+          AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(merged));
+          return merged;
+        });
+      } else if (newWorkOrders.length > 0) {
+        setWorkOrdersState(newWorkOrders);
+        await AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(newWorkOrders));
+      }
+
+      if (newReferenceData) {
+        setReferenceData(newReferenceData);
+        await AsyncStorage.setItem(STORAGE_KEYS.REFERENCE_DATA, JSON.stringify(newReferenceData));
+      }
+
+      if (newServerTimestamp) {
+        setLastSyncTime(newServerTimestamp);
+        await AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC, newServerTimestamp);
+      }
+
+    } catch (err) {
+      console.error("Failed to refresh work orders:", err);
+      setError(err instanceof Error ? err.message : "Failed to sync work orders");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [serverUrl, projectId, lastSyncTime]);
+
+  const claimWorkOrder = useCallback(async (workOrderId: number) => {
+    if (!serverUrl || !projectId) return;
+
+    const response = await fetch(
+      `${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}/claim`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Failed to claim work order");
+    }
+
+    const data = await response.json();
+    
+    if (data.workOrder) {
+      setWorkOrdersState(prev => {
+        const updated = prev.map(wo => wo.id === workOrderId ? { ...wo, ...data.workOrder } : wo);
+        AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
+        return updated;
+      });
+    }
+  }, [serverUrl, projectId]);
 
   const setWorkOrders = useCallback((orders: WorkOrder[]) => {
     setWorkOrdersState(orders);
     AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(orders));
   }, []);
 
-  const updateWorkOrder = useCallback((id: string, updates: Partial<WorkOrder>) => {
+  const updateWorkOrder = useCallback((id: number, updates: Partial<WorkOrder>) => {
     setWorkOrdersState(prev => {
       const updated = prev.map(wo =>
-        wo.id === id ? { ...wo, ...updates, updatedAt: new Date().toISOString() } : wo
+        wo.id === id 
+          ? { ...wo, ...updates, localUpdatedAt: new Date().toISOString(), syncPending: true } 
+          : wo
       );
       AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
       return updated;
@@ -271,12 +298,12 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        wo =>
-          wo.id.toLowerCase().includes(query) ||
-          wo.title.toLowerCase().includes(query) ||
-          wo.description.toLowerCase().includes(query) ||
-          wo.location.toLowerCase().includes(query)
+      filtered = filtered.filter(wo =>
+        wo.customerWoId?.toLowerCase().includes(query) ||
+        wo.serviceAddress?.toLowerCase().includes(query) ||
+        wo.customerName?.toLowerCase().includes(query) ||
+        wo.oldMeterId?.toLowerCase().includes(query) ||
+        wo.newMeterId?.toLowerCase().includes(query)
       );
     }
 
@@ -284,13 +311,10 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       filtered = filtered.filter(wo => filters.status.includes(wo.status));
     }
 
-    if (filters.priority.length > 0) {
-      filtered = filtered.filter(wo => filters.priority.includes(wo.priority));
-    }
-
     if (filters.assignedTo) {
       filtered = filtered.filter(wo =>
-        wo.assignedTo.toLowerCase().includes(filters.assignedTo.toLowerCase())
+        wo.assigned_user_display_name?.toLowerCase().includes(filters.assignedTo.toLowerCase()) ||
+        wo.assigned_user_username?.toLowerCase().includes(filters.assignedTo.toLowerCase())
       );
     }
 
@@ -298,11 +322,14 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       const aValue = a[sort.field as keyof WorkOrder];
       const bValue = b[sort.field as keyof WorkOrder];
 
-      if (aValue === undefined || bValue === undefined) return 0;
+      if (aValue === undefined || aValue === null) return 1;
+      if (bValue === undefined || bValue === null) return -1;
 
       let comparison = 0;
       if (typeof aValue === "string" && typeof bValue === "string") {
         comparison = aValue.localeCompare(bValue);
+      } else if (typeof aValue === "number" && typeof bValue === "number") {
+        comparison = aValue - bValue;
       } else if (aValue < bValue) {
         comparison = -1;
       } else if (aValue > bValue) {
@@ -315,20 +342,17 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     return filtered;
   }, [workOrders, filters, sort]);
 
-  const refreshWorkOrders = useCallback(async () => {
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoading(false);
-  }, []);
-
   return (
     <WorkOrderContext.Provider
       value={{
         workOrders,
+        referenceData,
         columns,
         filters,
         sort,
         isLoading,
+        lastSyncTime,
+        error,
         setWorkOrders,
         updateWorkOrder,
         setColumns,
@@ -336,6 +360,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         setSort,
         getFilteredWorkOrders,
         refreshWorkOrders,
+        claimWorkOrder,
       }}
     >
       {children}

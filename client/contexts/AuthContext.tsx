@@ -2,24 +2,35 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
-interface User {
+export interface User {
   id: string;
   username: string;
-  name: string;
+  displayName: string;
   role: string;
+}
+
+export interface Project {
+  id: number;
+  name: string;
+  description: string;
 }
 
 interface AuthState {
   user: User | null;
   serverUrl: string;
+  projectId: number | null;
+  projects: Project[];
   isLoading: boolean;
   isAuthenticated: boolean;
+  needsProjectSelection: boolean;
 }
 
 interface AuthContextType extends AuthState {
   login: (serverUrl: string, username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  selectProject: (projectId: number) => Promise<void>;
   updateServerUrl: (url: string) => Promise<void>;
+  getApiUrl: (path: string) => string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,7 +38,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const STORAGE_KEYS = {
   USER: "meterflo_user",
   SERVER_URL: "meterflo_server_url",
-  AUTH_TOKEN: "meterflo_auth_token",
+  PROJECT_ID: "meterflo_project_id",
+  PROJECTS: "meterflo_projects",
 };
 
 async function secureGet(key: string): Promise<string | null> {
@@ -57,8 +69,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
     serverUrl: "",
+    projectId: null,
+    projects: [],
     isLoading: true,
     isAuthenticated: false,
+    needsProjectSelection: false,
   });
 
   useEffect(() => {
@@ -67,17 +82,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadStoredAuth = async () => {
     try {
-      const [storedUser, storedServerUrl] = await Promise.all([
+      const [storedUser, storedServerUrl, storedProjectId, storedProjects] = await Promise.all([
         secureGet(STORAGE_KEYS.USER),
         secureGet(STORAGE_KEYS.SERVER_URL),
+        secureGet(STORAGE_KEYS.PROJECT_ID),
+        secureGet(STORAGE_KEYS.PROJECTS),
       ]);
 
-      if (storedUser && storedServerUrl) {
+      if (storedUser && storedServerUrl && storedProjectId) {
         setState({
           user: JSON.parse(storedUser),
           serverUrl: storedServerUrl,
+          projectId: parseInt(storedProjectId, 10),
+          projects: storedProjects ? JSON.parse(storedProjects) : [],
           isLoading: false,
           isAuthenticated: true,
+          needsProjectSelection: false,
+        });
+      } else if (storedUser && storedServerUrl && storedProjects) {
+        setState({
+          user: JSON.parse(storedUser),
+          serverUrl: storedServerUrl,
+          projectId: null,
+          projects: JSON.parse(storedProjects),
+          isLoading: false,
+          isAuthenticated: false,
+          needsProjectSelection: true,
         });
       } else {
         setState(prev => ({
@@ -98,53 +128,97 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const normalizedUrl = serverUrl.endsWith("/") ? serverUrl.slice(0, -1) : serverUrl;
       
-      const response = await fetch(`${normalizedUrl}/api/mobile/auth/login`, {
+      const loginResponse = await fetch(`${normalizedUrl}/api/auth/local/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ username, password }),
       });
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Login failed");
+      if (!loginResponse.ok) {
+        const errorText = await loginResponse.text();
+        throw new Error(errorText || "Invalid username or password");
       }
 
-      const data = await response.json();
+      const loginData = await loginResponse.json();
       const user: User = {
-        id: data.user.id,
-        username: data.user.username,
-        name: data.user.name || data.user.username,
-        role: data.user.role || "User",
+        id: loginData.user?.id || loginData.id,
+        username: loginData.user?.username || loginData.username,
+        displayName: loginData.user?.displayName || loginData.displayName || loginData.username,
+        role: loginData.user?.role || loginData.role || "User",
       };
+
+      const projectsResponse = await fetch(`${normalizedUrl}/api/users/${user.id}/projects`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+
+      if (!projectsResponse.ok) {
+        throw new Error("Failed to fetch projects");
+      }
+
+      const projectsData = await projectsResponse.json();
+      const projects: Project[] = Array.isArray(projectsData) ? projectsData : projectsData.projects || [];
 
       await Promise.all([
         secureSet(STORAGE_KEYS.USER, JSON.stringify(user)),
         secureSet(STORAGE_KEYS.SERVER_URL, normalizedUrl),
-        data.token ? secureSet(STORAGE_KEYS.AUTH_TOKEN, data.token) : Promise.resolve(),
+        secureSet(STORAGE_KEYS.PROJECTS, JSON.stringify(projects)),
       ]);
 
-      setState({
-        user,
-        serverUrl: normalizedUrl,
-        isLoading: false,
-        isAuthenticated: true,
-      });
+      if (projects.length === 1) {
+        await secureSet(STORAGE_KEYS.PROJECT_ID, String(projects[0].id));
+        setState({
+          user,
+          serverUrl: normalizedUrl,
+          projectId: projects[0].id,
+          projects,
+          isLoading: false,
+          isAuthenticated: true,
+          needsProjectSelection: false,
+        });
+      } else {
+        setState({
+          user,
+          serverUrl: normalizedUrl,
+          projectId: null,
+          projects,
+          isLoading: false,
+          isAuthenticated: false,
+          needsProjectSelection: true,
+        });
+      }
     } catch (error) {
       setState(prev => ({ ...prev, isLoading: false }));
       throw error;
     }
   }, []);
 
+  const selectProject = useCallback(async (projectId: number) => {
+    await secureSet(STORAGE_KEYS.PROJECT_ID, String(projectId));
+    setState(prev => ({
+      ...prev,
+      projectId,
+      isAuthenticated: true,
+      needsProjectSelection: false,
+    }));
+  }, []);
+
   const logout = useCallback(async () => {
     await Promise.all([
       secureDelete(STORAGE_KEYS.USER),
-      secureDelete(STORAGE_KEYS.AUTH_TOKEN),
+      secureDelete(STORAGE_KEYS.PROJECT_ID),
+      secureDelete(STORAGE_KEYS.PROJECTS),
     ]);
 
     setState(prev => ({
       ...prev,
       user: null,
+      projectId: null,
+      projects: [],
       isAuthenticated: false,
+      needsProjectSelection: false,
     }));
   }, []);
 
@@ -154,8 +228,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, serverUrl: normalizedUrl }));
   }, []);
 
+  const getApiUrl = useCallback((path: string) => {
+    const { serverUrl, projectId } = state;
+    if (!serverUrl || !projectId) return "";
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    return `${serverUrl}/api/projects/${projectId}${cleanPath}`;
+  }, [state.serverUrl, state.projectId]);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, updateServerUrl }}>
+    <AuthContext.Provider value={{ ...state, login, logout, selectProject, updateServerUrl, getApiUrl }}>
       {children}
     </AuthContext.Provider>
   );

@@ -8,6 +8,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOffline } from "@/contexts/OfflineContext";
+import { useWorkOrders } from "@/contexts/WorkOrderContext";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
 import { Spacing, BorderRadius } from "@/constants/theme";
@@ -17,8 +18,11 @@ export default function AccountScreen() {
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
-  const { user, serverUrl, logout } = useAuth();
-  const { isOnline, lastSyncTime } = useOffline();
+  const { user, serverUrl, projectId, projects, logout } = useAuth();
+  const { isOnline } = useOffline();
+  const { lastSyncTime } = useWorkOrders();
+
+  const currentProject = projects.find(p => p.id === projectId);
 
   const handleLogout = () => {
     if (Platform.OS === "web") {
@@ -36,8 +40,9 @@ export default function AccountScreen() {
     );
   };
 
-  const formatTime = (date: Date | null) => {
-    if (!date) return "Never";
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return "Never";
+    const date = new Date(dateString);
     return date.toLocaleString(undefined, {
       month: "short",
       day: "numeric",
@@ -64,9 +69,9 @@ export default function AccountScreen() {
           <Feather name="user" size={32} color="#FFFFFF" />
         </View>
         <View style={styles.profileInfo}>
-          <ThemedText type="h3">{user?.name || "User"}</ThemedText>
+          <ThemedText type="h3">{user?.displayName || user?.username || "User"}</ThemedText>
           <ThemedText type="small" style={{ color: theme.textSecondary }}>
-            {user?.username || "username"}
+            @{user?.username || "username"}
           </ThemedText>
           <View style={[styles.roleBadge, { backgroundColor: theme.primary + "20" }]}>
             <ThemedText type="caption" style={{ color: theme.primary }}>
@@ -75,6 +80,34 @@ export default function AccountScreen() {
           </View>
         </View>
       </View>
+
+      {currentProject ? (
+        <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
+          <ThemedText type="h4" style={styles.sectionTitle}>Current Project</ThemedText>
+          
+          <View style={styles.infoRow}>
+            <View style={styles.infoLabel}>
+              <Feather name="folder" size={16} color={theme.textSecondary} />
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>Project</ThemedText>
+            </View>
+            <ThemedText type="body" numberOfLines={1} style={styles.infoValue}>
+              {currentProject.name}
+            </ThemedText>
+          </View>
+
+          {currentProject.description ? (
+            <View style={styles.infoRow}>
+              <View style={styles.infoLabel}>
+                <Feather name="file-text" size={16} color={theme.textSecondary} />
+                <ThemedText type="small" style={{ color: theme.textSecondary }}>Description</ThemedText>
+              </View>
+              <ThemedText type="body" numberOfLines={2} style={styles.infoValue}>
+                {currentProject.description}
+              </ThemedText>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
       <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
         <ThemedText type="h4" style={styles.sectionTitle}>Server Connection</ThemedText>

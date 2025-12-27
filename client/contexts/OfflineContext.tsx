@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PendingAction {
   id: string;
@@ -14,26 +15,23 @@ interface PendingAction {
 interface OfflineContextType {
   isOnline: boolean;
   pendingActions: PendingAction[];
-  lastSyncTime: Date | null;
   isSyncing: boolean;
   addPendingAction: (action: Omit<PendingAction, "id" | "timestamp">) => Promise<void>;
   removePendingAction: (id: string) => Promise<void>;
   syncPendingActions: () => Promise<void>;
   clearAllPending: () => Promise<void>;
-  updateLastSyncTime: () => void;
 }
 
 const OfflineContext = createContext<OfflineContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
   PENDING_ACTIONS: "meterflo_pending_actions",
-  LAST_SYNC: "meterflo_last_sync",
 };
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
+  const { serverUrl, projectId } = useAuth();
   const [isOnline, setIsOnline] = useState(true);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
-  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
@@ -49,16 +47,9 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
 
   const loadStoredData = async () => {
     try {
-      const [storedActions, storedSync] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEYS.PENDING_ACTIONS),
-        AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC),
-      ]);
-
+      const storedActions = await AsyncStorage.getItem(STORAGE_KEYS.PENDING_ACTIONS);
       if (storedActions) {
         setPendingActions(JSON.parse(storedActions));
-      }
-      if (storedSync) {
-        setLastSyncTime(new Date(storedSync));
       }
     } catch (error) {
       console.error("Failed to load offline data:", error);
@@ -84,30 +75,66 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   }, [pendingActions]);
 
   const syncPendingActions = useCallback(async () => {
-    if (!isOnline || pendingActions.length === 0 || isSyncing) return;
+    if (!isOnline || pendingActions.length === 0 || isSyncing || !serverUrl || !projectId) return;
 
     setIsSyncing(true);
     try {
-      for (const action of pendingActions) {
-        await removePendingAction(action.id);
+      const changes = pendingActions.map(action => ({
+        workOrderId: parseInt(action.workOrderId, 10),
+        changeType: action.type,
+        data: action.data,
+        clientTimestamp: new Date(action.timestamp).toISOString(),
+      }));
+
+      const response = await fetch(
+        `${serverUrl}/api/projects/${projectId}/mobile/sync/upload`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            changes,
+            clientTimestamp: new Date().toISOString(),
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Sync upload failed:", errorText);
+        throw new Error(errorText || "Sync upload failed");
       }
-      updateLastSyncTime();
+
+      const result = await response.json();
+      
+      if (result.conflicts && result.conflicts.length > 0) {
+        console.warn("Sync conflicts detected:", result.conflicts);
+      }
+
+      const successfulIds = result.successful || pendingActions.map(a => a.id);
+      
+      const remainingActions = pendingActions.filter(
+        action => !successfulIds.includes(action.id) && !successfulIds.includes(parseInt(action.workOrderId, 10))
+      );
+      
+      if (remainingActions.length === 0) {
+        setPendingActions([]);
+        await AsyncStorage.removeItem(STORAGE_KEYS.PENDING_ACTIONS);
+      } else {
+        setPendingActions(remainingActions);
+        await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(remainingActions));
+      }
+
     } catch (error) {
       console.error("Sync failed:", error);
     } finally {
       setIsSyncing(false);
     }
-  }, [isOnline, pendingActions, isSyncing, removePendingAction]);
+  }, [isOnline, pendingActions, isSyncing, serverUrl, projectId]);
 
   const clearAllPending = useCallback(async () => {
     setPendingActions([]);
     await AsyncStorage.removeItem(STORAGE_KEYS.PENDING_ACTIONS);
-  }, []);
-
-  const updateLastSyncTime = useCallback(() => {
-    const now = new Date();
-    setLastSyncTime(now);
-    AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC, now.toISOString());
   }, []);
 
   return (
@@ -115,13 +142,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       value={{
         isOnline,
         pendingActions,
-        lastSyncTime,
         isSyncing,
         addPendingAction,
         removePendingAction,
         syncPendingActions,
         clearAllPending,
-        updateLastSyncTime,
       }}
     >
       {children}

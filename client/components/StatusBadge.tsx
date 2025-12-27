@@ -1,26 +1,42 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
-import { StatusColors, Spacing, BorderRadius } from "@/constants/theme";
+import { Spacing, BorderRadius } from "@/constants/theme";
 
 interface StatusBadgeProps {
-  status: "pending" | "in_progress" | "completed" | "on_hold";
+  status: string;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: "Pending",
-  in_progress: "In Progress",
-  completed: "Completed",
-  on_hold: "On Hold",
+const getStatusColor = (status: string): string => {
+  const normalizedStatus = status.toLowerCase().replace(/\s+/g, "_");
+  
+  switch (normalizedStatus) {
+    case "open":
+    case "pending":
+      return "#3B82F6";
+    case "in_progress":
+    case "in progress":
+      return "#F59E0B";
+    case "completed":
+    case "complete":
+      return "#10B981";
+    case "trouble":
+    case "on_hold":
+    case "on hold":
+      return "#EF4444";
+    case "scheduled":
+      return "#8B5CF6";
+    default:
+      return "#6B7280";
+  }
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const color = StatusColors[status] || StatusColors.pending;
-  const label = STATUS_LABELS[status] || status;
+  const color = getStatusColor(status);
 
   return (
     <View style={[styles.badge, { backgroundColor: color }]}>
-      <ThemedText style={styles.text}>{label}</ThemedText>
+      <ThemedText style={styles.text}>{status}</ThemedText>
     </View>
   );
 }

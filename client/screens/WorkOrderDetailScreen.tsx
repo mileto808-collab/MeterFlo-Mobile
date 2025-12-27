@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { View, ScrollView, StyleSheet, Pressable } from "react-native";
+import React, { useMemo, useState } from "react";
+import { View, ScrollView, StyleSheet, Pressable, Alert, Platform, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -7,10 +7,10 @@ import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders } from "@/contexts/WorkOrderContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { ThemedText } from "@/components/ThemedText";
 import { StatusBadge } from "@/components/StatusBadge";
-import { PriorityBadge } from "@/components/PriorityBadge";
 import { Button } from "@/components/Button";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
@@ -22,17 +22,20 @@ export default function WorkOrderDetailScreen() {
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { workOrders } = useWorkOrders();
+  const { workOrders, claimWorkOrder } = useWorkOrders();
+  const { user } = useAuth();
+  const [isClaiming, setIsClaiming] = useState(false);
 
   const workOrder = useMemo(() => {
     return workOrders.find(wo => wo.id === route.params.workOrder.id) || route.params.workOrder;
   }, [workOrders, route.params.workOrder]);
 
-  const completedSteps = workOrder.workflowSteps.filter(s => s.completed).length;
-  const totalSteps = workOrder.workflowSteps.length;
-  const progressPercent = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
+  const isAssignedToMe = workOrder.assignedUserId === user?.id;
+  const canClaim = !workOrder.assignedUserId || !isAssignedToMe;
+  const isCompleted = workOrder.status.toLowerCase() === "completed";
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Not set";
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, { 
       month: "short", 
@@ -41,7 +44,38 @@ export default function WorkOrderDetailScreen() {
     });
   };
 
-  const handleStartWorkflow = () => {
+  const handleClaim = async () => {
+    const doClaim = async () => {
+      setIsClaiming(true);
+      try {
+        await claimWorkOrder(workOrder.id);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to claim work order";
+        if (Platform.OS === "web") {
+          alert(message);
+        } else {
+          Alert.alert("Error", message);
+        }
+      } finally {
+        setIsClaiming(false);
+      }
+    };
+
+    if (Platform.OS === "web") {
+      doClaim();
+    } else {
+      Alert.alert(
+        "Claim Work Order",
+        "Assign this work order to yourself?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Claim", onPress: doClaim },
+        ]
+      );
+    }
+  };
+
+  const handleProcess = () => {
     navigation.navigate("WorkflowWizard", { workOrder });
   };
 
@@ -58,113 +92,137 @@ export default function WorkOrderDetailScreen() {
         <View style={styles.header}>
           <View style={styles.badgeRow}>
             <StatusBadge status={workOrder.status} />
-            <PriorityBadge priority={workOrder.priority} />
+            {workOrder.syncPending ? (
+              <View style={[styles.syncBadge, { backgroundColor: theme.warning }]}>
+                <Feather name="upload-cloud" size={12} color="#FFFFFF" />
+                <ThemedText style={styles.syncBadgeText}>Pending Sync</ThemedText>
+              </View>
+            ) : null}
           </View>
-          <ThemedText type="h3" style={styles.title}>{workOrder.title}</ThemedText>
+          <ThemedText type="h3" style={styles.title}>{workOrder.serviceAddress}</ThemedText>
           <ThemedText type="small" style={[styles.id, { color: theme.textSecondary }]}>
-            {workOrder.id}
+            {workOrder.customerWoId}
           </ThemedText>
         </View>
 
         <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
-          <ThemedText type="h4" style={styles.sectionTitle}>Details</ThemedText>
+          <ThemedText type="h4" style={styles.sectionTitle}>Customer</ThemedText>
           
-          <View style={styles.detailRow}>
+          {workOrder.customerName ? (
             <View style={styles.detailItem}>
               <Feather name="user" size={16} color={theme.textSecondary} />
               <View style={styles.detailContent}>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Assigned To</ThemedText>
-                <ThemedText type="body">{workOrder.assignedTo}</ThemedText>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Name</ThemedText>
+                <ThemedText type="body">{workOrder.customerName}</ThemedText>
               </View>
             </View>
+          ) : null}
+
+          {workOrder.customerPhone ? (
             <View style={styles.detailItem}>
-              <Feather name="calendar" size={16} color={theme.textSecondary} />
+              <Feather name="phone" size={16} color={theme.textSecondary} />
               <View style={styles.detailContent}>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Due Date</ThemedText>
-                <ThemedText type="body">{formatDate(workOrder.dueDate)}</ThemedText>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Phone</ThemedText>
+                <ThemedText type="body">{workOrder.customerPhone}</ThemedText>
               </View>
             </View>
-          </View>
-          
-          <View style={styles.detailRow}>
-            <View style={[styles.detailItem, { flex: 1 }]}>
-              <Feather name="map-pin" size={16} color={theme.textSecondary} />
-              <View style={styles.detailContent}>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Location</ThemedText>
-                <ThemedText type="body">{workOrder.location}</ThemedText>
-              </View>
+          ) : null}
+
+          <View style={styles.detailItem}>
+            <Feather name="map-pin" size={16} color={theme.textSecondary} />
+            <View style={styles.detailContent}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Address</ThemedText>
+              <ThemedText type="body">
+                {workOrder.serviceAddress}
+                {workOrder.city ? `, ${workOrder.city}` : ""}
+                {workOrder.state ? `, ${workOrder.state}` : ""}
+                {workOrder.zip ? ` ${workOrder.zip}` : ""}
+              </ThemedText>
             </View>
           </View>
         </View>
 
         <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
-          <ThemedText type="h4" style={styles.sectionTitle}>Description</ThemedText>
-          <ThemedText type="body" style={{ color: theme.textSecondary }}>
-            {workOrder.description}
-          </ThemedText>
+          <ThemedText type="h4" style={styles.sectionTitle}>Meter Information</ThemedText>
+          
+          <View style={styles.meterRow}>
+            <View style={styles.meterItem}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Old Meter ID</ThemedText>
+              <ThemedText type="body">{workOrder.oldMeterId || "N/A"}</ThemedText>
+            </View>
+            {workOrder.newMeterId ? (
+              <View style={styles.meterItem}>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>New Meter ID</ThemedText>
+                <ThemedText type="body">{workOrder.newMeterId}</ThemedText>
+              </View>
+            ) : null}
+          </View>
+
+          {workOrder.meterType ? (
+            <View style={styles.detailItem}>
+              <Feather name="box" size={16} color={theme.textSecondary} />
+              <View style={styles.detailContent}>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Meter Type</ThemedText>
+                <ThemedText type="body">{workOrder.meterType}</ThemedText>
+              </View>
+            </View>
+          ) : null}
+
+          {workOrder.serviceType ? (
+            <View style={styles.detailItem}>
+              <Feather name="settings" size={16} color={theme.textSecondary} />
+              <View style={styles.detailContent}>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Service Type</ThemedText>
+                <ThemedText type="body">{workOrder.serviceType}</ThemedText>
+              </View>
+            </View>
+          ) : null}
         </View>
 
         <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
-          <View style={styles.workflowHeader}>
-            <ThemedText type="h4" style={styles.sectionTitle}>Workflow Progress</ThemedText>
-            <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              {completedSteps}/{totalSteps} steps
-            </ThemedText>
-          </View>
+          <ThemedText type="h4" style={styles.sectionTitle}>Assignment</ThemedText>
           
-          <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
-            <View 
-              style={[
-                styles.progressFill, 
-                { 
-                  width: `${progressPercent}%`,
-                  backgroundColor: theme.success,
-                }
-              ]} 
-            />
+          <View style={styles.detailItem}>
+            <Feather name="user" size={16} color={theme.textSecondary} />
+            <View style={styles.detailContent}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Assigned To</ThemedText>
+              <ThemedText type="body">
+                {workOrder.assigned_user_display_name || workOrder.assigned_user_username || "Unassigned"}
+              </ThemedText>
+            </View>
           </View>
 
-          <View style={styles.stepsList}>
-            {workOrder.workflowSteps.map((step, index) => (
-              <View key={step.id} style={styles.stepItem}>
-                <View style={[
-                  styles.stepIndicator,
-                  { 
-                    backgroundColor: step.completed ? theme.success : theme.border,
-                    borderColor: step.completed ? theme.success : theme.border,
-                  }
-                ]}>
-                  {step.completed ? (
-                    <Feather name="check" size={12} color="#FFFFFF" />
-                  ) : (
-                    <ThemedText style={styles.stepNumber}>{index + 1}</ThemedText>
-                  )}
-                </View>
-                <ThemedText 
-                  type="body" 
-                  style={[
-                    styles.stepName,
-                    step.completed && { color: theme.textSecondary }
-                  ]}
-                >
-                  {step.name}
-                </ThemedText>
-              </View>
-            ))}
+          <View style={styles.detailItem}>
+            <Feather name="calendar" size={16} color={theme.textSecondary} />
+            <View style={styles.detailContent}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary }}>Scheduled Date</ThemedText>
+              <ThemedText type="body">{formatDate(workOrder.scheduledDate)}</ThemedText>
+            </View>
           </View>
         </View>
 
-        {workOrder.notes.length > 0 ? (
+        {workOrder.notes ? (
           <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
             <ThemedText type="h4" style={styles.sectionTitle}>Notes</ThemedText>
-            {workOrder.notes.map((note, index) => (
-              <View key={index} style={styles.noteItem}>
-                <Feather name="message-circle" size={14} color={theme.textSecondary} />
-                <ThemedText type="body" style={{ color: theme.textSecondary, flex: 1 }}>
-                  {note}
-                </ThemedText>
-              </View>
-            ))}
+            <ThemedText type="body" style={{ color: theme.textSecondary }}>
+              {workOrder.notes}
+            </ThemedText>
+          </View>
+        ) : null}
+
+        {workOrder.troubleCode || workOrder.troubleNote ? (
+          <View style={[styles.section, { backgroundColor: theme.error + "10" }]}>
+            <ThemedText type="h4" style={[styles.sectionTitle, { color: theme.error }]}>
+              Trouble Report
+            </ThemedText>
+            {workOrder.troubleCode ? (
+              <ThemedText type="body">Code: {workOrder.troubleCode}</ThemedText>
+            ) : null}
+            {workOrder.troubleNote ? (
+              <ThemedText type="body" style={{ color: theme.textSecondary }}>
+                {workOrder.troubleNote}
+              </ThemedText>
+            ) : null}
           </View>
         ) : null}
 
@@ -178,6 +236,11 @@ export default function WorkOrderDetailScreen() {
               Updated: {formatDate(workOrder.updatedAt)}
             </ThemedText>
           </View>
+          {workOrder.completedAt ? (
+            <ThemedText type="small" style={{ color: theme.success }}>
+              Completed: {formatDate(workOrder.completedAt)}
+            </ThemedText>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -188,12 +251,28 @@ export default function WorkOrderDetailScreen() {
           paddingBottom: insets.bottom + Spacing.lg,
         }
       ]}>
+        {canClaim && !isCompleted ? (
+          <Button
+            onPress={handleClaim}
+            style={[styles.claimButton, { backgroundColor: theme.backgroundSecondary }]}
+            disabled={isClaiming}
+          >
+            {isClaiming ? (
+              <ActivityIndicator size="small" color={theme.text} />
+            ) : (
+              <>
+                <Feather name="user-plus" size={16} color={theme.text} />
+                <ThemedText style={{ marginLeft: Spacing.sm }}>Claim</ThemedText>
+              </>
+            )}
+          </Button>
+        ) : null}
         <Button
-          onPress={handleStartWorkflow}
-          style={{ backgroundColor: theme.primary }}
-          disabled={workOrder.status === "completed"}
+          onPress={handleProcess}
+          style={[styles.processButton, { backgroundColor: theme.primary }]}
+          disabled={isCompleted}
         >
-          {workOrder.status === "completed" ? "Completed" : "Process Work Order"}
+          {isCompleted ? "Completed" : "Process Work Order"}
         </Button>
       </View>
     </View>
@@ -215,6 +294,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: Spacing.sm,
   },
+  syncBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.xs,
+    gap: 4,
+  },
+  syncBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "600",
+  },
   title: {
     marginTop: Spacing.sm,
   },
@@ -227,71 +319,46 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: Spacing.xs,
   },
-  detailRow: {
-    flexDirection: "row",
-    gap: Spacing.xl,
-  },
   detailItem: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: Spacing.sm,
-    flex: 1,
   },
   detailContent: {
+    flex: 1,
     gap: 2,
   },
-  workflowHeader: {
+  meterRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    gap: Spacing.xl,
   },
-  progressBar: {
-    height: 8,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  stepsList: {
-    gap: Spacing.md,
-  },
-  stepItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.md,
-  },
-  stepIndicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  stepNumber: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  stepName: {},
-  noteItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: Spacing.sm,
+  meterItem: {
+    flex: 1,
+    gap: 2,
   },
   timestampRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: Spacing.sm,
   },
   bottomAction: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
+    flexDirection: "row",
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
     borderTopWidth: 1,
     borderTopColor: "rgba(0,0,0,0.1)",
+    gap: Spacing.md,
+  },
+  claimButton: {
+    flex: 0,
+    paddingHorizontal: Spacing.lg,
+  },
+  processButton: {
+    flex: 1,
   },
 });

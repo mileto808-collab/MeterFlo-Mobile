@@ -7,6 +7,7 @@ import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useOffline } from "@/contexts/OfflineContext";
+import { useWorkOrders } from "@/contexts/WorkOrderContext";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
 import { Spacing, BorderRadius } from "@/constants/theme";
@@ -16,10 +17,12 @@ export default function SyncScreen() {
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
-  const { isOnline, pendingActions, lastSyncTime, isSyncing, syncPendingActions, clearAllPending } = useOffline();
+  const { isOnline, pendingActions, isSyncing, syncPendingActions, clearAllPending } = useOffline();
+  const { lastSyncTime, isLoading, refreshWorkOrders } = useWorkOrders();
 
-  const formatTime = (date: Date | null) => {
-    if (!date) return "Never";
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return "Never";
+    const date = new Date(dateString);
     return date.toLocaleString(undefined, {
       month: "short",
       day: "numeric",
@@ -34,6 +37,13 @@ export default function SyncScreen() {
       case "complete": return "Complete";
       case "workflow": return "Workflow";
       default: return type;
+    }
+  };
+
+  const handleSync = async () => {
+    await refreshWorkOrders();
+    if (pendingActions.length > 0) {
+      await syncPendingActions();
     }
   };
 
@@ -119,11 +129,11 @@ export default function SyncScreen() {
 
       <View style={styles.actions}>
         <Button
-          onPress={syncPendingActions}
-          disabled={!isOnline || pendingActions.length === 0 || isSyncing}
+          onPress={handleSync}
+          disabled={!isOnline || isLoading || isSyncing}
           style={{ backgroundColor: theme.primary }}
         >
-          {isSyncing ? (
+          {isLoading || isSyncing ? (
             <View style={styles.syncingContent}>
               <ActivityIndicator size="small" color="#FFFFFF" />
               <ThemedText style={{ color: "#FFFFFF", marginLeft: Spacing.sm }}>Syncing...</ThemedText>
