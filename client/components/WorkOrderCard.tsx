@@ -45,7 +45,7 @@ export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
   };
 
   const displayAddress = workOrder.serviceAddress || "No address";
-  const displayAssignee = workOrder.assigned_user_display_name || workOrder.assigned_user_username || "Unassigned";
+  const displayAssignee = workOrder.assignedUserDisplayName || workOrder.assignedUserUsername || "Unassigned";
 
   return (
     <AnimatedPressable

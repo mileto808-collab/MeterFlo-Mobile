@@ -16,21 +16,83 @@ export interface WorkOrder {
   zip?: string;
   customerName?: string;
   customerPhone?: string;
+  customerEmail?: string;
   meterType?: string;
+  newMeterType?: string;
   serviceType?: string;
   scheduledDate?: string;
   notes?: string;
+  route?: string;
+  zone?: string;
   assignedUserId?: string;
   assignedGroupId?: string;
-  assigned_user_username?: string;
-  assigned_user_display_name?: string;
+  assignedUserUsername?: string;
+  assignedUserDisplayName?: string;
   troubleCode?: string;
   troubleNote?: string;
   completedAt?: string;
+  completedBy?: string;
   createdAt: string;
   updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
   syncPending?: boolean;
   localUpdatedAt?: string;
+}
+
+interface ServerWorkOrder {
+  id: number;
+  status: string;
+  customer_wo_id: string;
+  customer_id?: string;
+  customer_name?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  phone?: string;
+  email?: string;
+  route?: string;
+  zone?: string;
+  service_type?: string;
+  old_meter_id?: string;
+  new_meter_id?: string;
+  old_meter_type?: string;
+  new_meter_type?: string;
+  old_meter_reading?: number | string;
+  new_meter_reading?: number | string;
+  old_gps?: string;
+  new_gps?: string;
+  notes?: string;
+  trouble?: string;
+  scheduled_at?: string;
+  completed_at?: string;
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+  updated_by?: string;
+  completed_by?: string;
+  scheduled_by?: string;
+  scheduled_by_username?: string;
+  completed_by_username?: string;
+  assigned_user_id?: string;
+  assigned_group_id?: string;
+  assigned_user_username?: string;
+  assigned_user_display_name?: string;
+  signature_data?: string;
+  signature_name?: string;
+  attachments?: string[];
+}
+
+interface ServerReferenceData {
+  workOrderStatuses?: string[] | { code: string; label: string }[];
+  troubleCodes?: { code: string; description: string }[];
+  meterTypes?: string[] | { id: string; name: string }[];
+  serviceTypes?: string[];
+  assignees?: {
+    users?: { id: string; username: string; displayName?: string; display_name?: string }[];
+    groups?: { name: string; description?: string }[];
+  };
 }
 
 export interface ReferenceData {
@@ -60,6 +122,92 @@ export interface FilterConfig {
 export interface SortConfig {
   field: string;
   direction: "asc" | "desc";
+}
+
+function mapServerWorkOrder(serverWo: ServerWorkOrder): WorkOrder {
+  return {
+    id: serverWo.id,
+    customerWoId: serverWo.customer_wo_id || "",
+    status: serverWo.status || "Unknown",
+    oldMeterId: serverWo.old_meter_id || "",
+    newMeterId: serverWo.new_meter_id || undefined,
+    oldMeterReading: serverWo.old_meter_reading != null ? String(serverWo.old_meter_reading) : undefined,
+    newMeterReading: serverWo.new_meter_reading != null ? String(serverWo.new_meter_reading) : undefined,
+    serviceAddress: serverWo.address || "",
+    city: serverWo.city || undefined,
+    state: serverWo.state || undefined,
+    zip: serverWo.zip || undefined,
+    customerName: serverWo.customer_name || undefined,
+    customerPhone: serverWo.phone || undefined,
+    customerEmail: serverWo.email || undefined,
+    meterType: serverWo.old_meter_type || undefined,
+    newMeterType: serverWo.new_meter_type || undefined,
+    serviceType: serverWo.service_type || undefined,
+    scheduledDate: serverWo.scheduled_at || undefined,
+    notes: serverWo.notes || undefined,
+    route: serverWo.route || undefined,
+    zone: serverWo.zone || undefined,
+    assignedUserId: serverWo.assigned_user_id || undefined,
+    assignedGroupId: serverWo.assigned_group_id || undefined,
+    assignedUserUsername: serverWo.assigned_user_username || undefined,
+    assignedUserDisplayName: serverWo.assigned_user_display_name || undefined,
+    troubleCode: serverWo.trouble || undefined,
+    completedAt: serverWo.completed_at || undefined,
+    completedBy: serverWo.completed_by || undefined,
+    createdAt: serverWo.created_at || new Date().toISOString(),
+    updatedAt: serverWo.updated_at || new Date().toISOString(),
+    createdBy: serverWo.created_by || undefined,
+    updatedBy: serverWo.updated_by || undefined,
+  };
+}
+
+function normalizeStoredWorkOrder(wo: any): WorkOrder {
+  if (wo.customer_wo_id !== undefined || wo.old_meter_id !== undefined) {
+    return mapServerWorkOrder(wo as ServerWorkOrder);
+  }
+  return wo as WorkOrder;
+}
+
+function normalizeStoredReferenceData(ref: any): ReferenceData {
+  if (ref.workOrderStatuses !== undefined) {
+    return mapServerReferenceData(ref as ServerReferenceData);
+  }
+  return ref as ReferenceData;
+}
+
+function mapServerReferenceData(serverRef: ServerReferenceData): ReferenceData {
+  let statuses: string[] = [];
+  if (Array.isArray(serverRef.workOrderStatuses)) {
+    statuses = serverRef.workOrderStatuses.map(s => 
+      typeof s === "string" ? s : s.label || s.code
+    );
+  }
+
+  let meterTypes: string[] = [];
+  if (Array.isArray(serverRef.meterTypes)) {
+    meterTypes = serverRef.meterTypes.map(m =>
+      typeof m === "string" ? m : m.name || m.id
+    );
+  }
+
+  const users = (serverRef.assignees?.users || []).map(u => ({
+    id: u.id,
+    username: u.username,
+    displayName: u.displayName || u.display_name || u.username,
+  }));
+
+  const groups = (serverRef.assignees?.groups || []).map(g => ({
+    name: g.name,
+    description: g.description || "",
+  }));
+
+  return {
+    statuses,
+    troubleCodes: serverRef.troubleCodes || [],
+    meterTypes,
+    serviceTypes: serverRef.serviceTypes || [],
+    assignees: { users, groups },
+  };
 }
 
 interface WorkOrderContextType {
@@ -99,7 +247,7 @@ const defaultColumns: ColumnConfig[] = [
   { key: "oldMeterId", label: "Old Meter", visible: true, order: 4 },
   { key: "meterType", label: "Meter Type", visible: false, order: 5 },
   { key: "scheduledDate", label: "Scheduled", visible: true, order: 6 },
-  { key: "assigned_user_display_name", label: "Assigned To", visible: false, order: 7 },
+  { key: "assignedUserDisplayName", label: "Assigned To", visible: false, order: 7 },
 ];
 
 const defaultFilters: FilterConfig = {
@@ -145,10 +293,14 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       ]);
 
       if (storedOrders) {
-        setWorkOrdersState(JSON.parse(storedOrders));
+        const parsedOrders = JSON.parse(storedOrders);
+        const normalizedOrders = parsedOrders.map(normalizeStoredWorkOrder);
+        setWorkOrdersState(normalizedOrders);
       }
       if (storedRefData) {
-        setReferenceData(JSON.parse(storedRefData));
+        const parsedRefData = JSON.parse(storedRefData);
+        const normalizedRefData = normalizeStoredReferenceData(parsedRefData);
+        setReferenceData(normalizedRefData);
       }
       if (storedColumns) {
         setColumnsState(JSON.parse(storedColumns));
@@ -189,19 +341,14 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       
-      console.log("=== MeterFlo Server Response ===");
-      console.log("Full response:", JSON.stringify(data, null, 2));
-      if (data.workOrders && data.workOrders.length > 0) {
-        console.log("Sample work order fields:", Object.keys(data.workOrders[0]));
-        console.log("Sample work order:", JSON.stringify(data.workOrders[0], null, 2));
-      }
-      if (data.referenceData) {
-        console.log("Reference data:", JSON.stringify(data.referenceData, null, 2));
-      }
-      console.log("=== End MeterFlo Response ===");
+      const serverWorkOrders: ServerWorkOrder[] = data.workOrders || [];
+      const newWorkOrders: WorkOrder[] = serverWorkOrders.map(mapServerWorkOrder);
       
-      const newWorkOrders: WorkOrder[] = data.workOrders || [];
-      const newReferenceData: ReferenceData = data.referenceData || null;
+      const serverReferenceData: ServerReferenceData | null = data.referenceData || null;
+      const newReferenceData: ReferenceData | null = serverReferenceData 
+        ? mapServerReferenceData(serverReferenceData)
+        : null;
+      
       const newServerTimestamp: string = data.serverTimestamp;
 
       if (lastSyncTime && newWorkOrders.length > 0) {
@@ -259,8 +406,9 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     const data = await response.json();
     
     if (data.workOrder) {
+      const mappedWorkOrder = mapServerWorkOrder(data.workOrder);
       setWorkOrdersState(prev => {
-        const updated = prev.map(wo => wo.id === workOrderId ? { ...wo, ...data.workOrder } : wo);
+        const updated = prev.map(wo => wo.id === workOrderId ? { ...wo, ...mappedWorkOrder } : wo);
         AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
         return updated;
       });
@@ -318,8 +466,8 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
     if (filters.assignedTo) {
       filtered = filtered.filter(wo =>
-        wo.assigned_user_display_name?.toLowerCase().includes(filters.assignedTo.toLowerCase()) ||
-        wo.assigned_user_username?.toLowerCase().includes(filters.assignedTo.toLowerCase())
+        wo.assignedUserDisplayName?.toLowerCase().includes(filters.assignedTo.toLowerCase()) ||
+        wo.assignedUserUsername?.toLowerCase().includes(filters.assignedTo.toLowerCase())
       );
     }
 

@@ -187,7 +187,7 @@ export default function WorkOrderDetailScreen() {
             <View style={styles.detailContent}>
               <ThemedText type="caption" style={{ color: theme.textSecondary }}>Assigned To</ThemedText>
               <ThemedText type="body">
-                {workOrder.assigned_user_display_name || workOrder.assigned_user_username || "Unassigned"}
+                {workOrder.assignedUserDisplayName || workOrder.assignedUserUsername || "Unassigned"}
               </ThemedText>
             </View>
           </View>
