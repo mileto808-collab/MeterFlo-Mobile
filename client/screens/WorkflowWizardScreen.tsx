@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { View, StyleSheet, Alert, Platform, ActivityIndicator } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { View, StyleSheet, Alert, Platform, ActivityIndicator, Pressable, Image, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { HeaderButton } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
+import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useTheme } from "@/hooks/useTheme";
@@ -15,40 +18,79 @@ import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { ThemedText } from "@/components/ThemedText";
 import { TextInput } from "@/components/TextInput";
 import { Button } from "@/components/Button";
-import { Checkbox } from "@/components/Checkbox";
 import { SelectInput } from "@/components/SelectInput";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 type RouteProps = RouteProp<RootStackParamList, "WorkflowWizard">;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+type WizardStep = 
+  | "canChange"
+  | "oldReading"
+  | "beforePhotos"
+  | "physicalChange"
+  | "newMeterId"
+  | "newReading"
+  | "afterPhotos"
+  | "gps"
+  | "signature"
+  | "confirm"
+  | "troubleCapture"
+  | "troubleConfirm";
+
+interface PhotoAsset {
+  uri: string;
+  id: string;
+}
+
 interface MeterChangeoutData {
-  locationConfirmed: boolean;
   canChange: boolean | null;
   troubleCode: string;
   troubleNote: string;
+  troublePhotos: PhotoAsset[];
   oldMeterReading: string;
+  beforePhotos: PhotoAsset[];
   newMeterId: string;
   newMeterReading: string;
+  afterPhotos: PhotoAsset[];
   gpsCoordinates: string;
+  signatureData: string;
   signatureName: string;
 }
 
-const WIZARD_STEPS = [
-  { id: "confirm", name: "Confirm Location", type: "checkbox" },
-  { id: "canChange", name: "Can Change Meter?", type: "select" },
-  { id: "oldReading", name: "Old Meter Reading", type: "number" },
-  { id: "newMeterId", name: "New Meter ID", type: "text" },
-  { id: "newReading", name: "New Meter Reading", type: "number" },
-  { id: "signature", name: "Customer Signature", type: "signature" },
+const SUCCESS_STEPS: WizardStep[] = [
+  "canChange",
+  "oldReading", 
+  "beforePhotos",
+  "physicalChange",
+  "newMeterId",
+  "newReading",
+  "afterPhotos",
+  "gps",
+  "signature",
+  "confirm",
 ];
 
-const TROUBLE_STEPS = [
-  { id: "confirm", name: "Confirm Location", type: "checkbox" },
-  { id: "canChange", name: "Can Change Meter?", type: "select" },
-  { id: "troubleCode", name: "Trouble Code", type: "select" },
-  { id: "troubleNote", name: "Trouble Notes", type: "text" },
+const TROUBLE_STEPS: WizardStep[] = [
+  "canChange",
+  "troubleCapture",
+  "troubleConfirm",
 ];
+
+const STEP_TITLES: Record<WizardStep, string> = {
+  canChange: "Can Meter Be Changed?",
+  oldReading: "Old Meter Final Reading",
+  beforePhotos: "Before Photos",
+  physicalChange: "Perform Physical Changeout",
+  newMeterId: "New Meter ID",
+  newReading: "New Meter Reading",
+  afterPhotos: "After Photos",
+  gps: "Capture GPS",
+  signature: "Customer Signature",
+  confirm: "Confirm & Submit",
+  troubleCapture: "Report Issue",
+  troubleConfirm: "Confirm & Submit",
+};
 
 export default function WorkflowWizardScreen() {
   const insets = useSafeAreaInsets();
@@ -58,6 +100,7 @@ export default function WorkflowWizardScreen() {
   const { updateWorkOrder, referenceData, claimWorkOrder } = useWorkOrders();
   const { serverUrl, projectId, user } = useAuth();
   const { isOnline, addPendingAction } = useOffline();
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const workOrder = route.params.workOrder;
   
@@ -65,23 +108,53 @@ export default function WorkflowWizardScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannerType, setScannerType] = useState<"barcode" | "qr">("barcode");
+  const [isCapturingGps, setIsCapturingGps] = useState(false);
+  
   const [formData, setFormData] = useState<MeterChangeoutData>({
-    locationConfirmed: false,
     canChange: null,
     troubleCode: "",
     troubleNote: "",
+    troublePhotos: [],
     oldMeterReading: workOrder.oldMeterReading || "",
+    beforePhotos: [],
     newMeterId: "",
     newMeterReading: "",
+    afterPhotos: [],
     gpsCoordinates: "",
+    signatureData: "",
     signatureName: "",
   });
 
-  const [claimError, setClaimError] = useState<string | null>(null);
+  const steps = formData.canChange === false ? TROUBLE_STEPS : SUCCESS_STEPS;
+  const currentStep = steps[currentStepIndex];
+  const totalSteps = steps.length;
+  const isFirstStep = currentStepIndex === 0;
+  const isLastStep = currentStepIndex === totalSteps - 1;
+
+  const troubleCodes = referenceData?.troubleCodes?.map(tc => tc.code) || [
+    "ACCESS_DENIED",
+    "METER_LOCKED", 
+    "UNSAFE_CONDITIONS",
+    "CUSTOMER_REFUSED",
+    "OTHER",
+  ];
 
   useEffect(() => {
     claimWorkOrderOnStart();
   }, []);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <HeaderButton onPress={handleCancel}>
+          <ThemedText style={{ color: theme.error }}>Cancel</ThemedText>
+        </HeaderButton>
+      ),
+    });
+  }, [navigation, theme]);
 
   const claimWorkOrderOnStart = async () => {
     const isAlreadyAssignedToMe = workOrder.assignedUserId === user?.id && !workOrder.assignedGroupId;
@@ -123,30 +196,6 @@ export default function WorkflowWizardScreen() {
     navigation.goBack();
   };
 
-  const steps = formData.canChange === false ? TROUBLE_STEPS : WIZARD_STEPS;
-  const currentStep = steps[currentStepIndex];
-  const totalSteps = steps.length;
-  const isFirstStep = currentStepIndex === 0;
-  const isLastStep = currentStepIndex === totalSteps - 1;
-
-  const troubleCodes = referenceData?.troubleCodes?.map(tc => tc.code) || [
-    "ACCESS_DENIED",
-    "METER_LOCKED",
-    "UNSAFE_CONDITIONS",
-    "CUSTOMER_REFUSED",
-    "OTHER",
-  ];
-
-  useEffect(() => {
-    navigation.setOptions({
-      headerLeft: () => (
-        <HeaderButton onPress={handleCancel}>
-          <ThemedText style={{ color: theme.error }}>Cancel</ThemedText>
-        </HeaderButton>
-      ),
-    });
-  }, [navigation, theme]);
-
   const handleCancel = () => {
     if (Platform.OS === "web") {
       navigation.goBack();
@@ -163,24 +212,148 @@ export default function WorkflowWizardScreen() {
     );
   };
 
+  const openSettings = async () => {
+    if (Platform.OS !== "web") {
+      try {
+        const Linking = require("expo-linking");
+        await Linking.openSettings();
+      } catch (e) {
+        console.error("Could not open settings:", e);
+      }
+    }
+  };
+
+  const takePhoto = async (photoType: "before" | "after" | "trouble") => {
+    try {
+      const permResult = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (!permResult.granted) {
+        if (Platform.OS !== "web") {
+          if (!permResult.canAskAgain) {
+            Alert.alert(
+              "Camera Permission Required",
+              "Please enable camera access in Settings to take photos.",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Open Settings", onPress: openSettings },
+              ]
+            );
+          } else {
+            Alert.alert("Permission Required", "Camera permission is needed to take photos.");
+          }
+        }
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        quality: 0.8,
+        allowsEditing: false,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const newPhoto: PhotoAsset = {
+          uri: result.assets[0].uri,
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        };
+
+        if (photoType === "before") {
+          setFormData(prev => ({ ...prev, beforePhotos: [...prev.beforePhotos, newPhoto] }));
+        } else if (photoType === "after") {
+          setFormData(prev => ({ ...prev, afterPhotos: [...prev.afterPhotos, newPhoto] }));
+        } else {
+          setFormData(prev => ({ ...prev, troublePhotos: [...prev.troublePhotos, newPhoto] }));
+        }
+      }
+    } catch (error) {
+      console.error("Photo capture error:", error);
+      if (Platform.OS !== "web") {
+        Alert.alert("Error", "Could not take photo. Please try again.");
+      }
+    }
+  };
+
+  const removePhoto = (photoType: "before" | "after" | "trouble", photoId: string) => {
+    if (photoType === "before") {
+      setFormData(prev => ({ ...prev, beforePhotos: prev.beforePhotos.filter(p => p.id !== photoId) }));
+    } else if (photoType === "after") {
+      setFormData(prev => ({ ...prev, afterPhotos: prev.afterPhotos.filter(p => p.id !== photoId) }));
+    } else {
+      setFormData(prev => ({ ...prev, troublePhotos: prev.troublePhotos.filter(p => p.id !== photoId) }));
+    }
+  };
+
+  const handleBarcodeScanned = (result: BarcodeScanningResult) => {
+    setFormData(prev => ({ ...prev, newMeterId: result.data }));
+    setShowScanner(false);
+    if (Platform.OS !== "web") {
+      Alert.alert("Scanned Successfully", result.data);
+    }
+  };
+
+  const captureGps = async () => {
+    setIsCapturingGps(true);
+    try {
+      const permResult = await Location.requestForegroundPermissionsAsync();
+      
+      if (!permResult.granted) {
+        if (Platform.OS !== "web") {
+          if (!permResult.canAskAgain) {
+            Alert.alert(
+              "Location Permission Required",
+              "Please enable location access in Settings to capture GPS coordinates.",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Open Settings", onPress: openSettings },
+              ]
+            );
+          } else {
+            Alert.alert("Permission Required", "Location permission is needed to capture GPS coordinates.");
+          }
+        }
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const coords = `${location.coords.latitude.toFixed(6)},${location.coords.longitude.toFixed(6)}`;
+      setFormData(prev => ({ ...prev, gpsCoordinates: coords }));
+    } catch (error) {
+      if (Platform.OS !== "web") {
+        Alert.alert("GPS Error", "Could not get location. Please try again or enter manually.");
+      }
+    } finally {
+      setIsCapturingGps(false);
+    }
+  };
+
   const isCurrentStepValid = (): boolean => {
-    switch (currentStep.id) {
-      case "confirm": 
-        return formData.locationConfirmed === true;
+    switch (currentStep) {
       case "canChange": 
         return formData.canChange !== null;
       case "oldReading": 
         return formData.oldMeterReading.trim().length > 0;
+      case "beforePhotos":
+        return formData.beforePhotos.length >= 1;
+      case "physicalChange":
+        return true;
       case "newMeterId": 
         return formData.newMeterId.trim().length > 0;
       case "newReading": 
         return formData.newMeterReading.trim().length > 0;
-      case "troubleCode": 
-        return formData.troubleCode.length > 0;
-      case "troubleNote": 
-        return true;
+      case "afterPhotos":
+        return formData.afterPhotos.length >= 1;
+      case "gps":
+        return formData.gpsCoordinates.trim().length > 0;
       case "signature": 
         return formData.signatureName.trim().length > 0;
+      case "confirm":
+        return true;
+      case "troubleCapture":
+        return formData.troubleCode.length > 0 && formData.troublePhotos.length >= 1;
+      case "troubleConfirm":
+        return true;
       default: 
         return true;
     }
@@ -191,6 +364,11 @@ export default function WorkflowWizardScreen() {
       if (Platform.OS !== "web") {
         Alert.alert("Required Field", "Please complete this step before continuing.");
       }
+      return;
+    }
+
+    if (currentStep === "canChange" && formData.canChange === false) {
+      setCurrentStepIndex(1);
       return;
     }
 
@@ -225,7 +403,7 @@ export default function WorkflowWizardScreen() {
       new_meter_reading: parseReading(formData.newMeterReading) ?? 0,
       new_meter_id: formData.newMeterId,
       new_gps: formData.gpsCoordinates || null,
-      signature_data: null,
+      signature_data: formData.signatureData || null,
       signature_name: formData.signatureName,
       trouble: null,
       notes: null,
@@ -301,95 +479,476 @@ export default function WorkflowWizardScreen() {
     }
   };
 
+  const renderPhotoGrid = (photos: PhotoAsset[], photoType: "before" | "after" | "trouble") => (
+    <View style={styles.photoGrid}>
+      {photos.map((photo) => (
+        <View key={photo.id} style={styles.photoContainer}>
+          <Image source={{ uri: photo.uri }} style={styles.photoThumbnail} />
+          <Pressable
+            style={[styles.removePhotoButton, { backgroundColor: theme.error }]}
+            onPress={() => removePhoto(photoType, photo.id)}
+          >
+            <Feather name="x" size={14} color="#FFFFFF" />
+          </Pressable>
+        </View>
+      ))}
+    </View>
+  );
+
   const renderStepInput = () => {
-    switch (currentStep.id) {
-      case "confirm":
-        return (
-          <Checkbox
-            checked={formData.locationConfirmed}
-            onToggle={() => setFormData(prev => ({ ...prev, locationConfirmed: !prev.locationConfirmed }))}
-            label="I confirm I am at the correct location and ready to proceed"
-          />
-        );
-      
+    switch (currentStep) {
       case "canChange":
         return (
-          <SelectInput
-            value={formData.canChange === null ? "" : formData.canChange ? "Yes" : "No"}
-            options={["Yes", "No"]}
-            onSelect={(value) => setFormData(prev => ({ ...prev, canChange: value === "Yes" }))}
-            placeholder="Can you change the meter?"
-          />
+          <View style={styles.decisionContainer}>
+            <View style={[styles.woDetailsCard, { backgroundColor: theme.backgroundSecondary }]}>
+              <View style={styles.detailRow}>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Work Order</ThemedText>
+                <ThemedText type="body">{workOrder.customerWoId}</ThemedText>
+              </View>
+              <View style={styles.detailRow}>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Address</ThemedText>
+                <ThemedText type="body">{workOrder.serviceAddress}</ThemedText>
+              </View>
+              <View style={styles.detailRow}>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Old Meter ID</ThemedText>
+                <ThemedText type="body">{workOrder.oldMeterId || "N/A"}</ThemedText>
+              </View>
+              <View style={styles.detailRow}>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Current Status</ThemedText>
+                <ThemedText type="body" style={{ color: workOrder.status === "Trouble" ? theme.warning : theme.text }}>
+                  {workOrder.status}
+                </ThemedText>
+              </View>
+            </View>
+            
+            <View style={styles.decisionButtons}>
+              <Pressable
+                style={[
+                  styles.decisionButton,
+                  { backgroundColor: formData.canChange === false ? theme.error : theme.backgroundSecondary }
+                ]}
+                onPress={() => setFormData(prev => ({ ...prev, canChange: false }))}
+              >
+                <Feather name="x-circle" size={24} color={formData.canChange === false ? "#FFFFFF" : theme.error} />
+                <ThemedText 
+                  type="body" 
+                  style={{ color: formData.canChange === false ? "#FFFFFF" : theme.text, marginTop: Spacing.sm }}
+                >
+                  No - Report Issue
+                </ThemedText>
+              </Pressable>
+              
+              <Pressable
+                style={[
+                  styles.decisionButton,
+                  { backgroundColor: formData.canChange === true ? theme.success : theme.backgroundSecondary }
+                ]}
+                onPress={() => setFormData(prev => ({ ...prev, canChange: true }))}
+              >
+                <Feather name="check-circle" size={24} color={formData.canChange === true ? "#FFFFFF" : theme.success} />
+                <ThemedText 
+                  type="body" 
+                  style={{ color: formData.canChange === true ? "#FFFFFF" : theme.text, marginTop: Spacing.sm }}
+                >
+                  Yes - Proceed
+                </ThemedText>
+              </Pressable>
+            </View>
+          </View>
         );
 
       case "oldReading":
         return (
-          <TextInput
-            value={formData.oldMeterReading}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, oldMeterReading: text }))}
-            placeholder="Enter old meter reading"
-            keyboardType="numeric"
-          />
+          <View>
+            <View style={styles.iconHeader}>
+              <Feather name="activity" size={32} color={theme.primary} />
+            </View>
+            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+              Enter the final reading from the old meter
+            </ThemedText>
+            <TextInput
+              value={formData.oldMeterReading}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, oldMeterReading: text }))}
+              placeholder="Enter reading (e.g., 12345)"
+              keyboardType="numeric"
+            />
+          </View>
+        );
+
+      case "beforePhotos":
+        return (
+          <View>
+            <View style={styles.iconHeader}>
+              <Feather name="camera" size={32} color={theme.primary} />
+            </View>
+            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
+              Take photos of the old meter before removal (minimum 1 required)
+            </ThemedText>
+            
+            <Button
+              onPress={() => takePhoto("before")}
+              style={{ backgroundColor: theme.primary, marginBottom: Spacing.md }}
+            >
+              <Feather name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+              Take Before Photo
+            </Button>
+            
+            {formData.beforePhotos.length > 0 && renderPhotoGrid(formData.beforePhotos, "before")}
+            
+            <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>
+              {formData.beforePhotos.length} photo(s) captured
+            </ThemedText>
+          </View>
+        );
+
+      case "physicalChange":
+        return (
+          <View>
+            <View style={styles.iconHeader}>
+              <Feather name="tool" size={32} color={theme.primary} />
+            </View>
+            <ThemedText type="body" style={{ marginBottom: Spacing.lg }}>
+              Safely remove the old meter and install the new meter.
+            </ThemedText>
+            
+            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
+              <View style={styles.summaryRow}>
+                <Feather name="check" size={16} color={theme.success} />
+                <ThemedText type="small">Old meter reading: {formData.oldMeterReading}</ThemedText>
+              </View>
+              <View style={styles.summaryRow}>
+                <Feather name="check" size={16} color={theme.success} />
+                <ThemedText type="small">{formData.beforePhotos.length} before photo(s) captured</ThemedText>
+              </View>
+            </View>
+            
+            <ThemedText type="caption" style={{ color: theme.textSecondary, marginTop: Spacing.lg }}>
+              Tap "Next" when the new meter is installed
+            </ThemedText>
+          </View>
         );
 
       case "newMeterId":
+        if (showScanner) {
+          const permissionDenied = cameraPermission && !cameraPermission.granted && !cameraPermission.canAskAgain;
+          
+          return (
+            <View style={styles.scannerContainer}>
+              {cameraPermission?.granted ? (
+                <CameraView
+                  style={styles.camera}
+                  facing="back"
+                  barcodeScannerSettings={{
+                    barcodeTypes: scannerType === "barcode" 
+                      ? ["code128", "code39", "ean13", "ean8", "upc_a", "upc_e", "itf14", "codabar"]
+                      : ["qr", "datamatrix"],
+                  }}
+                  onBarcodeScanned={handleBarcodeScanned}
+                />
+              ) : (
+                <View style={styles.cameraPlaceholder}>
+                  <Feather name="camera-off" size={48} color={theme.textSecondary} />
+                  <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.md, textAlign: "center" }}>
+                    {permissionDenied 
+                      ? "Camera access denied. Please enable in Settings."
+                      : "Camera permission required"
+                    }
+                  </ThemedText>
+                  {permissionDenied ? (
+                    <Button
+                      onPress={openSettings}
+                      style={{ backgroundColor: theme.primary, marginTop: Spacing.lg }}
+                    >
+                      Open Settings
+                    </Button>
+                  ) : (
+                    <Button
+                      onPress={requestCameraPermission}
+                      style={{ backgroundColor: theme.primary, marginTop: Spacing.lg }}
+                    >
+                      Grant Permission
+                    </Button>
+                  )}
+                </View>
+              )}
+              {cameraPermission?.granted ? (
+                <View style={styles.scannerOverlay}>
+                  <View style={[
+                    styles.scanRegion, 
+                    { 
+                      borderColor: theme.primary,
+                      width: scannerType === "qr" ? 200 : 280,
+                      height: scannerType === "qr" ? 200 : 100,
+                    }
+                  ]} />
+                </View>
+              ) : null}
+              <Button
+                onPress={() => setShowScanner(false)}
+                style={{ backgroundColor: theme.backgroundSecondary, marginTop: Spacing.lg }}
+              >
+                <ThemedText>Cancel Scan</ThemedText>
+              </Button>
+            </View>
+          );
+        }
+
         return (
-          <TextInput
-            value={formData.newMeterId}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, newMeterId: text }))}
-            placeholder="Scan or enter new meter ID"
-            autoCapitalize="characters"
-          />
+          <View>
+            <View style={styles.iconHeader}>
+              <Feather name="hash" size={32} color={theme.primary} />
+            </View>
+            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.lg }}>
+              Scan or enter the new meter ID
+            </ThemedText>
+            
+            <View style={styles.scanButtonsRow}>
+              <Pressable
+                style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                onPress={() => { setScannerType("barcode"); setShowScanner(true); }}
+              >
+                <Feather name="maximize" size={24} color={theme.primary} />
+                <ThemedText type="small" style={{ marginTop: Spacing.xs }}>Scan Barcode</ThemedText>
+              </Pressable>
+              
+              <Pressable
+                style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                onPress={() => { setScannerType("qr"); setShowScanner(true); }}
+              >
+                <Feather name="grid" size={24} color={theme.primary} />
+                <ThemedText type="small" style={{ marginTop: Spacing.xs }}>Scan QR Code</ThemedText>
+              </Pressable>
+            </View>
+            
+            <ThemedText type="caption" style={{ color: theme.textSecondary, marginVertical: Spacing.md, textAlign: "center" }}>
+              or enter manually
+            </ThemedText>
+            
+            <TextInput
+              value={formData.newMeterId}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, newMeterId: text }))}
+              placeholder="Enter new meter ID"
+              autoCapitalize="characters"
+            />
+          </View>
         );
 
       case "newReading":
         return (
-          <TextInput
-            value={formData.newMeterReading}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, newMeterReading: text }))}
-            placeholder="Enter new meter reading (usually 0)"
-            keyboardType="numeric"
-          />
+          <View>
+            <View style={styles.iconHeader}>
+              <Feather name="activity" size={32} color={theme.primary} />
+            </View>
+            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+              Enter the initial reading from the new meter (usually 0)
+            </ThemedText>
+            <TextInput
+              value={formData.newMeterReading}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, newMeterReading: text }))}
+              placeholder="Enter reading (usually 0)"
+              keyboardType="numeric"
+            />
+          </View>
         );
 
-      case "troubleCode":
+      case "afterPhotos":
         return (
-          <SelectInput
-            value={formData.troubleCode}
-            options={troubleCodes}
-            onSelect={(value) => setFormData(prev => ({ ...prev, troubleCode: value }))}
-            placeholder="Select trouble code"
-          />
+          <View>
+            <View style={styles.iconHeader}>
+              <Feather name="camera" size={32} color={theme.primary} />
+            </View>
+            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
+              Take photos of the new meter after installation (minimum 1 required)
+            </ThemedText>
+            
+            <Button
+              onPress={() => takePhoto("after")}
+              style={{ backgroundColor: theme.primary, marginBottom: Spacing.md }}
+            >
+              <Feather name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+              Take After Photo
+            </Button>
+            
+            {formData.afterPhotos.length > 0 && renderPhotoGrid(formData.afterPhotos, "after")}
+            
+            <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>
+              {formData.afterPhotos.length} photo(s) captured
+            </ThemedText>
+          </View>
         );
 
-      case "troubleNote":
+      case "gps":
         return (
-          <TextInput
-            value={formData.troubleNote}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, troubleNote: text }))}
-            placeholder="Describe the issue (optional)"
-            multiline
-          />
+          <View>
+            <View style={styles.iconHeader}>
+              <Feather name="map-pin" size={32} color={theme.primary} />
+            </View>
+            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
+              Capture GPS coordinates of the meter location
+            </ThemedText>
+            
+            <Button
+              onPress={captureGps}
+              style={{ backgroundColor: theme.primary, marginBottom: Spacing.md }}
+              disabled={isCapturingGps}
+            >
+              {isCapturingGps ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Feather name="navigation" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                  Get Current Location
+                </>
+              )}
+            </Button>
+            
+            {formData.gpsCoordinates ? (
+              <View style={[styles.gpsResult, { backgroundColor: theme.backgroundSecondary }]}>
+                <Feather name="check-circle" size={20} color={theme.success} />
+                <ThemedText type="body" style={{ marginLeft: Spacing.sm }}>{formData.gpsCoordinates}</ThemedText>
+              </View>
+            ) : null}
+            
+            <ThemedText type="caption" style={{ color: theme.textSecondary, marginTop: Spacing.lg, marginBottom: Spacing.sm }}>
+              Or enter manually (lat,lng)
+            </ThemedText>
+            <TextInput
+              value={formData.gpsCoordinates}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, gpsCoordinates: text }))}
+              placeholder="e.g., 37.7749,-122.4194"
+            />
+          </View>
         );
 
       case "signature":
         return (
           <View>
+            <View style={styles.iconHeader}>
+              <Feather name="edit-3" size={32} color={theme.primary} />
+            </View>
+            
             <View style={[styles.signaturePlaceholder, { borderColor: theme.border }]}>
               <Feather name="edit-3" size={32} color={theme.textSecondary} />
               <ThemedText type="small" style={{ color: theme.textSecondary }}>
                 Signature capture available in Expo Go
               </ThemedText>
             </View>
+            
             <View style={{ marginTop: Spacing.lg }}>
               <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
-                Customer Name
+                Customer Name (Required)
               </ThemedText>
               <TextInput
                 value={formData.signatureName}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, signatureName: text }))}
                 placeholder="Enter customer name"
               />
+            </View>
+          </View>
+        );
+
+      case "confirm":
+        return (
+          <View>
+            <ThemedText type="h4" style={{ marginBottom: Spacing.lg }}>Review & Submit</ThemedText>
+            
+            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
+              <View style={styles.summaryRow}>
+                <Feather name="activity" size={16} color={theme.primary} />
+                <ThemedText type="small">Old reading: {formData.oldMeterReading}</ThemedText>
+              </View>
+              <View style={styles.summaryRow}>
+                <Feather name="camera" size={16} color={theme.primary} />
+                <ThemedText type="small">{formData.beforePhotos.length} before photo(s)</ThemedText>
+              </View>
+              <View style={styles.summaryRow}>
+                <Feather name="hash" size={16} color={theme.primary} />
+                <ThemedText type="small">New meter: {formData.newMeterId}</ThemedText>
+              </View>
+              <View style={styles.summaryRow}>
+                <Feather name="activity" size={16} color={theme.primary} />
+                <ThemedText type="small">New reading: {formData.newMeterReading}</ThemedText>
+              </View>
+              <View style={styles.summaryRow}>
+                <Feather name="camera" size={16} color={theme.primary} />
+                <ThemedText type="small">{formData.afterPhotos.length} after photo(s)</ThemedText>
+              </View>
+              <View style={styles.summaryRow}>
+                <Feather name="map-pin" size={16} color={theme.primary} />
+                <ThemedText type="small">GPS: {formData.gpsCoordinates}</ThemedText>
+              </View>
+              <View style={styles.summaryRow}>
+                <Feather name="user" size={16} color={theme.primary} />
+                <ThemedText type="small">Customer: {formData.signatureName}</ThemedText>
+              </View>
+            </View>
+          </View>
+        );
+
+      case "troubleCapture":
+        return (
+          <View>
+            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
+              Select a trouble code and take at least one photo
+            </ThemedText>
+            
+            <SelectInput
+              value={formData.troubleCode}
+              options={troubleCodes}
+              onSelect={(value) => setFormData(prev => ({ ...prev, troubleCode: value }))}
+              placeholder="Select trouble code"
+            />
+            
+            <View style={{ marginTop: Spacing.lg }}>
+              <Button
+                onPress={() => takePhoto("trouble")}
+                style={{ backgroundColor: theme.primary, marginBottom: Spacing.md }}
+              >
+                <Feather name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                Take Photo
+              </Button>
+              
+              {formData.troublePhotos.length > 0 && renderPhotoGrid(formData.troublePhotos, "trouble")}
+              
+              <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>
+                {formData.troublePhotos.length} photo(s) captured (minimum 1 required)
+              </ThemedText>
+            </View>
+            
+            <View style={{ marginTop: Spacing.lg }}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+                Additional Notes (Optional)
+              </ThemedText>
+              <TextInput
+                value={formData.troubleNote}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, troubleNote: text }))}
+                placeholder="Describe the issue..."
+                multiline
+              />
+            </View>
+          </View>
+        );
+
+      case "troubleConfirm":
+        return (
+          <View>
+            <ThemedText type="h4" style={{ marginBottom: Spacing.lg }}>Review & Submit</ThemedText>
+            
+            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
+              <View style={styles.summaryRow}>
+                <Feather name="alert-triangle" size={16} color={theme.warning} />
+                <ThemedText type="small">Trouble: {formData.troubleCode}</ThemedText>
+              </View>
+              <View style={styles.summaryRow}>
+                <Feather name="camera" size={16} color={theme.primary} />
+                <ThemedText type="small">{formData.troublePhotos.length} photo(s)</ThemedText>
+              </View>
+              {formData.troubleNote ? (
+                <View style={styles.summaryRow}>
+                  <Feather name="file-text" size={16} color={theme.primary} />
+                  <ThemedText type="small" numberOfLines={2}>{formData.troubleNote}</ThemedText>
+                </View>
+              ) : null}
             </View>
           </View>
         );
@@ -430,6 +989,19 @@ export default function WorkflowWizardScreen() {
     );
   }
 
+  const getStepRequiredLabel = () => {
+    switch (currentStep) {
+      case "physicalChange":
+        return null;
+      default:
+        return (
+          <ThemedText type="caption" style={[styles.requiredText, { color: theme.error }]}>
+            Required
+          </ThemedText>
+        );
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
       <View style={[styles.progressContainer, { backgroundColor: theme.backgroundDefault }]}>
@@ -441,16 +1013,24 @@ export default function WorkflowWizardScreen() {
             {Math.round(((currentStepIndex + 1) / totalSteps) * 100)}%
           </ThemedText>
         </View>
-        <View style={[styles.progressBar, { backgroundColor: theme.border }]}>
-          <View 
-            style={[
-              styles.progressFill, 
-              { 
-                width: `${((currentStepIndex + 1) / totalSteps) * 100}%`,
-                backgroundColor: theme.primary,
-              }
-            ]} 
-          />
+        <View style={styles.progressDotsContainer}>
+          {steps.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.progressDot,
+                {
+                  backgroundColor: index === currentStepIndex 
+                    ? theme.primary 
+                    : index < currentStepIndex 
+                      ? theme.success
+                      : theme.border,
+                  width: index === currentStepIndex ? 24 : 8,
+                  opacity: index < currentStepIndex ? 0.6 : 1,
+                }
+              ]}
+            />
+          ))}
         </View>
       </View>
 
@@ -461,21 +1041,9 @@ export default function WorkflowWizardScreen() {
           { paddingBottom: insets.bottom + Spacing["5xl"] + 80 },
         ]}
       >
-        <View style={[styles.woInfo, { backgroundColor: theme.backgroundSecondary }]}>
-          <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-            {workOrder.customerWoId}
-          </ThemedText>
-          <ThemedText type="body">{workOrder.serviceAddress}</ThemedText>
-          <ThemedText type="small" style={{ color: theme.textSecondary }}>
-            Old Meter: {workOrder.oldMeterId || "N/A"}
-          </ThemedText>
-        </View>
-
         <View style={[styles.stepCard, { backgroundColor: theme.backgroundDefault }]}>
-          <ThemedText type="h3" style={styles.stepTitle}>{currentStep.name}</ThemedText>
-          <ThemedText type="caption" style={[styles.requiredText, { color: theme.error }]}>
-            Required
-          </ThemedText>
+          <ThemedText type="h3" style={styles.stepTitle}>{STEP_TITLES[currentStep]}</ThemedText>
+          {getStepRequiredLabel()}
           
           <View style={styles.inputContainer}>
             {renderStepInput()}
@@ -511,7 +1079,7 @@ export default function WorkflowWizardScreen() {
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : isLastStep ? (
-              "Complete"
+              "Submit"
             ) : (
               "Next"
             )}
@@ -539,14 +1107,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    overflow: "hidden",
+  progressDotsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: Spacing.xs,
+    marginTop: Spacing.sm,
   },
-  progressFill: {
-    height: "100%",
-    borderRadius: 3,
+  progressDot: {
+    height: 8,
+    borderRadius: 4,
   },
   scrollView: {
     flex: 1,
@@ -571,6 +1141,114 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginTop: Spacing.md,
+  },
+  decisionContainer: {
+    gap: Spacing.lg,
+  },
+  woDetailsCard: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.md,
+  },
+  detailRow: {
+    gap: Spacing.xs,
+  },
+  decisionButtons: {
+    flexDirection: "row",
+    gap: Spacing.md,
+  },
+  decisionButton: {
+    flex: 1,
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconHeader: {
+    alignItems: "center",
+    marginBottom: Spacing.lg,
+  },
+  photoGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.sm,
+  },
+  photoContainer: {
+    position: "relative",
+    width: 80,
+    height: 80,
+  },
+  photoThumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: BorderRadius.sm,
+  },
+  removePhotoButton: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scannerContainer: {
+    alignItems: "center",
+  },
+  camera: {
+    width: 300,
+    height: 300,
+    borderRadius: BorderRadius.md,
+    overflow: "hidden",
+  },
+  cameraPlaceholder: {
+    width: 300,
+    height: 300,
+    borderRadius: BorderRadius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#000",
+  },
+  scannerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 300,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scanRegion: {
+    borderWidth: 2,
+    borderRadius: BorderRadius.sm,
+    borderStyle: "dashed",
+  },
+  scanButtonsRow: {
+    flexDirection: "row",
+    gap: Spacing.md,
+  },
+  scanButton: {
+    flex: 1,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    alignItems: "center",
+  },
+  gpsResult: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  summaryCard: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.md,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
   },
   signaturePlaceholder: {
     height: 120,
