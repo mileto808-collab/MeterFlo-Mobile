@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useLayoutEffect, useCallback } from "react";
 import { View, ScrollView, StyleSheet, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { HeaderButton, useHeaderHeight } from "@react-navigation/elements";
+import { useHeaderHeight } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
@@ -37,15 +37,19 @@ export default function SortScreen() {
     navigation.goBack();
   }, [navigation]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
-        <HeaderButton onPress={handleCancel}>
-          <ThemedText>Cancel</ThemedText>
-        </HeaderButton>
+        <Pressable
+          onPress={handleCancel}
+          hitSlop={8}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, paddingHorizontal: 8 })}
+        >
+          <ThemedText style={{ color: theme.primary }}>Cancel</ThemedText>
+        </Pressable>
       ),
     });
-  }, [navigation, handleCancel]);
+  }, [navigation, theme, handleCancel]);
 
   const handleApply = () => {
     setSort(localSort);
