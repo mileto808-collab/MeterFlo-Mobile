@@ -1,0 +1,190 @@
+Let me pull the wizard code to give a detailed UI/UX explanation:
+
+Here's a comprehensive UI/UX explanation of the Meter Changeout Wizard for the MeterFlo Mobile team:
+
+Meter Changeout Wizard - Complete UI/UX Flow
+Overview
+The wizard has two paths based on the technician's initial decision:
+
+Success Path (10 steps) - When the meter CAN be changed
+Trouble Path (3 steps) - When the meter CANNOT be changed
+Step 1: "Can Meter Be Changed?" (Both Paths Start Here)
+UI Display:
+
+Card showing work order details:
+Work Order ID (customer_wo_id)
+Address
+Old Meter ID (old_meter_id)
+Current Status (highlighted in amber if "Trouble")
+Existing trouble code if any
+Existing notes if any
+User Action: Two large buttons:
+
+"No - Report Issue" → Goes to Trouble Path
+"Yes - Proceed" → Goes to Success Path
+TROUBLE PATH (3 Steps)
+Step 2: "Report Issue" (troubleCapture)
+Required Fields:
+
+Trouble Code (required) - Dropdown select from troubleCodes reference data
+Photo(s) (minimum 1 required) - Opens device camera
+Note (optional) - Text area for additional details
+Validation: Cannot proceed until trouble code selected AND at least 1 photo captured.
+
+Step 3: "Confirm & Submit" (confirm)
+UI Display: Summary card showing:
+
+Trouble Code selected
+Number of photos captured
+Note (if any)
+Action: Submit button sets:
+
+{
+  "status": "Trouble",
+  "trouble": "<selected_trouble_code>",
+  "notes": "<trouble_note>",
+  "attachments": ["<photo_files>"]
+}
+SUCCESS PATH (10 Steps)
+Step 2: "Old Meter Final Reading" (oldReading)
+UI:
+
+Wrench icon header
+Text input for meter reading (numeric keyboard on mobile)
+Validation: digits only, leading zeros preserved (e.g., "0001")
+Field: old_meter_reading
+
+Step 3: "Before Photos" (beforePhotos)
+UI:
+
+Camera icon header
+"Take Before Photo" button → Opens device camera
+Photo grid showing thumbnails with delete buttons
+Minimum 1 photo required
+Action: Captures photos of OLD meter before removal.
+
+Step 4: "Perform Physical Changeout" (physicalChange)
+UI:
+
+Wrench icon header
+Instructions: "Safely remove the old meter and install the new meter"
+Summary card showing:
+Old meter reading recorded
+Number of before photos captured
+Action: Informational step - technician physically swaps meters, then taps "Next".
+
+Step 5: "New Meter ID" (newMeterId)
+UI: Three input modes with a selection screen:
+
+Scan Barcode - Opens camera with barcode scanner
+Supports: CODE_128, CODE_39, CODE_93, EAN_13, EAN_8, UPC_A, UPC_E, ITF, CODABAR
+Scanning region: 280x100 pixels (horizontal)
+Scan QR Code - Opens camera with QR scanner
+Supports: QR_CODE, DATA_MATRIX
+Scanning region: 200x200 pixels (square)
+Manual Entry - Text input field
+Field: new_meter_id
+
+Logic:
+
+User taps "Scan Barcode", "Scan QR Code", or "Enter Manually"
+On successful scan: auto-populates field, shows toast "Scanned Successfully: [ID]"
+On camera error: falls back to manual entry
+Step 6: "New Meter Reading" (newReading)
+UI:
+
+Text input for initial reading of new meter
+Usually "0" or small number
+Validation: digits only
+Field: new_meter_reading
+
+Step 7: "After Photos" (afterPhotos)
+UI:
+
+Same as Before Photos step
+Captures photos of NEW meter after installation
+Minimum 1 photo required
+Action: Documents completed installation.
+
+Step 8: "Capture GPS" (gps)
+UI:
+
+GPS capture component with "Get Current Location" button
+Shows lat/lng coordinates when captured
+Manual entry fallback available
+Format validation: lat,lng where lat is -90 to 90, lng is -180 to 180
+Field: new_gps (format: "37.7749,-122.4194")
+
+Step 9: "Customer Signature" (signature)
+UI:
+
+Signature pad canvas (touch/mouse drawing)
+Text input for customer name (required)
+"Clear" button to reset signature
+Fields:
+
+signature_data - Base64 encoded PNG image
+signature_name - Customer name string
+Note: Signature drawing is optional, but customer name is REQUIRED.
+
+Step 10: "Confirm & Submit" (confirm)
+UI: Summary card showing all captured data:
+
+Old meter reading
+Before photos count
+New meter ID
+New meter reading
+After photos count
+GPS coordinates
+Customer signature name
+Final Validation: All required fields must be present:
+
+Valid old meter reading
+Valid new meter reading
+New meter ID not empty
+At least 1 before photo
+At least 1 after photo
+Valid GPS coordinates
+Customer name not empty
+Submit Action:
+
+{
+  "status": "Completed",
+  "old_meter_reading": "<digits>",
+  "new_meter_id": "<scanned_or_manual>",
+  "new_meter_reading": "<digits>",
+  "new_gps": "<lat,lng>",
+  "signature_data": "<base64_png>",
+  "signature_name": "<customer_name>",
+  "completed_at": "<ISO_timestamp>",
+  "completed_by": "<user_id>",
+  "attachments": ["<before_photos>", "<after_photos>"]
+}
+Progress Indicator
+At the top of every step, a horizontal progress bar shows:
+
+Current step: wider pill, solid primary color
+Completed steps: small dots, semi-transparent primary
+Remaining steps: small dots, muted color
+Photo Handling
+Camera Access:
+
+<input type="file" accept="image/*" capture="environment" />
+Uses device back camera
+Multiple photos allowed per step
+Each photo shows as thumbnail with:
+Preview on tap (full-screen modal)
+Delete button (X in corner)
+Number badge
+Photo Types in Data Model:
+
+troublePhotos - Trouble path only
+beforePhotos - Success path, old meter
+afterPhotos - Success path, new meter
+Key Mobile Implementation Notes
+Barcode/QR Scanning uses html5-qrcode library
+GPS Capture uses browser Geolocation API
+Signature Pad is canvas-based touch drawing
+All photos are stored as File objects with blob preview URLs
+Form submission uses multipart/form-data for photos
+Validation happens at each step AND final confirmation
