@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, ScrollView, StyleSheet, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -44,10 +44,22 @@ export default function FilterScreen() {
     return "#6B7280";
   }
 
+  const handleCancel = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
+  const handleReset = useCallback(() => {
+    setLocalFilters({
+      status: [],
+      assignedTo: "",
+      searchQuery: filters.searchQuery,
+    });
+  }, [filters.searchQuery]);
+
   useEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
-        <HeaderButton onPress={() => navigation.goBack()}>
+        <HeaderButton onPress={handleCancel}>
           <ThemedText>Cancel</ThemedText>
         </HeaderButton>
       ),
@@ -57,15 +69,7 @@ export default function FilterScreen() {
         </HeaderButton>
       ),
     });
-  }, [navigation, theme]);
-
-  const handleReset = () => {
-    setLocalFilters({
-      status: [],
-      assignedTo: "",
-      searchQuery: filters.searchQuery,
-    });
-  };
+  }, [navigation, theme, handleCancel, handleReset]);
 
   const handleApply = () => {
     setFilters(localFilters);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, ScrollView, StyleSheet, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -32,15 +32,19 @@ export default function SortScreen() {
 
   const [localSort, setLocalSort] = useState<SortConfig>(sort);
 
+  const handleCancel = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
+
   useEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
-        <HeaderButton onPress={() => navigation.goBack()}>
+        <HeaderButton onPress={handleCancel}>
           <ThemedText>Cancel</ThemedText>
         </HeaderButton>
       ),
     });
-  }, [navigation]);
+  }, [navigation, handleCancel]);
 
   const handleApply = () => {
     setSort(localSort);

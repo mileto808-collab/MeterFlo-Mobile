@@ -19,6 +19,8 @@ import { ThemedText } from "@/components/ThemedText";
 import { TextInput } from "@/components/TextInput";
 import { Button } from "@/components/Button";
 import { SelectInput } from "@/components/SelectInput";
+import { SignaturePad } from "@/components/SignaturePad";
+import { PhotoViewer } from "@/components/PhotoViewer";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 type RouteProps = RouteProp<RootStackParamList, "WorkflowWizard">;
@@ -112,6 +114,7 @@ export default function WorkflowWizardScreen() {
   const [showScanner, setShowScanner] = useState(false);
   const [scannerType, setScannerType] = useState<"barcode" | "qr">("barcode");
   const [isCapturingGps, setIsCapturingGps] = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState<{ uri: string; type: "before" | "after" | "trouble"; id: string } | null>(null);
   
   const [formData, setFormData] = useState<MeterChangeoutData>({
     canChange: null,
@@ -204,10 +207,10 @@ export default function WorkflowWizardScreen() {
     
     Alert.alert(
       "Cancel Workflow",
-      "Your progress will not be saved. Are you sure?",
+      "Your progress will not be saved. Are you sure you want to leave?",
       [
-        { text: "Continue", style: "cancel" },
-        { text: "Cancel", style: "destructive", onPress: () => navigation.goBack() },
+        { text: "Stay", style: "cancel" },
+        { text: "Leave", style: "destructive", onPress: () => navigation.goBack() },
       ]
     );
   };
@@ -548,18 +551,26 @@ export default function WorkflowWizardScreen() {
   const renderPhotoGrid = (photos: PhotoAsset[], photoType: "before" | "after" | "trouble") => (
     <View style={styles.photoGrid}>
       {photos.map((photo) => (
-        <View key={photo.id} style={styles.photoContainer}>
+        <Pressable 
+          key={photo.id} 
+          style={styles.photoContainer}
+          onPress={() => setViewingPhoto({ uri: photo.uri, type: photoType, id: photo.id })}
+        >
           <Image source={{ uri: photo.uri }} style={styles.photoThumbnail} />
-          <Pressable
-            style={[styles.removePhotoButton, { backgroundColor: theme.error }]}
-            onPress={() => removePhoto(photoType, photo.id)}
-          >
-            <Feather name="x" size={14} color="#FFFFFF" />
-          </Pressable>
-        </View>
+          <View style={styles.photoOverlay}>
+            <Feather name="maximize-2" size={16} color="#FFFFFF" />
+          </View>
+        </Pressable>
       ))}
     </View>
   );
+
+  const handleDeleteViewingPhoto = () => {
+    if (viewingPhoto) {
+      removePhoto(viewingPhoto.type, viewingPhoto.id);
+      setViewingPhoto(null);
+    }
+  };
 
   const renderStepInput = () => {
     switch (currentStep) {
@@ -913,12 +924,14 @@ export default function WorkflowWizardScreen() {
               <Feather name="edit-3" size={32} color={theme.primary} />
             </View>
             
-            <View style={[styles.signaturePlaceholder, { borderColor: theme.border }]}>
-              <Feather name="edit-3" size={32} color={theme.textSecondary} />
-              <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                Signature capture available in Expo Go
-              </ThemedText>
-            </View>
+            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
+              Have the customer sign below
+            </ThemedText>
+            
+            <SignaturePad
+              onSignatureChange={(data) => setFormData(prev => ({ ...prev, signatureData: data }))}
+              height={180}
+            />
             
             <View style={{ marginTop: Spacing.lg }}>
               <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
@@ -1172,6 +1185,13 @@ export default function WorkflowWizardScreen() {
           </Button>
         </View>
       </View>
+
+      <PhotoViewer
+        visible={viewingPhoto !== null}
+        photoUri={viewingPhoto?.uri || null}
+        onClose={() => setViewingPhoto(null)}
+        onDelete={handleDeleteViewingPhoto}
+      />
     </View>
   );
 }
@@ -1268,6 +1288,14 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: BorderRadius.sm,
+  },
+  photoOverlay: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: BorderRadius.xs,
+    padding: 4,
   },
   removePhotoButton: {
     position: "absolute",
