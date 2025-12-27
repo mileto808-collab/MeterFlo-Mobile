@@ -7,6 +7,7 @@ import { HeaderButton } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
+import * as Linking from "expo-linking";
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
@@ -295,59 +296,27 @@ export default function WorkflowWizardScreen() {
 
   const launchExternalScanner = async () => {
     if (Platform.OS === "web") {
-      Alert.alert("Not Available", "External scanner apps are not available on web. Please use the built-in camera scanner.");
+      Alert.alert("Not Available", "Scanner is not available on web. Please use the built-in camera scanner.");
       return;
     }
 
-    try {
-      const IntentLauncher = require("expo-intent-launcher");
-      const Linking = require("expo-linking");
-      
-      if (Platform.OS === "android") {
-        try {
-          const result = await IntentLauncher.startActivityAsync(
-            "com.google.zxing.client.android.SCAN",
-            {
-              extra: { SCAN_MODE: "ONE_D_MODE,QR_CODE_MODE" },
-            }
-          );
-          
-          if (result.resultCode === IntentLauncher.ResultCode.Success && result.data) {
-            const scannedData = result.data;
-            setFormData(prev => ({ ...prev, newMeterId: scannedData }));
-            Alert.alert("Scanned Successfully", scannedData);
-          }
-        } catch (intentError) {
-          Alert.alert(
-            "External Scanner",
-            "No compatible scanner app found. You can install a barcode scanner app from the Play Store, or use the built-in camera scanner.",
-            [
-              { text: "Use Camera", onPress: () => { setScannerType("barcode"); setShowScanner(true); } },
-              { text: "OK", style: "cancel" },
-            ]
-          );
-        }
-      } else {
-        Alert.alert(
-          "External Scanner",
-          "External scanner apps work best on Android. On iOS, please use the built-in camera scanner.",
-          [
-            { text: "Use Camera", onPress: () => { setScannerType("barcode"); setShowScanner(true); } },
-            { text: "OK", style: "cancel" },
-          ]
-        );
-      }
-    } catch (error) {
-      console.error("External scanner error:", error);
-      Alert.alert(
-        "Scanner Not Available",
-        "Could not launch external scanner. Please use the built-in camera scanner instead.",
-        [
-          { text: "Use Camera", onPress: () => { setScannerType("barcode"); setShowScanner(true); } },
-          { text: "OK", style: "cancel" },
-        ]
-      );
-    }
+    Alert.alert(
+      "Choose Scanner",
+      "How would you like to scan the barcode?",
+      [
+        { 
+          text: "Use Camera", 
+          onPress: () => { 
+            setScannerType("barcode"); 
+            setShowScanner(true); 
+          } 
+        },
+        {
+          text: "Enter Manually",
+          style: "cancel",
+        },
+      ]
+    );
   };
 
   const captureGps = async () => {
