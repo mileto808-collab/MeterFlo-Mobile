@@ -76,6 +76,10 @@ interface ServerWorkOrder {
   new_meter_reading?: number | string;
   old_gps?: string;
   new_gps?: string;
+  gps?: string;
+  location?: string;
+  meter_gps?: string;
+  meter_location?: string;
   notes?: string;
   trouble?: string;
   scheduled_at?: string;
@@ -152,7 +156,7 @@ function mapServerWorkOrder(serverWo: ServerWorkOrder): WorkOrder {
     newMeterReading: serverWo.new_meter_reading != null ? String(serverWo.new_meter_reading) : undefined,
     oldMeterType: serverWo.old_meter_type || undefined,
     newMeterType: serverWo.new_meter_type || undefined,
-    oldGps: serverWo.old_gps || undefined,
+    oldGps: serverWo.old_gps || serverWo.gps || serverWo.location || serverWo.meter_gps || serverWo.meter_location || undefined,
     newGps: serverWo.new_gps || undefined,
     serviceAddress: serverWo.address || "",
     city: serverWo.city || undefined,
