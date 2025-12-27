@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/contexts/AuthContext";
-import { proxyRequest } from "@/lib/api-proxy";
 
 export interface WorkOrder {
   id: number;
@@ -178,11 +177,17 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         path += `&lastSyncTimestamp=${encodeURIComponent(lastSyncTime)}`;
       }
 
-      const data = await proxyRequest({
-        serverUrl,
+      const response = await fetch(`${serverUrl}${path}`, {
         method: "GET",
-        path,
+        credentials: "include",
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to fetch work orders");
+      }
+
+      const data = await response.json();
       
       const newWorkOrders: WorkOrder[] = data.workOrders || [];
       const newReferenceData: ReferenceData = data.referenceData || null;
@@ -230,11 +235,17 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   const claimWorkOrder = useCallback(async (workOrderId: number) => {
     if (!serverUrl || !projectId) return;
 
-    const data = await proxyRequest({
-      serverUrl,
+    const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}/claim`, {
       method: "POST",
-      path: `/api/projects/${projectId}/work-orders/${workOrderId}/claim`,
+      credentials: "include",
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Failed to claim work order");
+    }
+
+    const data = await response.json();
     
     if (data.workOrder) {
       setWorkOrdersState(prev => {

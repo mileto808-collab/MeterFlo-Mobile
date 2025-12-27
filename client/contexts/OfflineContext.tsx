@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/contexts/AuthContext";
-import { proxyRequest } from "@/lib/api-proxy";
 
 interface PendingAction {
   id: string;
@@ -87,15 +86,22 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         clientTimestamp: new Date(action.timestamp).toISOString(),
       }));
 
-      const result = await proxyRequest({
-        serverUrl,
+      const response = await fetch(`${serverUrl}/api/projects/${projectId}/mobile/sync/upload`, {
         method: "POST",
-        path: `/api/projects/${projectId}/mobile/sync/upload`,
-        body: {
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
           changes,
           clientTimestamp: new Date().toISOString(),
-        },
+        }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Sync failed");
+      }
+
+      const result = await response.json();
       
       if (result.conflicts && result.conflicts.length > 0) {
         console.warn("Sync conflicts detected:", result.conflicts);

@@ -11,7 +11,6 @@ import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders } from "@/contexts/WorkOrderContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOffline } from "@/contexts/OfflineContext";
-import { proxyRequest } from "@/lib/api-proxy";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { ThemedText } from "@/components/ThemedText";
 import { TextInput } from "@/components/TextInput";
@@ -179,12 +178,22 @@ export default function WorkflowWizardScreen() {
 
     try {
       if (isOnline && serverUrl && projectId) {
-        const result = await proxyRequest({
-          serverUrl,
-          method: "POST",
-          path: `/api/projects/${projectId}/work-orders/${workOrder.id}/meter-changeout`,
-          body: changeoutPayload,
-        });
+        const response = await fetch(
+          `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}/meter-changeout`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(changeoutPayload),
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || "Failed to complete work order");
+        }
+
+        const result = await response.json();
         
         updateWorkOrder(workOrder.id, {
           status: result.workOrder?.status || (canChange ? "Completed" : "Trouble"),

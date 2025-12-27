@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
-import { proxyRequest, clearProxySession } from "@/lib/api-proxy";
 
 export interface User {
   id: string;
@@ -129,12 +128,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const normalizedUrl = serverUrl.endsWith("/") ? serverUrl.slice(0, -1) : serverUrl;
       
-      const loginData = await proxyRequest({
-        serverUrl: normalizedUrl,
+      const loginResponse = await fetch(`${normalizedUrl}/api/auth/local/login`, {
         method: "POST",
-        path: "/api/auth/local/login",
-        body: { username, password },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username, password }),
       });
+
+      if (!loginResponse.ok) {
+        const errorText = await loginResponse.text();
+        throw new Error(errorText || "Login failed");
+      }
+
+      const loginData = await loginResponse.json();
 
       const user: User = {
         id: loginData.user?.id || loginData.id,
@@ -143,12 +149,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: loginData.user?.role || loginData.role || "User",
       };
 
-      const projectsData = await proxyRequest({
-        serverUrl: normalizedUrl,
+      const projectsResponse = await fetch(`${normalizedUrl}/api/users/${user.id}/projects`, {
         method: "GET",
-        path: `/api/users/${user.id}/projects`,
+        credentials: "include",
       });
 
+      if (!projectsResponse.ok) {
+        throw new Error("Failed to fetch projects");
+      }
+
+      const projectsData = await projectsResponse.json();
       const projects: Project[] = Array.isArray(projectsData) ? projectsData : projectsData.projects || [];
 
       await Promise.all([
@@ -199,9 +209,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedServerUrl = await secureGet(STORAGE_KEYS.SERVER_URL);
     if (storedServerUrl) {
       try {
-        await clearProxySession(storedServerUrl);
+        await fetch(`${storedServerUrl}/api/auth/logout`, {
+          method: "POST",
+          credentials: "include",
+        });
       } catch (e) {
-        console.warn("Failed to clear proxy session:", e);
+        console.warn("Failed to logout from server:", e);
       }
     }
     
