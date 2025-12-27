@@ -39,7 +39,7 @@ export interface WorkOrder {
   troubleNote?: string;
   signatureData?: string;
   signatureName?: string;
-  attachments?: string[];
+  attachments?: (string | { url?: string; filename?: string; name?: string; id?: string })[];
   completedAt?: string;
   completedBy?: string;
   completedByUsername?: string;
@@ -94,7 +94,10 @@ interface ServerWorkOrder {
   assigned_user_display_name?: string;
   signature_data?: string;
   signature_name?: string;
-  attachments?: string[];
+  attachments?: (string | { url?: string; filename?: string; name?: string; id?: string })[];
+  assigned_group_name?: string;
+  created_by_username?: string;
+  updated_by_username?: string;
 }
 
 interface ServerReferenceData {
@@ -170,6 +173,7 @@ function mapServerWorkOrder(serverWo: ServerWorkOrder): WorkOrder {
     assignedGroupId: serverWo.assigned_group_id || undefined,
     assignedUserUsername: serverWo.assigned_user_username || undefined,
     assignedUserDisplayName: serverWo.assigned_user_display_name || undefined,
+    assignedGroupName: serverWo.assigned_group_name || undefined,
     troubleCode: serverWo.trouble || undefined,
     signatureData: serverWo.signature_data || undefined,
     signatureName: serverWo.signature_name || undefined,
@@ -180,7 +184,9 @@ function mapServerWorkOrder(serverWo: ServerWorkOrder): WorkOrder {
     createdAt: serverWo.created_at || new Date().toISOString(),
     updatedAt: serverWo.updated_at || new Date().toISOString(),
     createdBy: serverWo.created_by || undefined,
+    createdByUsername: serverWo.created_by_username || undefined,
     updatedBy: serverWo.updated_by || undefined,
+    updatedByUsername: serverWo.updated_by_username || undefined,
   };
 }
 
