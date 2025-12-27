@@ -3,7 +3,7 @@ import { View, ScrollView, StyleSheet, Pressable, ActivityIndicator } from "reac
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useOffline } from "@/contexts/OfflineContext";
@@ -62,7 +62,7 @@ export default function SyncScreen() {
     >
       <View style={[styles.statusCard, { backgroundColor: isOnline ? theme.success + "15" : theme.warning + "15" }]}>
         <View style={[styles.statusIcon, { backgroundColor: isOnline ? theme.success : theme.warning }]}>
-          <Ionicons name={isOnline ? "wifi-outline" : "cloud-offline-outline"} size={24} color="#FFFFFF" />
+          <Feather name={isOnline ? "wifi" : "wifi-off"} size={24} color="#FFFFFF" />
         </View>
         <View style={styles.statusContent}>
           <ThemedText type="h4">{isOnline ? "Connected" : "Offline"}</ThemedText>
@@ -119,7 +119,7 @@ export default function SyncScreen() {
           </View>
         ) : (
           <View style={styles.emptyState}>
-            <Ionicons name="checkmark-circle-outline" size={32} color={theme.success} />
+            <Feather name="check-circle" size={32} color={theme.success} />
             <ThemedText type="body" style={{ color: theme.textSecondary }}>
               All changes are synced
             </ThemedText>
@@ -151,7 +151,7 @@ export default function SyncScreen() {
               { opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Ionicons name="trash-outline" size={16} color={theme.error} />
+            <Feather name="trash-2" size={16} color={theme.error} />
             <ThemedText type="small" style={{ color: theme.error }}>
               Clear All Pending
             </ThemedText>

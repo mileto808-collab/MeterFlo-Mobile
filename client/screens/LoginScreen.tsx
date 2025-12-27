@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Image, Pressable, ActivityIndicator, Alert, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { ThemedText } from "@/components/ThemedText";
 import { TextInput } from "@/components/TextInput";
@@ -108,8 +108,8 @@ export default function LoginScreen() {
               style={styles.eyeButton}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons
-                name={showPassword ? "eye-off-outline" : "eye-outline"}
+              <Feather
+                name={showPassword ? "eye-off" : "eye"}
                 size={20}
                 color={theme.textSecondary}
               />
@@ -119,7 +119,7 @@ export default function LoginScreen() {
 
         {error ? (
           <View style={[styles.errorContainer, { backgroundColor: theme.error + "15" }]}>
-            <Ionicons name="alert-circle-outline" size={16} color={theme.error} />
+            <Feather name="alert-circle" size={16} color={theme.error} />
             <ThemedText type="small" style={[styles.errorText, { color: theme.error }]}>
               {error}
             </ThemedText>

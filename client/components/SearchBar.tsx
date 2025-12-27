@@ -1,6 +1,6 @@
 import React from "react";
 import { View, TextInput, StyleSheet, Pressable } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
@@ -15,7 +15,7 @@ export function SearchBar({ value, onChangeText, placeholder = "Search..." }: Se
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
-      <Ionicons name="search-outline" size={18} color={theme.textSecondary} />
+      <Feather name="search" size={18} color={theme.textSecondary} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -31,7 +31,7 @@ export function SearchBar({ value, onChangeText, placeholder = "Search..." }: Se
           onPress={() => onChangeText("")}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="close-outline" size={18} color={theme.textSecondary} />
+          <Feather name="x" size={18} color={theme.textSecondary} />
         </Pressable>
       ) : null}
     </View>

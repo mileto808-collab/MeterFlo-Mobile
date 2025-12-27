@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useHeaderHeight } from "@react-navigation/elements";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders, SortConfig } from "@/contexts/WorkOrderContext";
@@ -16,12 +16,12 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const SORT_FIELDS = [
-  { value: "dueDate", label: "Due Date", icon: "calendar-outline" as const },
-  { value: "priority", label: "Priority", icon: "alert-circle-outline" as const },
-  { value: "status", label: "Status", icon: "checkmark-circle-outline" as const },
-  { value: "title", label: "Title", icon: "document-text-outline" as const },
-  { value: "createdAt", label: "Created Date", icon: "time-outline" as const },
-  { value: "updatedAt", label: "Last Updated", icon: "refresh-outline" as const },
+  { value: "dueDate", label: "Due Date", icon: "calendar" as const },
+  { value: "priority", label: "Priority", icon: "alert-circle" as const },
+  { value: "status", label: "Status", icon: "check-circle" as const },
+  { value: "title", label: "Title", icon: "file-text" as const },
+  { value: "createdAt", label: "Created Date", icon: "clock" as const },
+  { value: "updatedAt", label: "Last Updated", icon: "refresh-cw" as const },
 ];
 
 export default function SortScreen() {
@@ -73,7 +73,7 @@ export default function SortScreen() {
                   ]}
                 >
                   <View style={styles.optionContent}>
-                    <Ionicons
+                    <Feather
                       name={field.icon}
                       size={20}
                       color={isSelected ? theme.primary : theme.textSecondary}
@@ -86,7 +86,7 @@ export default function SortScreen() {
                     </ThemedText>
                   </View>
                   {isSelected ? (
-                    <Ionicons name="checkmark-outline" size={20} color={theme.primary} />
+                    <Feather name="check" size={20} color={theme.primary} />
                   ) : null}
                 </Pressable>
               );
@@ -106,8 +106,8 @@ export default function SortScreen() {
               },
             ]}
           >
-            <Ionicons
-              name={localSort.direction === "asc" ? "arrow-up-outline" : "arrow-down-outline"}
+            <Feather
+              name={localSort.direction === "asc" ? "arrow-up" : "arrow-down"}
               size={20}
               color={theme.primary}
             />

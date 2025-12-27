@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { HeaderButton } from "@react-navigation/elements";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
@@ -501,7 +501,7 @@ export default function WorkflowWizardScreen() {
         >
           <Image source={{ uri: photo.uri }} style={styles.photoThumbnail} />
           <View style={styles.photoOverlay}>
-            <Ionicons name="expand-outline" size={16} color="#FFFFFF" />
+            <Feather name="maximize-2" size={16} color="#FFFFFF" />
           </View>
         </Pressable>
       ))}
@@ -549,7 +549,7 @@ export default function WorkflowWizardScreen() {
                 ]}
                 onPress={() => setFormData(prev => ({ ...prev, canChange: false }))}
               >
-                <Ionicons name="close-circle-outline" size={24} color={formData.canChange === false ? "#FFFFFF" : theme.error} />
+                <Feather name="x-circle" size={24} color={formData.canChange === false ? "#FFFFFF" : theme.error} />
                 <ThemedText 
                   type="body" 
                   style={{ color: formData.canChange === false ? "#FFFFFF" : theme.text, marginTop: Spacing.sm }}
@@ -565,7 +565,7 @@ export default function WorkflowWizardScreen() {
                 ]}
                 onPress={() => setFormData(prev => ({ ...prev, canChange: true }))}
               >
-                <Ionicons name="checkmark-circle-outline" size={24} color={formData.canChange === true ? "#FFFFFF" : theme.success} />
+                <Feather name="check-circle" size={24} color={formData.canChange === true ? "#FFFFFF" : theme.success} />
                 <ThemedText 
                   type="body" 
                   style={{ color: formData.canChange === true ? "#FFFFFF" : theme.text, marginTop: Spacing.sm }}
@@ -581,7 +581,7 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Ionicons name="pulse-outline" size={32} color={theme.primary} />
+              <Feather name="activity" size={32} color={theme.primary} />
             </View>
             <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
               Enter the final reading from the old meter
@@ -599,7 +599,7 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Ionicons name="camera-outline" size={32} color={theme.primary} />
+              <Feather name="camera" size={32} color={theme.primary} />
             </View>
             <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
               Take photos of the old meter before removal (minimum 1 required)
@@ -609,7 +609,7 @@ export default function WorkflowWizardScreen() {
               onPress={() => takePhoto("before")}
               style={{ backgroundColor: theme.primary, marginBottom: Spacing.md }}
             >
-              <Ionicons name="camera-outline" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+              <Feather name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
               Take Before Photo
             </Button>
             
@@ -625,7 +625,7 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Ionicons name="build-outline" size={32} color={theme.primary} />
+              <Feather name="tool" size={32} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ marginBottom: Spacing.lg }}>
               Safely remove the old meter and install the new meter.
@@ -633,11 +633,11 @@ export default function WorkflowWizardScreen() {
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
               <View style={styles.summaryRow}>
-                <Ionicons name="checkmark-outline" size={16} color={theme.success} />
+                <Feather name="check" size={16} color={theme.success} />
                 <ThemedText type="small">Old meter reading: {formData.oldMeterReading}</ThemedText>
               </View>
               <View style={styles.summaryRow}>
-                <Ionicons name="checkmark-outline" size={16} color={theme.success} />
+                <Feather name="check" size={16} color={theme.success} />
                 <ThemedText type="small">{formData.beforePhotos.length} before photo(s) captured</ThemedText>
               </View>
             </View>
@@ -667,7 +667,7 @@ export default function WorkflowWizardScreen() {
                 />
               ) : (
                 <View style={styles.cameraPlaceholder}>
-                  <Ionicons name="camera-outline" size={48} color={theme.textSecondary} />
+                  <Feather name="camera-off" size={48} color={theme.textSecondary} />
                   <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.md, textAlign: "center" }}>
                     {permissionDenied 
                       ? "Camera access denied. Please enable in Settings."
@@ -716,7 +716,7 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Ionicons name="keypad-outline" size={32} color={theme.primary} />
+              <Feather name="hash" size={32} color={theme.primary} />
             </View>
             <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.lg }}>
               Scan or enter the new meter ID
@@ -730,7 +730,7 @@ export default function WorkflowWizardScreen() {
                 style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
                 onPress={() => { setScannerType("barcode"); setShowScanner(true); }}
               >
-                <Ionicons name="scan-outline" size={24} color={theme.primary} />
+                <Feather name="maximize" size={24} color={theme.primary} />
                 <ThemedText type="small" style={{ marginTop: Spacing.xs }}>Scan Barcode</ThemedText>
               </Pressable>
               
@@ -738,7 +738,7 @@ export default function WorkflowWizardScreen() {
                 style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
                 onPress={() => { setScannerType("qr"); setShowScanner(true); }}
               >
-                <Ionicons name="qr-code-outline" size={24} color={theme.primary} />
+                <Feather name="grid" size={24} color={theme.primary} />
                 <ThemedText type="small" style={{ marginTop: Spacing.xs }}>Scan QR Code</ThemedText>
               </Pressable>
             </View>
@@ -763,7 +763,7 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Ionicons name="pulse-outline" size={32} color={theme.primary} />
+              <Feather name="activity" size={32} color={theme.primary} />
             </View>
             <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
               Enter the initial reading from the new meter (usually 0)
@@ -781,7 +781,7 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Ionicons name="camera-outline" size={32} color={theme.primary} />
+              <Feather name="camera" size={32} color={theme.primary} />
             </View>
             <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
               Take photos of the new meter after installation (minimum 1 required)
@@ -791,7 +791,7 @@ export default function WorkflowWizardScreen() {
               onPress={() => takePhoto("after")}
               style={{ backgroundColor: theme.primary, marginBottom: Spacing.md }}
             >
-              <Ionicons name="camera-outline" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+              <Feather name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
               Take After Photo
             </Button>
             
@@ -807,7 +807,7 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Ionicons name="location-outline" size={32} color={theme.primary} />
+              <Feather name="map-pin" size={32} color={theme.primary} />
             </View>
             <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
               Capture GPS coordinates of the meter location
@@ -822,7 +822,7 @@ export default function WorkflowWizardScreen() {
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
-                  <Ionicons name="navigate-outline" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                  <Feather name="navigation" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
                   Get Current Location
                 </>
               )}
@@ -830,7 +830,7 @@ export default function WorkflowWizardScreen() {
             
             {formData.gpsCoordinates ? (
               <View style={[styles.gpsResult, { backgroundColor: theme.backgroundSecondary }]}>
-                <Ionicons name="checkmark-circle-outline" size={20} color={theme.success} />
+                <Feather name="check-circle" size={20} color={theme.success} />
                 <ThemedText type="body" style={{ marginLeft: Spacing.sm }}>{formData.gpsCoordinates}</ThemedText>
               </View>
             ) : null}
@@ -850,7 +850,7 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Ionicons name="pencil-outline" size={32} color={theme.primary} />
+              <Feather name="edit-3" size={32} color={theme.primary} />
             </View>
             
             <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
@@ -882,31 +882,31 @@ export default function WorkflowWizardScreen() {
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
               <View style={styles.summaryRow}>
-                <Ionicons name="pulse-outline" size={16} color={theme.primary} />
+                <Feather name="activity" size={16} color={theme.primary} />
                 <ThemedText type="small">Old reading: {formData.oldMeterReading}</ThemedText>
               </View>
               <View style={styles.summaryRow}>
-                <Ionicons name="camera-outline" size={16} color={theme.primary} />
+                <Feather name="camera" size={16} color={theme.primary} />
                 <ThemedText type="small">{formData.beforePhotos.length} before photo(s)</ThemedText>
               </View>
               <View style={styles.summaryRow}>
-                <Ionicons name="keypad-outline" size={16} color={theme.primary} />
+                <Feather name="hash" size={16} color={theme.primary} />
                 <ThemedText type="small">New meter: {formData.newMeterId}</ThemedText>
               </View>
               <View style={styles.summaryRow}>
-                <Ionicons name="pulse-outline" size={16} color={theme.primary} />
+                <Feather name="activity" size={16} color={theme.primary} />
                 <ThemedText type="small">New reading: {formData.newMeterReading}</ThemedText>
               </View>
               <View style={styles.summaryRow}>
-                <Ionicons name="camera-outline" size={16} color={theme.primary} />
+                <Feather name="camera" size={16} color={theme.primary} />
                 <ThemedText type="small">{formData.afterPhotos.length} after photo(s)</ThemedText>
               </View>
               <View style={styles.summaryRow}>
-                <Ionicons name="location-outline" size={16} color={theme.primary} />
+                <Feather name="map-pin" size={16} color={theme.primary} />
                 <ThemedText type="small">GPS: {formData.gpsCoordinates}</ThemedText>
               </View>
               <View style={styles.summaryRow}>
-                <Ionicons name="person-outline" size={16} color={theme.primary} />
+                <Feather name="user" size={16} color={theme.primary} />
                 <ThemedText type="small">Customer: {formData.signatureName}</ThemedText>
               </View>
             </View>
@@ -932,7 +932,7 @@ export default function WorkflowWizardScreen() {
                 onPress={() => takePhoto("trouble")}
                 style={{ backgroundColor: theme.primary, marginBottom: Spacing.md }}
               >
-                <Ionicons name="camera-outline" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                <Feather name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
                 Take Photo
               </Button>
               
@@ -964,16 +964,16 @@ export default function WorkflowWizardScreen() {
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
               <View style={styles.summaryRow}>
-                <Ionicons name="warning-outline" size={16} color={theme.warning} />
+                <Feather name="alert-triangle" size={16} color={theme.warning} />
                 <ThemedText type="small">Trouble: {formData.troubleCode}</ThemedText>
               </View>
               <View style={styles.summaryRow}>
-                <Ionicons name="camera-outline" size={16} color={theme.primary} />
+                <Feather name="camera" size={16} color={theme.primary} />
                 <ThemedText type="small">{formData.troublePhotos.length} photo(s)</ThemedText>
               </View>
               {formData.troubleNote ? (
                 <View style={styles.summaryRow}>
-                  <Ionicons name="document-text-outline" size={16} color={theme.primary} />
+                  <Feather name="file-text" size={16} color={theme.primary} />
                   <ThemedText type="small" numberOfLines={2}>{formData.troubleNote}</ThemedText>
                 </View>
               ) : null}
@@ -1000,7 +1000,7 @@ export default function WorkflowWizardScreen() {
   if (claimError) {
     return (
       <View style={[styles.container, styles.loadingContainer, { backgroundColor: theme.backgroundRoot }]}>
-        <Ionicons name="alert-circle-outline" size={48} color={theme.error} />
+        <Feather name="alert-circle" size={48} color={theme.error} />
         <ThemedText type="h4" style={{ marginTop: Spacing.lg, color: theme.error, textAlign: "center" }}>
           Could not claim work order
         </ThemedText>

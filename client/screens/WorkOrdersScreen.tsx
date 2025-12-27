@@ -5,7 +5,7 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders, WorkOrder } from "@/contexts/WorkOrderContext";
@@ -53,7 +53,7 @@ export default function WorkOrdersScreen() {
 
   const ListEmptyComponent = useMemo(() => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="file-tray-outline" size={48} color={theme.textSecondary} />
+      <Feather name="inbox" size={48} color={theme.textSecondary} />
       <ThemedText type="body" style={[styles.emptyText, { color: theme.textSecondary }]}>
         {error ? "Failed to load work orders" : "No work orders found"}
       </ThemedText>
@@ -85,7 +85,7 @@ export default function WorkOrdersScreen() {
               { backgroundColor: theme.backgroundSecondary, opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Ionicons name="filter-outline" size={20} color={theme.text} />
+            <Feather name="filter" size={20} color={theme.text} />
             {activeFilterCount > 0 ? (
               <View style={[styles.filterBadge, { backgroundColor: theme.primary }]}>
                 <ThemedText style={styles.filterBadgeText}>{activeFilterCount}</ThemedText>
@@ -99,7 +99,7 @@ export default function WorkOrdersScreen() {
               { backgroundColor: theme.backgroundSecondary, opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Ionicons name="swap-vertical-outline" size={20} color={theme.text} />
+            <Feather name="bar-chart-2" size={20} color={theme.text} style={{ transform: [{ rotate: "-90deg" }] }} />
           </Pressable>
         </View>
       </View>

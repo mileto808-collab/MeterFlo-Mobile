@@ -221,31 +221,31 @@ export const Typography = {
   },
 };
 
-// Font Families - using system fonts for native compatibility
+// Font Families
 export const Fonts = Platform.select({
   ios: {
-    sans: "System",             // iOS system font (SF Pro)
-    serif: "Georgia",
-    rounded: "System",
-    mono: "Menlo",              // iOS monospace
+    sans: "Inter",              // Primary UI font (requires expo-font)
+    serif: "ui-serif",
+    rounded: "ui-rounded",
+    mono: "JetBrains Mono",     // For IDs, readings, timestamps (requires expo-font)
   },
   android: {
-    sans: "Roboto",             // Android system font
+    sans: "Inter",
     serif: "serif",
-    rounded: "Roboto",
-    mono: "monospace",          // Android monospace
+    rounded: "Inter",
+    mono: "JetBrains Mono",
   },
   default: {
-    sans: "System",
+    sans: "Inter",
     serif: "serif",
-    rounded: "System",
-    mono: "monospace",
+    rounded: "Inter",
+    mono: "JetBrains Mono",
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    sans: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', system-ui, sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    rounded: "Inter, 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', sans-serif",
+    mono: "'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
 

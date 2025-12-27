@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Pressable, StyleSheet, Modal, FlatList } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
 import { Spacing, BorderRadius } from "@/constants/theme";
@@ -42,7 +42,7 @@ export function SelectInput({ value, options, onSelect, placeholder = "Select...
         >
           {value || placeholder}
         </ThemedText>
-        <Ionicons name="chevron-down-outline" size={20} color={theme.textSecondary} />
+        <Feather name="chevron-down" size={20} color={theme.textSecondary} />
       </Pressable>
 
       <Modal
@@ -65,7 +65,7 @@ export function SelectInput({ value, options, onSelect, placeholder = "Select...
             <View style={[styles.header, { borderBottomColor: theme.border }]}>
               <ThemedText type="h4">Select Option</ThemedText>
               <Pressable onPress={() => setIsOpen(false)}>
-                <Ionicons name="close-outline" size={24} color={theme.text} />
+                <Feather name="x" size={24} color={theme.text} />
               </Pressable>
             </View>
             <FlatList
@@ -89,7 +89,7 @@ export function SelectInput({ value, options, onSelect, placeholder = "Select...
                     {item}
                   </ThemedText>
                   {item === value ? (
-                    <Ionicons name="checkmark-outline" size={20} color={theme.primary} />
+                    <Feather name="check" size={20} color={theme.primary} />
                   ) : null}
                 </Pressable>
               )}

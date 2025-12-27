@@ -3,7 +3,7 @@ import { View, ScrollView, StyleSheet, Pressable, Alert, Platform } from "react-
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -66,7 +66,7 @@ export default function AccountScreen() {
     >
       <View style={[styles.profileCard, { backgroundColor: theme.backgroundDefault }]}>
         <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
-          <Ionicons name="person-outline" size={32} color="#FFFFFF" />
+          <Feather name="user" size={32} color="#FFFFFF" />
         </View>
         <View style={styles.profileInfo}>
           <ThemedText type="h3">{user?.displayName || user?.username || "User"}</ThemedText>
@@ -87,7 +87,7 @@ export default function AccountScreen() {
           
           <View style={styles.infoRow}>
             <View style={styles.infoLabel}>
-              <Ionicons name="folder-outline" size={16} color={theme.textSecondary} />
+              <Feather name="folder" size={16} color={theme.textSecondary} />
               <ThemedText type="small" style={{ color: theme.textSecondary }}>Project</ThemedText>
             </View>
             <ThemedText type="body" numberOfLines={1} style={styles.infoValue}>
@@ -98,7 +98,7 @@ export default function AccountScreen() {
           {currentProject.description ? (
             <View style={styles.infoRow}>
               <View style={styles.infoLabel}>
-                <Ionicons name="document-text-outline" size={16} color={theme.textSecondary} />
+                <Feather name="file-text" size={16} color={theme.textSecondary} />
                 <ThemedText type="small" style={{ color: theme.textSecondary }}>Description</ThemedText>
               </View>
               <ThemedText type="body" numberOfLines={2} style={styles.infoValue}>
@@ -114,7 +114,7 @@ export default function AccountScreen() {
         
         <View style={styles.infoRow}>
           <View style={styles.infoLabel}>
-            <Ionicons name="globe-outline" size={16} color={theme.textSecondary} />
+            <Feather name="globe" size={16} color={theme.textSecondary} />
             <ThemedText type="small" style={{ color: theme.textSecondary }}>Server URL</ThemedText>
           </View>
           <ThemedText type="body" numberOfLines={1} style={styles.infoValue}>
@@ -124,7 +124,7 @@ export default function AccountScreen() {
 
         <View style={styles.infoRow}>
           <View style={styles.infoLabel}>
-            <Ionicons name={isOnline ? "wifi-outline" : "cloud-offline-outline"} size={16} color={isOnline ? theme.success : theme.warning} />
+            <Feather name={isOnline ? "wifi" : "wifi-off"} size={16} color={isOnline ? theme.success : theme.warning} />
             <ThemedText type="small" style={{ color: theme.textSecondary }}>Status</ThemedText>
           </View>
           <View style={[
@@ -139,7 +139,7 @@ export default function AccountScreen() {
 
         <View style={styles.infoRow}>
           <View style={styles.infoLabel}>
-            <Ionicons name="refresh-outline" size={16} color={theme.textSecondary} />
+            <Feather name="refresh-cw" size={16} color={theme.textSecondary} />
             <ThemedText type="small" style={{ color: theme.textSecondary }}>Last Sync</ThemedText>
           </View>
           <ThemedText type="body">{formatTime(lastSyncTime)}</ThemedText>
@@ -151,7 +151,7 @@ export default function AccountScreen() {
         
         <View style={styles.infoRow}>
           <View style={styles.infoLabel}>
-            <Ionicons name="information-circle-outline" size={16} color={theme.textSecondary} />
+            <Feather name="info" size={16} color={theme.textSecondary} />
             <ThemedText type="small" style={{ color: theme.textSecondary }}>Version</ThemedText>
           </View>
           <ThemedText type="body">1.0.0</ThemedText>
@@ -159,7 +159,7 @@ export default function AccountScreen() {
 
         <View style={styles.infoRow}>
           <View style={styles.infoLabel}>
-            <Ionicons name="phone-portrait-outline" size={16} color={theme.textSecondary} />
+            <Feather name="smartphone" size={16} color={theme.textSecondary} />
             <ThemedText type="small" style={{ color: theme.textSecondary }}>App</ThemedText>
           </View>
           <ThemedText type="body">MeterFlo Mobile</ThemedText>

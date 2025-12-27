@@ -3,7 +3,7 @@ import { View, StyleSheet, Pressable, Alert, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from "react-native-draggable-flatlist";
 
 import { useTheme } from "@/hooks/useTheme";
@@ -75,15 +75,15 @@ export default function ColumnsScreen() {
         ]}
       >
         <View style={styles.dragHandle}>
-          <Ionicons name="menu-outline" size={20} color={theme.textSecondary} />
+          <Feather name="menu" size={20} color={theme.textSecondary} />
         </View>
         <ThemedText type="body" style={styles.columnLabel}>{item.label}</ThemedText>
         <Pressable
           onPress={() => handleToggle(item.key)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons
-            name={item.visible ? "eye-outline" : "eye-off-outline"}
+          <Feather
+            name={item.visible ? "eye" : "eye-off"}
             size={20}
             color={item.visible ? theme.primary : theme.textSecondary}
           />
@@ -97,7 +97,7 @@ export default function ColumnsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
       <View style={[styles.instructions, { marginTop: headerHeight + Spacing.xl }]}>
-        <Ionicons name="information-circle-outline" size={16} color={theme.textSecondary} />
+        <Feather name="info" size={16} color={theme.textSecondary} />
         <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
           Long press and drag to reorder. Tap the eye icon to show/hide columns.
         </ThemedText>
@@ -129,7 +129,7 @@ export default function ColumnsScreen() {
             { opacity: pressed ? 0.7 : 1 },
           ]}
         >
-          <Ionicons name="refresh-outline" size={16} color={theme.textSecondary} />
+          <Feather name="refresh-cw" size={16} color={theme.textSecondary} />
           <ThemedText type="small" style={{ color: theme.textSecondary }}>
             Reset to Default
           </ThemedText>

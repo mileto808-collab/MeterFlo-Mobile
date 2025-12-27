@@ -1,6 +1,6 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View } from "react-native";
 import WorkOrdersStackNavigator from "@/navigation/WorkOrdersStackNavigator";
@@ -69,7 +69,7 @@ export default function MainTabNavigator() {
         options={{
           title: "Work Orders",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="clipboard-outline" size={size} color={color} />
+            <Feather name="clipboard" size={size} color={color} />
           ),
         }}
       />
@@ -80,7 +80,7 @@ export default function MainTabNavigator() {
           title: "Sync",
           tabBarIcon: ({ color, size }) => (
             <View>
-              <Ionicons name="refresh-outline" size={size} color={color} />
+              <Feather name="refresh-cw" size={size} color={color} />
               <PendingBadge count={pendingActions.length} />
             </View>
           ),
@@ -92,7 +92,7 @@ export default function MainTabNavigator() {
         options={{
           title: "Columns",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size} color={color} />
+            <Feather name="columns" size={size} color={color} />
           ),
         }}
       />
@@ -102,7 +102,7 @@ export default function MainTabNavigator() {
         options={{
           title: "Account",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+            <Feather name="user" size={size} color={color} />
           ),
         }}
       />
