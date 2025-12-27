@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect, useCallback } from "react";
+import React, { useState } from "react";
 import { View, ScrollView, StyleSheet, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -44,43 +44,6 @@ export default function FilterScreen() {
     if (normalized === "trouble") return "#EF4444";
     return "#6B7280";
   }
-
-  const handleCancel = useCallback(() => {
-    navigation.goBack();
-  }, [navigation]);
-
-  const handleReset = useCallback(() => {
-    const clearedFilters = {
-      status: [],
-      assignedTo: "",
-      searchQuery: "",
-    };
-    setLocalFilters(clearedFilters);
-    setFilters(clearedFilters);
-  }, [setFilters]);
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerLeft: () => (
-        <Pressable
-          onPress={handleCancel}
-          hitSlop={8}
-          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, paddingHorizontal: 8 })}
-        >
-          <ThemedText style={{ color: theme.primary }}>Cancel</ThemedText>
-        </Pressable>
-      ),
-      headerRight: () => (
-        <Pressable
-          onPress={handleReset}
-          hitSlop={8}
-          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, paddingHorizontal: 8 })}
-        >
-          <ThemedText style={{ color: theme.error }}>Reset</ThemedText>
-        </Pressable>
-      ),
-    });
-  }, [navigation, theme, handleCancel, handleReset]);
 
   const handleApply = () => {
     setFilters(localFilters);
