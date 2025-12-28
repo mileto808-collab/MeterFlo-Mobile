@@ -6,7 +6,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
-import { useOffline } from "@/contexts/OfflineContext";
+import { useOffline, SyncHistoryEntry } from "@/contexts/OfflineContext";
 import { useWorkOrders } from "@/contexts/WorkOrderContext";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
@@ -17,7 +17,7 @@ export default function SyncScreen() {
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
-  const { isOnline, pendingActions, isSyncing, syncPendingActions, clearAllPending } = useOffline();
+  const { isOnline, pendingActions, syncHistory, isSyncing, syncPendingActions, clearAllPending, clearSyncHistory } = useOffline();
   const { lastSyncTime, isLoading, refreshWorkOrders, clearAllData, workOrders } = useWorkOrders();
   const [isClearing, setIsClearing] = useState(false);
 
@@ -38,6 +38,38 @@ export default function SyncScreen() {
       case "complete": return "Complete";
       case "workflow": return "Workflow";
       default: return type;
+    }
+  };
+  
+  const formatHistoryTime = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  };
+  
+  const getStatusIcon = (status: SyncHistoryEntry["status"]) => {
+    switch (status) {
+      case "success": return "check-circle";
+      case "failed": return "x-circle";
+      case "partial": return "alert-circle";
+    }
+  };
+  
+  const getStatusColor = (status: SyncHistoryEntry["status"]) => {
+    switch (status) {
+      case "success": return theme.success;
+      case "failed": return theme.error;
+      case "partial": return theme.warning;
     }
   };
 
@@ -229,6 +261,92 @@ export default function SyncScreen() {
           </ThemedText>
         </Pressable>
       </View>
+
+      <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
+        <View style={styles.sectionHeader}>
+          <ThemedText type="h4">Upload History</ThemedText>
+          {syncHistory.length > 0 ? (
+            <Pressable onPress={clearSyncHistory}>
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                Clear
+              </ThemedText>
+            </Pressable>
+          ) : null}
+        </View>
+
+        {syncHistory.length > 0 ? (
+          <View style={styles.historyList}>
+            {syncHistory.slice(0, 10).map((entry) => (
+              <View key={entry.id} style={[styles.historyItem, { borderColor: theme.border }]}>
+                <View style={styles.historyItemHeader}>
+                  <View style={styles.historyItemStatus}>
+                    <Feather 
+                      name={getStatusIcon(entry.status)} 
+                      size={16} 
+                      color={getStatusColor(entry.status)} 
+                    />
+                    <ThemedText type="body" style={{ color: getStatusColor(entry.status) }}>
+                      {entry.status === "success" ? "Success" : entry.status === "failed" ? "Failed" : "Partial"}
+                    </ThemedText>
+                  </View>
+                  <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                    {formatHistoryTime(entry.timestamp)}
+                  </ThemedText>
+                </View>
+                
+                <View style={styles.historyItemDetails}>
+                  <View style={styles.historyDetailRow}>
+                    <Feather name="file-text" size={12} color={theme.textSecondary} />
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                      {entry.workOrderTitles.length} work order{entry.workOrderTitles.length !== 1 ? "s" : ""}
+                    </ThemedText>
+                  </View>
+                  
+                  {entry.photoCount > 0 ? (
+                    <View style={styles.historyDetailRow}>
+                      <Feather name="camera" size={12} color={theme.textSecondary} />
+                      <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                        {entry.photoCount} photo{entry.photoCount !== 1 ? "s" : ""}
+                      </ThemedText>
+                    </View>
+                  ) : null}
+                  
+                  {entry.successCount > 0 && entry.failedCount > 0 ? (
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                      {entry.successCount} succeeded, {entry.failedCount} failed
+                    </ThemedText>
+                  ) : null}
+                </View>
+                
+                {entry.errorMessage ? (
+                  <View style={[styles.errorBox, { backgroundColor: theme.error + "10" }]}>
+                    <ThemedText type="caption" style={{ color: theme.error }}>
+                      {entry.errorMessage}
+                    </ThemedText>
+                  </View>
+                ) : null}
+                
+                {entry.workOrderTitles.length > 0 && entry.workOrderTitles.length <= 3 ? (
+                  <View style={styles.workOrderList}>
+                    {entry.workOrderTitles.map((title, idx) => (
+                      <ThemedText key={idx} type="caption" numberOfLines={1} style={{ color: theme.textSecondary }}>
+                        {title}
+                      </ThemedText>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Feather name="clock" size={32} color={theme.textSecondary} />
+            <ThemedText type="body" style={{ color: theme.textSecondary }}>
+              No upload history yet
+            </ThemedText>
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -322,5 +440,40 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderRadius: BorderRadius.md,
     marginTop: Spacing.sm,
+  },
+  historyList: {
+    gap: Spacing.md,
+  },
+  historyItem: {
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    gap: Spacing.sm,
+  },
+  historyItemHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  historyItemStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  historyItemDetails: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.md,
+  },
+  historyDetailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  errorBox: {
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.xs,
+  },
+  workOrderList: {
+    gap: Spacing.xs,
   },
 });

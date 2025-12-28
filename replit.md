@@ -49,12 +49,21 @@ Preferred communication style: Simple, everyday language.
 ### Workflow Wizard Features
 - **Trouble Code Display**: Trouble codes display with labels (e.g., "02 - Unsafe") for better readability
 - **Photo Upload**: Photos captured during workflows are converted to base64 and sent to server
+  - Uses expo-image-manipulator for reliable base64 conversion (1200px width, 0.7 quality JPEG compression)
   - `trouble_photos`: Base64 array for trouble path photos
   - `before_photos`: Base64 array for before meter photos (success path)
   - `after_photos`: Base64 array for after meter photos (success path)
+  - User feedback when photo conversion fails with option to continue or cancel
 - **Server Payload Fields**: Uses snake_case fields per server API requirements
   - `updated_by`: Username (not display name) for tracking changes
   - `completed_by`: User ID for completion attribution
+
+### Sync History Tracking
+- **SyncHistoryEntry Interface**: Tracks timestamp, work order IDs/titles, status, counts, photo count, error messages
+- **Persistent Storage**: Sync history stored in AsyncStorage under "meterflo_sync_history" (limited to 20 entries)
+- **Direct Submission History**: Tracks online submissions separately from queued offline actions
+- **Photo Count Tracking**: Pending actions include photoCount for accurate history when syncing queued actions
+- **Error Handling**: History recording wrapped in try/catch to prevent AsyncStorage failures from breaking app flow
 
 ### Key Design Patterns
 - **Path Aliases**: `@/` maps to `client/`, `@shared/` maps to `shared/`

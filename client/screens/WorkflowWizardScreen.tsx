@@ -7,7 +7,7 @@ import { HeaderButton } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import * as FileSystem from "expo-file-system/legacy";
+import * as ImageManipulator from "expo-image-manipulator";
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
@@ -102,7 +102,7 @@ export default function WorkflowWizardScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { updateWorkOrder, referenceData, claimWorkOrder } = useWorkOrders();
   const { serverUrl, projectId, user } = useAuth();
-  const { isOnline, addPendingAction } = useOffline();
+  const { isOnline, addPendingAction, addDirectSubmissionHistory } = useOffline();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const workOrder = route.params.workOrder;
@@ -239,8 +239,10 @@ export default function WorkflowWizardScreen() {
     }
   };
 
-  const convertPhotosToBase64 = async (photos: PhotoAsset[]): Promise<string[]> => {
+  const convertPhotosToBase64 = async (photos: PhotoAsset[]): Promise<{ base64Photos: string[]; failedCount: number }> => {
     const base64Photos: string[] = [];
+    let failedCount = 0;
+    
     for (const photo of photos) {
       try {
         if (Platform.OS === "web") {
@@ -258,16 +260,27 @@ export default function WorkflowWizardScreen() {
           });
           base64Photos.push(base64);
         } else {
-          const base64 = await FileSystem.readAsStringAsync(photo.uri, {
-            encoding: "base64",
-          });
-          base64Photos.push(base64);
+          const manipResult = await ImageManipulator.manipulateAsync(
+            photo.uri,
+            [{ resize: { width: 1200 } }],
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+          );
+          if (manipResult.base64) {
+            base64Photos.push(manipResult.base64);
+            console.log(`[Photo] Converted photo successfully, size: ${Math.round(manipResult.base64.length / 1024)}KB`);
+          } else {
+            console.error("[Photo] manipulateAsync returned no base64 data");
+            failedCount++;
+          }
         }
       } catch (error) {
-        console.error("Error converting photo to base64:", error);
+        console.error("[Photo] Error converting photo to base64:", error);
+        failedCount++;
       }
     }
-    return base64Photos;
+    
+    console.log(`[Photo] Conversion complete: ${base64Photos.length} success, ${failedCount} failed out of ${photos.length} total`);
+    return { base64Photos, failedCount };
   };
 
   const takePhoto = async (photoType: "before" | "after" | "trouble") => {
@@ -457,18 +470,52 @@ export default function WorkflowWizardScreen() {
       let troublePhotosBase64: string[] = [];
       let beforePhotosBase64: string[] = [];
       let afterPhotosBase64: string[] = [];
+      let totalFailedPhotos = 0;
       
       if (!canChange && formData.troublePhotos.length > 0) {
-        troublePhotosBase64 = await convertPhotosToBase64(formData.troublePhotos);
+        const result = await convertPhotosToBase64(formData.troublePhotos);
+        troublePhotosBase64 = result.base64Photos;
+        totalFailedPhotos += result.failedCount;
       }
       
       if (canChange && formData.beforePhotos.length > 0) {
-        beforePhotosBase64 = await convertPhotosToBase64(formData.beforePhotos);
+        const result = await convertPhotosToBase64(formData.beforePhotos);
+        beforePhotosBase64 = result.base64Photos;
+        totalFailedPhotos += result.failedCount;
       }
       
       if (canChange && formData.afterPhotos.length > 0) {
-        afterPhotosBase64 = await convertPhotosToBase64(formData.afterPhotos);
+        const result = await convertPhotosToBase64(formData.afterPhotos);
+        afterPhotosBase64 = result.base64Photos;
+        totalFailedPhotos += result.failedCount;
       }
+      
+      if (totalFailedPhotos > 0) {
+        const successCount = troublePhotosBase64.length + beforePhotosBase64.length + afterPhotosBase64.length;
+        const message = `${totalFailedPhotos} photo(s) could not be processed. ${successCount} photo(s) will be uploaded. Continue anyway?`;
+        
+        const shouldContinue = await new Promise<boolean>((resolve) => {
+          if (Platform.OS === "web") {
+            resolve(confirm(message));
+          } else {
+            Alert.alert(
+              "Photo Processing Issue",
+              message,
+              [
+                { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+                { text: "Continue", onPress: () => resolve(true) },
+              ]
+            );
+          }
+        });
+        
+        if (!shouldContinue) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      console.log(`[WorkflowWizard] Submitting with photos - trouble: ${troublePhotosBase64.length}, before: ${beforePhotosBase64.length}, after: ${afterPhotosBase64.length}`);
 
       const patchPayload = canChange ? {
         status: "Completed",
@@ -514,6 +561,20 @@ export default function WorkflowWizardScreen() {
 
         const result = await response.json();
         
+        const totalPhotoCount = troublePhotosBase64.length + beforePhotosBase64.length + afterPhotosBase64.length;
+        try {
+          await addDirectSubmissionHistory({
+            workOrderIds: [String(workOrder.id)],
+            workOrderTitles: [workOrder.serviceAddress],
+            status: "success",
+            successCount: 1,
+            failedCount: 0,
+            photoCount: totalPhotoCount,
+          });
+        } catch (historyError) {
+          console.warn("[WorkflowWizard] Failed to record sync history:", historyError);
+        }
+        
         updateWorkOrder(workOrder.id, {
           status: result.workOrder?.status || (canChange ? "Completed" : "Trouble"),
           newMeterId: canChange ? formData.newMeterId : undefined,
@@ -525,11 +586,13 @@ export default function WorkflowWizardScreen() {
           syncPending: false,
         });
       } else {
+        const offlinePhotoCount = troublePhotosBase64.length + beforePhotosBase64.length + afterPhotosBase64.length;
         await addPendingAction({
           type: "complete",
           workOrderId: String(workOrder.id),
           workOrderTitle: workOrder.serviceAddress,
           data: patchPayload,
+          photoCount: offlinePhotoCount,
         });
         
         updateWorkOrder(workOrder.id, {
@@ -548,6 +611,26 @@ export default function WorkflowWizardScreen() {
       navigation.goBack();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to complete work order";
+      
+      if (isOnline && serverUrl && projectId) {
+        const totalPhotoCount = (formData.troublePhotos?.length || 0) + 
+          (formData.beforePhotos?.length || 0) + 
+          (formData.afterPhotos?.length || 0);
+        try {
+          await addDirectSubmissionHistory({
+            workOrderIds: [String(workOrder.id)],
+            workOrderTitles: [workOrder.serviceAddress],
+            status: "failed",
+            successCount: 0,
+            failedCount: 1,
+            photoCount: totalPhotoCount,
+            errorMessage: message,
+          });
+        } catch (historyError) {
+          console.warn("[WorkflowWizard] Failed to record sync history:", historyError);
+        }
+      }
+      
       if (Platform.OS === "web") {
         alert(message);
       } else {
