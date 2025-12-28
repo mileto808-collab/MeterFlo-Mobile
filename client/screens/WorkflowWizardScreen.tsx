@@ -122,10 +122,12 @@ export default function WorkflowWizardScreen() {
   const [isCapturingGps, setIsCapturingGps] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<{ uri: string; type: "before" | "after" | "trouble"; id: string } | null>(null);
   
+  const hasUnsyncedDraft = Boolean(workOrder.syncPending);
+  
   const [formData, setFormData] = useState<MeterChangeoutData>({
     canChange: null,
     troubleCode: workOrder.troubleCode || "",
-    troubleNote: workOrder.notes || workOrder.troubleNote || "",
+    troubleNote: hasUnsyncedDraft ? (workOrder.notes || workOrder.troubleNote || "") : "",
     troublePhotos: [],
     oldMeterReading: workOrder.oldMeterReading || "",
     beforePhotos: [],
@@ -135,7 +137,7 @@ export default function WorkflowWizardScreen() {
     gpsCoordinates: workOrder.newGps || "",
     signatureData: workOrder.signatureData || "",
     signatureName: workOrder.signatureName || "",
-    notes: workOrder.notes || "",
+    notes: hasUnsyncedDraft ? (workOrder.notes || "") : "",
   });
 
   const getSteps = () => {
