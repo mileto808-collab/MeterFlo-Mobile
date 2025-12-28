@@ -138,7 +138,7 @@ export default function WorkOrdersScreen() {
         <SearchBar
           value={filters.searchQuery}
           onChangeText={handleSearchChange}
-          placeholder="Search work orders..."
+          placeholder="Scan Meter ID..."
           onSearchPress={() => setShowSearchOptions(true)}
         />
         <View style={styles.actionButtons}>
