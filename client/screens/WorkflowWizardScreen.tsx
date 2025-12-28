@@ -7,6 +7,7 @@ import { HeaderButton } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
+import * as FileSystem from "expo-file-system";
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
@@ -137,13 +138,25 @@ export default function WorkflowWizardScreen() {
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;
 
-  const troubleCodes = referenceData?.troubleCodes?.map(tc => tc.code) || [
-    "ACCESS_DENIED",
-    "METER_LOCKED", 
-    "UNSAFE_CONDITIONS",
-    "CUSTOMER_REFUSED",
-    "OTHER",
+  const troubleCodeOptions = referenceData?.troubleCodes || [
+    { code: "ACCESS_DENIED", description: "Access Denied" },
+    { code: "METER_LOCKED", description: "Meter Locked" },
+    { code: "UNSAFE_CONDITIONS", description: "Unsafe Conditions" },
+    { code: "CUSTOMER_REFUSED", description: "Customer Refused" },
+    { code: "OTHER", description: "Other" },
   ];
+  
+  const troubleCodeDisplayStrings = troubleCodeOptions.map(tc => `${tc.code} - ${tc.description}`);
+  
+  const getTroubleCodeFromDisplay = (displayString: string): string => {
+    const code = displayString.split(" - ")[0];
+    return code;
+  };
+  
+  const getTroubleCodeDisplay = (code: string): string => {
+    const tc = troubleCodeOptions.find(t => t.code === code);
+    return tc ? `${tc.code} - ${tc.description}` : code;
+  };
 
   useEffect(() => {
     claimWorkOrderOnStart();
@@ -224,6 +237,37 @@ export default function WorkflowWizardScreen() {
         console.error("Could not open settings:", e);
       }
     }
+  };
+
+  const convertPhotosToBase64 = async (photos: PhotoAsset[]): Promise<string[]> => {
+    const base64Photos: string[] = [];
+    for (const photo of photos) {
+      try {
+        if (Platform.OS === "web") {
+          const response = await fetch(photo.uri);
+          const blob = await response.blob();
+          const reader = new FileReader();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            reader.onloadend = () => {
+              const result = reader.result as string;
+              const base64Data = result.split(",")[1];
+              resolve(base64Data);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          base64Photos.push(base64);
+        } else {
+          const base64 = await FileSystem.readAsStringAsync(photo.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          base64Photos.push(base64);
+        }
+      } catch (error) {
+        console.error("Error converting photo to base64:", error);
+      }
+    }
+    return base64Photos;
   };
 
   const takePhoto = async (photoType: "before" | "after" | "trouble") => {
@@ -409,32 +453,48 @@ export default function WorkflowWizardScreen() {
       return Number.isNaN(parsed) ? null : parsed;
     };
 
-    const patchPayload = canChange ? {
-      status: "Completed",
-      old_meter_reading: parseReading(formData.oldMeterReading) ?? 0,
-      new_meter_reading: parseReading(formData.newMeterReading) ?? 0,
-      new_meter_id: formData.newMeterId,
-      new_gps: formData.gpsCoordinates || null,
-      signature_data: formData.signatureData || null,
-      signature_name: formData.signatureName,
-      trouble: null,
-      notes: null,
-      completed_at: completedAt,
-      completed_by: user?.id || null,
-      updated_by: user?.username || null,
-    } : {
-      status: "Trouble",
-      old_meter_reading: parseReading(formData.oldMeterReading),
-      trouble: formData.troubleCode,
-      notes: formData.troubleNote || null,
-      completed_at: completedAt,
-      updated_by: user?.username || null,
-    };
-
     try {
-      console.log("[WorkflowWizard] User object:", JSON.stringify(user, null, 2));
-      console.log("[WorkflowWizard] Submitting work order update:", JSON.stringify(patchPayload, null, 2));
+      let troublePhotosBase64: string[] = [];
+      let beforePhotosBase64: string[] = [];
+      let afterPhotosBase64: string[] = [];
       
+      if (!canChange && formData.troublePhotos.length > 0) {
+        troublePhotosBase64 = await convertPhotosToBase64(formData.troublePhotos);
+      }
+      
+      if (canChange && formData.beforePhotos.length > 0) {
+        beforePhotosBase64 = await convertPhotosToBase64(formData.beforePhotos);
+      }
+      
+      if (canChange && formData.afterPhotos.length > 0) {
+        afterPhotosBase64 = await convertPhotosToBase64(formData.afterPhotos);
+      }
+
+      const patchPayload = canChange ? {
+        status: "Completed",
+        old_meter_reading: parseReading(formData.oldMeterReading) ?? 0,
+        new_meter_reading: parseReading(formData.newMeterReading) ?? 0,
+        new_meter_id: formData.newMeterId,
+        new_gps: formData.gpsCoordinates || null,
+        signature_data: formData.signatureData || null,
+        signature_name: formData.signatureName,
+        trouble: null,
+        notes: null,
+        completed_at: completedAt,
+        completed_by: user?.id || null,
+        updated_by: user?.username || null,
+        before_photos: beforePhotosBase64.length > 0 ? beforePhotosBase64 : null,
+        after_photos: afterPhotosBase64.length > 0 ? afterPhotosBase64 : null,
+      } : {
+        status: "Trouble",
+        old_meter_reading: parseReading(formData.oldMeterReading),
+        trouble: getTroubleCodeFromDisplay(formData.troubleCode),
+        notes: formData.troubleNote || null,
+        completed_at: completedAt,
+        updated_by: user?.username || null,
+        trouble_photos: troublePhotosBase64.length > 0 ? troublePhotosBase64 : null,
+      };
+
       if (isOnline && serverUrl && projectId) {
         const response = await fetch(
           `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}`,
@@ -459,7 +519,7 @@ export default function WorkflowWizardScreen() {
           newMeterId: canChange ? formData.newMeterId : undefined,
           newMeterReading: canChange ? formData.newMeterReading : undefined,
           oldMeterReading: formData.oldMeterReading,
-          troubleCode: canChange ? undefined : formData.troubleCode,
+          troubleCode: canChange ? undefined : getTroubleCodeFromDisplay(formData.troubleCode),
           troubleNote: canChange ? undefined : formData.troubleNote,
           completedAt: completedAt,
           syncPending: false,
@@ -478,7 +538,7 @@ export default function WorkflowWizardScreen() {
           newMeterId: canChange ? formData.newMeterId : undefined,
           newMeterReading: canChange ? formData.newMeterReading : undefined,
           oldMeterReading: formData.oldMeterReading,
-          troubleCode: canChange ? undefined : formData.troubleCode,
+          troubleCode: canChange ? undefined : getTroubleCodeFromDisplay(formData.troubleCode),
           troubleNote: canChange ? undefined : formData.troubleNote,
           completedAt: completedAt,
         });
@@ -929,8 +989,8 @@ export default function WorkflowWizardScreen() {
             
             <SelectInput
               value={formData.troubleCode}
-              options={troubleCodes}
-              onSelect={(value) => setFormData(prev => ({ ...prev, troubleCode: value }))}
+              options={troubleCodeDisplayStrings}
+              onSelect={(displayValue) => setFormData(prev => ({ ...prev, troubleCode: displayValue }))}
               placeholder="Select trouble code"
             />
             
