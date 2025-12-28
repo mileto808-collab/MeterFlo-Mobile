@@ -369,7 +369,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      let path = `/api/mobile/sync?includeCompleted=false`;
+      let path = `/api/mobile/sync?projectId=${projectId}&includeCompleted=false`;
       
       const currentLastSyncTime = lastSyncTimeRef.current;
       if (currentLastSyncTime && !forceFullSync) {

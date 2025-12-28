@@ -128,6 +128,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
+          projectId,
           changes,
           clientTimestamp: new Date().toISOString(),
         }),
