@@ -736,22 +736,22 @@ export default function WorkflowWizardScreen() {
       case "canChange":
         return (
           <View style={styles.decisionContainer}>
-            <View style={[styles.woDetailsCard, { backgroundColor: theme.backgroundSecondary }]}>
+            <View style={[styles.woDetailsCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.detailRow}>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Work Order</ThemedText>
-                <ThemedText type="body">{workOrder.customerWoId}</ThemedText>
+                <ThemedText type="body" style={{ color: theme.textSecondary }}>Work Order</ThemedText>
+                <ThemedText type="body" style={{ fontWeight: "500" }}>{workOrder.customerWoId}</ThemedText>
               </View>
-              <View style={styles.detailRow}>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Address</ThemedText>
-                <ThemedText type="body">{workOrder.serviceAddress}</ThemedText>
+              <View style={[styles.detailRow, { marginTop: Spacing.md }]}>
+                <ThemedText type="body" style={{ color: theme.textSecondary }}>Address</ThemedText>
+                <ThemedText type="h4" style={{ fontWeight: "600" }}>{workOrder.serviceAddress}</ThemedText>
               </View>
-              <View style={styles.detailRow}>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Old Meter ID</ThemedText>
-                <ThemedText type="body">{workOrder.oldMeterId || "N/A"}</ThemedText>
+              <View style={[styles.detailRow, { marginTop: Spacing.md }]}>
+                <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Meter ID</ThemedText>
+                <ThemedText type="h4" style={{ fontWeight: "600", color: theme.primary }}>{workOrder.oldMeterId || "N/A"}</ThemedText>
               </View>
-              <View style={styles.detailRow}>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>Current Status</ThemedText>
-                <ThemedText type="body" style={{ color: workOrder.status === "Trouble" ? theme.warning : theme.text }}>
+              <View style={[styles.detailRow, { marginTop: Spacing.md }]}>
+                <ThemedText type="body" style={{ color: theme.textSecondary }}>Current Status</ThemedText>
+                <ThemedText type="body" style={{ color: workOrder.status === "Trouble" ? theme.warning : theme.text, fontWeight: "500" }}>
                   {workOrder.status}
                 </ThemedText>
               </View>
@@ -799,7 +799,7 @@ export default function WorkflowWizardScreen() {
             <View style={styles.iconHeader}>
               <Feather name="activity" size={48} color={theme.primary} />
             </View>
-            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.md, textAlign: "center" }}>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               Enter the final reading from the old meter
             </ThemedText>
             <TextInput
@@ -807,6 +807,7 @@ export default function WorkflowWizardScreen() {
               onChangeText={(text) => setFormData(prev => ({ ...prev, oldMeterReading: text }))}
               placeholder="Enter reading (e.g., 12345)"
               keyboardType="numeric"
+              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg }}
             />
           </View>
         );
@@ -847,18 +848,18 @@ export default function WorkflowWizardScreen() {
               Safely remove the old meter and install the new meter
             </ThemedText>
             
-            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
+            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.summaryRow}>
-                <Feather name="check" size={16} color={theme.success} />
-                <ThemedText type="small">Old meter reading: {formData.oldMeterReading}</ThemedText>
+                <Feather name="check-circle" size={24} color={theme.success} />
+                <ThemedText type="body" style={{ fontWeight: "500" }}>Old Meter Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldMeterReading}</ThemedText></ThemedText>
               </View>
-              <View style={styles.summaryRow}>
-                <Feather name="check" size={16} color={theme.success} />
-                <ThemedText type="small">{formData.beforePhotos.length} before photo(s) captured</ThemedText>
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Feather name="check-circle" size={24} color={theme.success} />
+                <ThemedText type="body" style={{ fontWeight: "500" }}>{formData.beforePhotos.length} Before Photo(s) Captured</ThemedText>
               </View>
             </View>
             
-            <ThemedText type="caption" style={{ color: theme.textSecondary, marginTop: Spacing.lg }}>
+            <ThemedText type="body" style={{ color: theme.primary, marginTop: Spacing.xl, textAlign: "center", fontWeight: "500" }}>
               Tap "Next" when the new meter is installed
             </ThemedText>
           </View>
@@ -938,7 +939,7 @@ export default function WorkflowWizardScreen() {
               Scan or enter the new meter ID
             </ThemedText>
             
-            <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
               Scan with camera:
             </ThemedText>
             <View style={styles.scanButtonsRow}>
@@ -946,20 +947,20 @@ export default function WorkflowWizardScreen() {
                 style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
                 onPress={() => { setScannerType("barcode"); setShowScanner(true); }}
               >
-                <Feather name="maximize" size={24} color={theme.primary} />
-                <ThemedText type="small" style={{ marginTop: Spacing.xs }}>Scan Barcode</ThemedText>
+                <Feather name="maximize" size={32} color={theme.primary} />
+                <ThemedText type="body" style={{ marginTop: Spacing.sm, fontWeight: "500" }}>Scan Barcode</ThemedText>
               </Pressable>
               
               <Pressable
                 style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
                 onPress={() => { setScannerType("qr"); setShowScanner(true); }}
               >
-                <Feather name="grid" size={24} color={theme.primary} />
-                <ThemedText type="small" style={{ marginTop: Spacing.xs }}>Scan QR Code</ThemedText>
+                <Feather name="grid" size={32} color={theme.primary} />
+                <ThemedText type="body" style={{ marginTop: Spacing.sm, fontWeight: "500" }}>Scan QR Code</ThemedText>
               </Pressable>
             </View>
             
-            <ThemedText type="caption" style={{ color: theme.textSecondary, marginVertical: Spacing.md, textAlign: "center" }}>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginVertical: Spacing.lg, textAlign: "center" }}>
               or enter manually
             </ThemedText>
             
@@ -968,8 +969,9 @@ export default function WorkflowWizardScreen() {
               onChangeText={(text) => setFormData(prev => ({ ...prev, newMeterId: text }))}
               placeholder="Type or use HID scanner"
               autoCapitalize="characters"
+              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg }}
             />
-            <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: Spacing.xs, textAlign: "center" }}>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm, textAlign: "center" }}>
               Tap field and scan with Bluetooth/USB barcode gun
             </ThemedText>
           </View>
@@ -981,7 +983,7 @@ export default function WorkflowWizardScreen() {
             <View style={styles.iconHeader}>
               <Feather name="activity" size={48} color={theme.primary} />
             </View>
-            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.md, textAlign: "center" }}>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               Enter the initial reading from the new meter (usually 0)
             </ThemedText>
             <TextInput
@@ -989,6 +991,7 @@ export default function WorkflowWizardScreen() {
               onChangeText={(text) => setFormData(prev => ({ ...prev, newMeterReading: text }))}
               placeholder="Enter reading (usually 0)"
               keyboardType="numeric"
+              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg }}
             />
           </View>
         );
@@ -1094,36 +1097,39 @@ export default function WorkflowWizardScreen() {
       case "confirm":
         return (
           <View>
-            <ThemedText type="h4" style={{ marginBottom: Spacing.lg }}>Review & Submit</ThemedText>
+            <View style={styles.iconHeader}>
+              <Feather name="check-circle" size={48} color={theme.success} />
+            </View>
+            <ThemedText type="h3" style={{ marginBottom: Spacing.lg, textAlign: "center" }}>Review & Submit</ThemedText>
             
-            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
+            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.summaryRow}>
-                <Feather name="activity" size={16} color={theme.primary} />
-                <ThemedText type="small">Old reading: {formData.oldMeterReading}</ThemedText>
+                <Feather name="activity" size={20} color={theme.primary} />
+                <ThemedText type="body">Old Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldMeterReading}</ThemedText></ThemedText>
               </View>
-              <View style={styles.summaryRow}>
-                <Feather name="camera" size={16} color={theme.primary} />
-                <ThemedText type="small">{formData.beforePhotos.length} before photo(s)</ThemedText>
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Feather name="camera" size={20} color={theme.primary} />
+                <ThemedText type="body">{formData.beforePhotos.length} Before Photo(s)</ThemedText>
               </View>
-              <View style={styles.summaryRow}>
-                <Feather name="hash" size={16} color={theme.primary} />
-                <ThemedText type="small">New meter: {formData.newMeterId}</ThemedText>
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Feather name="hash" size={20} color={theme.primary} />
+                <ThemedText type="body">New Meter: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newMeterId}</ThemedText></ThemedText>
               </View>
-              <View style={styles.summaryRow}>
-                <Feather name="activity" size={16} color={theme.primary} />
-                <ThemedText type="small">New reading: {formData.newMeterReading}</ThemedText>
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Feather name="activity" size={20} color={theme.primary} />
+                <ThemedText type="body">New Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newMeterReading}</ThemedText></ThemedText>
               </View>
-              <View style={styles.summaryRow}>
-                <Feather name="camera" size={16} color={theme.primary} />
-                <ThemedText type="small">{formData.afterPhotos.length} after photo(s)</ThemedText>
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Feather name="camera" size={20} color={theme.primary} />
+                <ThemedText type="body">{formData.afterPhotos.length} After Photo(s)</ThemedText>
               </View>
-              <View style={styles.summaryRow}>
-                <Feather name="map-pin" size={16} color={theme.primary} />
-                <ThemedText type="small">GPS: {formData.gpsCoordinates}</ThemedText>
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Feather name="map-pin" size={20} color={theme.primary} />
+                <ThemedText type="body" numberOfLines={1}>GPS: {formData.gpsCoordinates}</ThemedText>
               </View>
-              <View style={styles.summaryRow}>
-                <Feather name="user" size={16} color={theme.primary} />
-                <ThemedText type="small">Customer: {formData.signatureName}</ThemedText>
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Feather name="user" size={20} color={theme.primary} />
+                <ThemedText type="body">Customer: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.signatureName}</ThemedText></ThemedText>
               </View>
             </View>
           </View>
@@ -1179,21 +1185,24 @@ export default function WorkflowWizardScreen() {
       case "troubleConfirm":
         return (
           <View>
-            <ThemedText type="h4" style={{ marginBottom: Spacing.lg }}>Review & Submit</ThemedText>
+            <View style={styles.iconHeader}>
+              <Feather name="alert-triangle" size={48} color={theme.warning} />
+            </View>
+            <ThemedText type="h3" style={{ marginBottom: Spacing.lg, textAlign: "center" }}>Review & Submit</ThemedText>
             
-            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
+            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.summaryRow}>
-                <Feather name="alert-triangle" size={16} color={theme.warning} />
-                <ThemedText type="small">Trouble: {formData.troubleCode}</ThemedText>
+                <Feather name="alert-triangle" size={20} color={theme.warning} />
+                <ThemedText type="body">Trouble: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.troubleCode}</ThemedText></ThemedText>
               </View>
-              <View style={styles.summaryRow}>
-                <Feather name="camera" size={16} color={theme.primary} />
-                <ThemedText type="small">{formData.troublePhotos.length} photo(s)</ThemedText>
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Feather name="camera" size={20} color={theme.primary} />
+                <ThemedText type="body">{formData.troublePhotos.length} Photo(s) Captured</ThemedText>
               </View>
               {formData.troubleNote ? (
-                <View style={styles.summaryRow}>
-                  <Feather name="file-text" size={16} color={theme.primary} />
-                  <ThemedText type="small" numberOfLines={2}>{formData.troubleNote}</ThemedText>
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Feather name="file-text" size={20} color={theme.primary} />
+                  <ThemedText type="body" numberOfLines={2}>{formData.troubleNote}</ThemedText>
                 </View>
               ) : null}
             </View>
@@ -1425,17 +1434,18 @@ const styles = StyleSheet.create({
   photoGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: Spacing.sm,
+    gap: Spacing.md,
+    justifyContent: "flex-start",
   },
   photoContainer: {
     position: "relative",
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
   },
   photoThumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: BorderRadius.sm,
+    width: 100,
+    height: 100,
+    borderRadius: BorderRadius.md,
   },
   photoOverlay: {
     position: "absolute",

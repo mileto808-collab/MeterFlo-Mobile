@@ -1,10 +1,10 @@
 import React from "react";
-import { TextInput as RNTextInput, TextInputProps, StyleSheet, ViewStyle, StyleProp } from "react-native";
+import { TextInput as RNTextInput, TextInputProps, StyleSheet, TextStyle, StyleProp } from "react-native";
 import { useTheme } from "@/hooks/useTheme";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 interface Props extends TextInputProps {
-  style?: StyleProp<ViewStyle>;
+  style?: StyleProp<TextStyle>;
 }
 
 export function TextInput({ style, ...props }: Props) {
