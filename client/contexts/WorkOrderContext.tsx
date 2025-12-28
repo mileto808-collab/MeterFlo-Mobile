@@ -461,6 +461,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
             completedByUsername: localWo.completedByUsername || serverWo.completedByUsername,
             troubleCode: localWo.troubleCode || serverWo.troubleCode,
             troubleNote: serverWo.troubleNote,
+            notes: serverWo.notes,
             status: localWo.status || serverWo.status,
           };
         }
