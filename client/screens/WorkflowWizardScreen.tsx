@@ -634,16 +634,19 @@ export default function WorkflowWizardScreen() {
         
         updateWorkOrder(workOrder.id, {
           status: result.workOrder?.status || (canChange ? "Completed" : "Trouble"),
-          newMeterId: canChange ? formData.newMeterId : undefined,
-          newMeterReading: canChange ? formData.newMeterReading : undefined,
-          newGps: canChange ? formData.gpsCoordinates : undefined,
           oldMeterReading: formData.oldMeterReading,
-          troubleCode: canChange ? undefined : getTroubleCodeFromDisplay(formData.troubleCode),
-          troubleNote: canChange ? undefined : formData.troubleNote,
           completedAt: completedAt,
           completedBy: user?.id,
           completedByUsername: user?.displayName || user?.username,
           syncPending: false,
+          ...(canChange ? {
+            newMeterId: formData.newMeterId,
+            newMeterReading: formData.newMeterReading,
+            newGps: formData.gpsCoordinates,
+          } : {
+            troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
+            troubleNote: formData.troubleNote,
+          }),
         });
       } else {
         const offlinePhotoCount = troublePhotosBase64.length + beforePhotosBase64.length + afterPhotosBase64.length;
@@ -658,15 +661,18 @@ export default function WorkflowWizardScreen() {
         updateWorkOrder(workOrder.id, {
           status: canChange ? "Completed" : "Trouble",
           syncPending: true,
-          newMeterId: canChange ? formData.newMeterId : undefined,
-          newMeterReading: canChange ? formData.newMeterReading : undefined,
-          newGps: canChange ? formData.gpsCoordinates : undefined,
           oldMeterReading: formData.oldMeterReading,
-          troubleCode: canChange ? undefined : getTroubleCodeFromDisplay(formData.troubleCode),
-          troubleNote: canChange ? undefined : formData.troubleNote,
           completedAt: completedAt,
           completedBy: user?.id,
           completedByUsername: user?.displayName || user?.username,
+          ...(canChange ? {
+            newMeterId: formData.newMeterId,
+            newMeterReading: formData.newMeterReading,
+            newGps: formData.gpsCoordinates,
+          } : {
+            troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
+            troubleNote: formData.troubleNote,
+          }),
         });
       }
 
