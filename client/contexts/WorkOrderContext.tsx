@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -305,11 +305,16 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   const [sort, setSortState] = useState<SortConfig>(defaultSort);
   const [isLoading, setIsLoading] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const lastSyncTimeRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadStoredData();
   }, []);
+
+  useEffect(() => {
+    lastSyncTimeRef.current = lastSyncTime;
+  }, [lastSyncTime]);
 
   useEffect(() => {
     if (isAuthenticated && serverUrl && projectId) {
@@ -360,9 +365,12 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     try {
       let path = `/api/projects/${projectId}/mobile/sync/download?includeCompleted=false`;
       
-      if (lastSyncTime && !forceFullSync) {
-        path += `&lastSyncTimestamp=${encodeURIComponent(lastSyncTime)}`;
+      const currentLastSyncTime = lastSyncTimeRef.current;
+      if (currentLastSyncTime && !forceFullSync) {
+        path += `&lastSyncTimestamp=${encodeURIComponent(currentLastSyncTime)}`;
       }
+      
+      console.log("[refreshWorkOrders] forceFullSync:", forceFullSync, "lastSyncTime:", currentLastSyncTime, "path:", path);
 
       const response = await fetch(`${serverUrl}${path}`, {
         method: "GET",
@@ -386,10 +394,14 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       
       const newServerTimestamp: string = data.serverTimestamp;
 
-      if (forceFullSync || !lastSyncTime) {
+      console.log("[refreshWorkOrders] Received", newWorkOrders.length, "work orders from server");
+      
+      if (forceFullSync || !currentLastSyncTime) {
+        console.log("[refreshWorkOrders] Full sync - replacing all work orders");
         setWorkOrdersState(newWorkOrders);
         await AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(newWorkOrders));
       } else if (newWorkOrders.length > 0) {
+        console.log("[refreshWorkOrders] Incremental sync - merging work orders");
         setWorkOrdersState(prev => {
           const merged = [...prev];
           newWorkOrders.forEach(newWo => {
@@ -423,7 +435,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [serverUrl, projectId, lastSyncTime]);
+  }, [serverUrl, projectId]);
 
   const claimWorkOrder = useCallback(async (workOrderId: number) => {
     if (!serverUrl || !projectId) return;
@@ -488,14 +500,17 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   }, [serverUrl, projectId]);
 
   const clearAllData = useCallback(async () => {
-    setWorkOrdersState([]);
-    setReferenceData(null);
-    setLastSyncTime(null);
+    console.log("[clearAllData] Clearing all work order data");
     await AsyncStorage.multiRemove([
       STORAGE_KEYS.WORK_ORDERS,
       STORAGE_KEYS.REFERENCE_DATA,
       STORAGE_KEYS.LAST_SYNC,
     ]);
+    lastSyncTimeRef.current = null;
+    setLastSyncTime(null);
+    setReferenceData(null);
+    setWorkOrdersState([]);
+    console.log("[clearAllData] Done clearing data");
   }, []);
 
   const setWorkOrders = useCallback((orders: WorkOrder[]) => {
