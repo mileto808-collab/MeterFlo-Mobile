@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/contexts/AuthContext";
@@ -56,6 +56,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [syncHistory, setSyncHistory] = useState<SyncHistoryEntry[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const wasOfflineRef = useRef(false);
+  const autoSyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadStoredData();
@@ -306,6 +308,47 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       setIsSyncing(false);
     }
   }, [isOnline, pendingActions, isSyncing, serverUrl, projectId, addSyncHistoryEntry]);
+
+  // Auto-sync when connectivity is restored
+  useEffect(() => {
+    // Track when we go offline
+    if (!isOnline) {
+      wasOfflineRef.current = true;
+      return;
+    }
+
+    // Only auto-sync if we were previously offline and now online
+    if (wasOfflineRef.current && isOnline && pendingActions.length > 0 && !isSyncing && serverUrl && projectId) {
+      console.log("[OfflineContext] Connectivity restored, triggering auto-sync");
+      
+      // Clear any existing timeout
+      if (autoSyncTimeoutRef.current) {
+        clearTimeout(autoSyncTimeoutRef.current);
+      }
+      
+      // Debounce auto-sync to avoid rapid reconnect issues
+      autoSyncTimeoutRef.current = setTimeout(() => {
+        // Reset wasOfflineRef only when sync attempt starts
+        wasOfflineRef.current = false;
+        
+        syncPendingActions().then(syncedIds => {
+          if (syncedIds.length > 0) {
+            console.log(`[OfflineContext] Auto-sync completed, synced ${syncedIds.length} work orders`);
+          }
+        }).catch(err => {
+          console.error("[OfflineContext] Auto-sync failed, will retry on next trigger:", err);
+          // Restore flag to allow retry on next effect trigger
+          wasOfflineRef.current = true;
+        });
+      }, 2000);
+    }
+    
+    return () => {
+      if (autoSyncTimeoutRef.current) {
+        clearTimeout(autoSyncTimeoutRef.current);
+      }
+    };
+  }, [isOnline, pendingActions.length, isSyncing, serverUrl, projectId, syncPendingActions]);
 
   const clearAllPending = useCallback(async () => {
     setPendingActions([]);
