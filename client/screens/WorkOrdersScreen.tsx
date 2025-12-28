@@ -122,7 +122,7 @@ export default function WorkOrdersScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
-            onRefresh={() => refreshWorkOrders(true)}
+            onRefresh={() => refreshWorkOrders(true, true)}
             tintColor={theme.primary}
             colors={[theme.primary]}
           />

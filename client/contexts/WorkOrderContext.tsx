@@ -310,7 +310,7 @@ interface WorkOrderContextType {
   setSort: (sort: SortConfig) => void;
   getFilteredWorkOrders: () => WorkOrder[];
   getStatusColor: (status: string) => string;
-  refreshWorkOrders: (forceFullSync?: boolean) => Promise<void>;
+  refreshWorkOrders: (forceFullSync?: boolean, preserveLocal?: boolean) => Promise<void>;
   claimWorkOrder: (workOrderId: number) => Promise<void>;
   fetchSingleWorkOrder: (workOrderId: number) => Promise<WorkOrder | null>;
   clearAllData: () => Promise<void>;
@@ -397,7 +397,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const refreshWorkOrders = useCallback(async (forceFullSync: boolean = false) => {
+  const refreshWorkOrders = useCallback(async (forceFullSync: boolean = false, preserveLocal: boolean = false) => {
     if (!serverUrl || !projectId) return;
     
     setIsLoading(true);
@@ -412,7 +412,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       }
       
       const fullUrl = `${serverUrl}${path}`;
-      console.log("[refreshWorkOrders] forceFullSync:", forceFullSync, "lastSyncTime:", currentLastSyncTime, "fullUrl:", fullUrl);
+      console.log("[refreshWorkOrders] forceFullSync:", forceFullSync, "preserveLocal:", preserveLocal, "lastSyncTime:", currentLastSyncTime, "fullUrl:", fullUrl);
 
       const response = await fetch(fullUrl, {
         method: "GET",
@@ -469,7 +469,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       };
       
       if (forceFullSync || !currentLastSyncTime) {
-        console.log("[refreshWorkOrders] Full sync - replacing work orders, preserving pending");
+        console.log("[refreshWorkOrders] Full sync - replacing work orders, preserveLocal:", preserveLocal);
         setWorkOrdersState(prev => {
           const prevById = new Map(prev.map(wo => [wo.id, wo]));
           const serverWorkOrderIds = new Set(newWorkOrders.map(wo => wo.id));
@@ -480,17 +480,27 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
           });
           
           const pendingNotOnServer = prev.filter(wo => wo.syncPending && !serverWorkOrderIds.has(wo.id));
+          const pendingIds = new Set(pendingNotOnServer.map(wo => wo.id));
           
-          const removedWorkOrders = prev.filter(wo => !wo.syncPending && !serverWorkOrderIds.has(wo.id));
+          const localOnlyWorkOrders = preserveLocal 
+            ? prev.filter(wo => !wo.syncPending && !serverWorkOrderIds.has(wo.id) && !pendingIds.has(wo.id))
+            : [];
+          
+          const removedWorkOrders = preserveLocal 
+            ? []
+            : prev.filter(wo => !wo.syncPending && !serverWorkOrderIds.has(wo.id));
           
           if (pendingNotOnServer.length > 0) {
             console.log("[refreshWorkOrders] Preserving", pendingNotOnServer.length, "pending work orders not on server");
+          }
+          if (localOnlyWorkOrders.length > 0) {
+            console.log("[refreshWorkOrders] Preserving", localOnlyWorkOrders.length, "local work orders (preserveLocal=true)");
           }
           if (removedWorkOrders.length > 0) {
             console.log("[refreshWorkOrders] Removing", removedWorkOrders.length, "work orders no longer on server");
           }
           
-          const finalWorkOrders = [...mergedServerWorkOrders, ...pendingNotOnServer];
+          const finalWorkOrders = [...mergedServerWorkOrders, ...pendingNotOnServer, ...localOnlyWorkOrders];
           AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(finalWorkOrders));
           return finalWorkOrders;
         });
