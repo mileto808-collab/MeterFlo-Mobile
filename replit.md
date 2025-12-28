@@ -58,6 +58,7 @@ Preferred communication style: Simple, everyday language.
 - **Pull-to-refresh and Sync button both trigger full syncs** to get fresh data from server
 - **Work order removal**: When a work order is no longer returned by the server (e.g., admin processed it), it's removed from the device
 - **Pending changes preserved**: Work orders with `syncPending=true` are never removed, ensuring offline completions aren't lost
+- **Sync clearing logic**: After successful sync, `syncPending` flag only cleared for work orders where ALL pending actions were synced (prevents premature badge removal if some actions fail)
 - **Edit completed orders**: Completed/trouble work orders can be edited via "Edit Completion" button, which launches the wizard with pre-filled data (skipping the "Can Meter Be Changed?" step)
 
 ### Workflow Wizard Features
