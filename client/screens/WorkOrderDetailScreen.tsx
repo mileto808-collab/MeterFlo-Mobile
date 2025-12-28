@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useLayoutEffect, useCallback } from "react";
-import { View, ScrollView, StyleSheet, Pressable, Alert, Platform, ActivityIndicator, Linking } from "react-native";
+import React, { useMemo } from "react";
+import { View, ScrollView, StyleSheet, Pressable, Alert, Platform, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -8,7 +8,6 @@ import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders } from "@/contexts/WorkOrderContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { useOffline } from "@/contexts/OfflineContext";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { ThemedText } from "@/components/ThemedText";
@@ -71,61 +70,13 @@ export default function WorkOrderDetailScreen() {
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { workOrders, referenceData, claimWorkOrder, fetchSingleWorkOrder, updateWorkOrder } = useWorkOrders();
-  const { user } = useAuth();
+  const { workOrders, referenceData, updateWorkOrder } = useWorkOrders();
   const { pendingActions } = useOffline();
-  const [isClaiming, setIsClaiming] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const workOrder = useMemo(() => {
     return workOrders.find(wo => wo.id === route.params.workOrder.id) || route.params.workOrder;
   }, [workOrders, route.params.workOrder]);
 
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await fetchSingleWorkOrder(workOrder.id);
-      if (Platform.OS !== "web") {
-        Alert.alert("Refreshed", "Work order details updated from server.");
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to refresh work order";
-      if (Platform.OS === "web") {
-        alert(message);
-      } else {
-        Alert.alert("Error", message);
-      }
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [fetchSingleWorkOrder, workOrder.id]);
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <Pressable
-          onPress={handleRefresh}
-          disabled={isRefreshing}
-          accessibilityLabel="Refresh work order"
-          accessibilityRole="button"
-          style={({ pressed }) => ({
-            opacity: pressed || isRefreshing ? 0.5 : 1,
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-          })}
-        >
-          {isRefreshing ? (
-            <ActivityIndicator size="small" color={theme.primary} />
-          ) : (
-            <Feather name="refresh-cw" size={22} color={theme.primary} />
-          )}
-        </Pressable>
-      ),
-    });
-  }, [navigation, handleRefresh, isRefreshing, theme.primary]);
-
-  const isAssignedToMe = workOrder.assignedUserId === user?.id;
-  const canClaim = !workOrder.assignedUserId || !isAssignedToMe;
   const isCompleted = workOrder.status.toLowerCase() === "completed";
   const isTrouble = workOrder.status.toLowerCase() === "trouble";
   const isCancelled = workOrder.status.toLowerCase() === "cancelled";
@@ -200,37 +151,6 @@ export default function WorkOrderDetailScreen() {
     if (!code) return null;
     const found = referenceData?.troubleCodes.find(tc => tc.code === code);
     return found ? `${found.code} - ${found.label}` : code;
-  };
-
-  const handleClaim = async () => {
-    const doClaim = async () => {
-      setIsClaiming(true);
-      try {
-        await claimWorkOrder(workOrder.id);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to claim work order";
-        if (Platform.OS === "web") {
-          alert(message);
-        } else {
-          Alert.alert("Error", message);
-        }
-      } finally {
-        setIsClaiming(false);
-      }
-    };
-
-    if (Platform.OS === "web") {
-      doClaim();
-    } else {
-      Alert.alert(
-        "Claim Work Order",
-        "Assign this work order to yourself?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Claim", onPress: doClaim },
-        ]
-      );
-    }
   };
 
   const handleProcess = () => {
@@ -573,22 +493,6 @@ export default function WorkOrderDetailScreen() {
           paddingBottom: insets.bottom + Spacing.lg,
         }
       ]}>
-        {canClaim && !isCompleted && !isCancelled ? (
-          <Button
-            onPress={handleClaim}
-            style={[styles.claimButton, { backgroundColor: theme.backgroundSecondary }]}
-            disabled={isClaiming}
-          >
-            {isClaiming ? (
-              <ActivityIndicator size="small" color={theme.text} />
-            ) : (
-              <>
-                <Feather name="user-plus" size={16} color={theme.text} />
-                <ThemedText style={{ marginLeft: Spacing.sm }}>Claim</ThemedText>
-              </>
-            )}
-          </Button>
-        ) : null}
         <Button
           onPress={handleProcess}
           style={[styles.processButton, { backgroundColor: isCancelled ? theme.backgroundSecondary : theme.primary }]}
@@ -754,10 +658,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(0,0,0,0.1)",
     gap: Spacing.md,
-  },
-  claimButton: {
-    flex: 0,
-    paddingHorizontal: Spacing.lg,
   },
   processButton: {
     flex: 1,
