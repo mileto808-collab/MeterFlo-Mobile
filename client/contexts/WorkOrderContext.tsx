@@ -404,6 +404,35 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
       console.log("[refreshWorkOrders] Received", newWorkOrders.length, "work orders from server");
       
+      const mergeLocalCompletionData = (serverWo: WorkOrder, localWo: WorkOrder | undefined): WorkOrder => {
+        if (!localWo) return serverWo;
+        if (localWo.syncPending) return localWo;
+        
+        const localStatus = localWo.status?.toLowerCase();
+        const isLocallyCompleted = localStatus === "completed" || localStatus === "trouble";
+        
+        if (isLocallyCompleted && localWo.completedAt) {
+          return {
+            ...serverWo,
+            customerWoId: localWo.customerWoId || serverWo.customerWoId,
+            oldMeterId: localWo.oldMeterId || serverWo.oldMeterId,
+            oldGps: localWo.oldGps || serverWo.oldGps,
+            oldMeterReading: localWo.oldMeterReading || serverWo.oldMeterReading,
+            newMeterId: localWo.newMeterId || serverWo.newMeterId,
+            newMeterReading: localWo.newMeterReading || serverWo.newMeterReading,
+            newGps: localWo.newGps || serverWo.newGps,
+            completedAt: localWo.completedAt || serverWo.completedAt,
+            completedBy: localWo.completedBy || serverWo.completedBy,
+            completedByUsername: localWo.completedByUsername || serverWo.completedByUsername,
+            troubleCode: localWo.troubleCode || serverWo.troubleCode,
+            troubleNote: localWo.troubleNote || serverWo.troubleNote,
+            status: localWo.status || serverWo.status,
+          };
+        }
+        
+        return serverWo;
+      };
+      
       if (forceFullSync || !currentLastSyncTime) {
         console.log("[refreshWorkOrders] Full sync - replacing work orders, preserving pending");
         setWorkOrdersState(prev => {
@@ -412,10 +441,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
           
           const mergedServerWorkOrders = newWorkOrders.map(serverWo => {
             const localWo = prevById.get(serverWo.id);
-            if (localWo?.syncPending) {
-              return localWo;
-            }
-            return serverWo;
+            return mergeLocalCompletionData(serverWo, localWo);
           });
           
           const pendingNotOnServer = prev.filter(wo => wo.syncPending && !serverWorkOrderIds.has(wo.id));
@@ -440,9 +466,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
           newWorkOrders.forEach(newWo => {
             const existingIndex = merged.findIndex(wo => wo.id === newWo.id);
             if (existingIndex >= 0) {
-              if (!merged[existingIndex].syncPending) {
-                merged[existingIndex] = newWo;
-              }
+              merged[existingIndex] = mergeLocalCompletionData(newWo, merged[existingIndex]);
             } else {
               merged.push(newWo);
             }

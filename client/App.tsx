@@ -14,6 +14,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import { WorkOrderProvider } from "@/contexts/WorkOrderContext";
+import { AutoSyncManager } from "@/components/AutoSyncManager";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <AuthProvider>
           <OfflineProvider>
             <WorkOrderProvider>
+              <AutoSyncManager />
               <SafeAreaProvider>
                 <GestureHandlerRootView style={styles.root}>
                   <KeyboardProvider>

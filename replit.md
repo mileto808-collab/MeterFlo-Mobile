@@ -60,7 +60,8 @@ Preferred communication style: Simple, everyday language.
 - **Pending changes preserved**: Work orders with `syncPending=true` are never removed, ensuring offline completions aren't lost
 - **Sync clearing logic**: After successful sync, `syncPending` flag only cleared for work orders where ALL pending actions were synced (prevents premature badge removal if some actions fail)
 - **Offline completion sync**: Offline completions now use individual mobile endpoints (`/api/mobile/workorders/{id}/complete` or `/trouble`) with properly formatted camelCase payloads and photo objects, ensuring offline and online completions use identical API format
-- **Auto-sync on reconnect**: When device connectivity is restored after being offline, pending actions are automatically synced with a 2-second debounce. If sync fails, the system retries on subsequent connectivity changes
+- **Auto-sync on reconnect**: When device connectivity is restored after being offline, pending actions are automatically synced with a 2-second debounce. If sync fails, the system retries on subsequent connectivity changes. After successful sync, the Pending badge is automatically cleared via the AutoSyncManager component
+- **Local data preservation**: During sync, local completion data (customerWoId, oldMeterId, oldGps, oldMeterReading, newMeterId, newMeterReading, newGps, completedAt, completedBy, troubleCode, troubleNote) is preserved and merged with server data to prevent data loss
 - **Edit completed orders**: Completed/trouble work orders can be edited via "Edit Completion" button, which launches the wizard with pre-filled data (skipping the "Can Meter Be Changed?" step)
 
 ### Workflow Wizard Features
