@@ -104,6 +104,7 @@ export default function WorkOrderDetailScreen() {
         <HeaderButton
           onPress={handleRefresh}
           disabled={isRefreshing}
+          accessibilityLabel="Refresh work order"
         >
           {isRefreshing ? (
             <ActivityIndicator size="small" color={theme.primary} />
