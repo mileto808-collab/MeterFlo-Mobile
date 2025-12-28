@@ -807,7 +807,7 @@ export default function WorkflowWizardScreen() {
               onChangeText={(text) => setFormData(prev => ({ ...prev, oldMeterReading: text }))}
               placeholder="Enter reading (e.g., 12345)"
               keyboardType="numeric"
-              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg }}
+              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg, minHeight: 60 }}
             />
           </View>
         );
@@ -969,7 +969,7 @@ export default function WorkflowWizardScreen() {
               onChangeText={(text) => setFormData(prev => ({ ...prev, newMeterId: text }))}
               placeholder="Type or use HID scanner"
               autoCapitalize="characters"
-              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg }}
+              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg, minHeight: 60 }}
             />
             <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm, textAlign: "center" }}>
               Tap field and scan with Bluetooth/USB barcode gun
@@ -991,7 +991,7 @@ export default function WorkflowWizardScreen() {
               onChangeText={(text) => setFormData(prev => ({ ...prev, newMeterReading: text }))}
               placeholder="Enter reading (usually 0)"
               keyboardType="numeric"
-              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg }}
+              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg, minHeight: 60 }}
             />
           </View>
         );
