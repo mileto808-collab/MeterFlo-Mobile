@@ -258,9 +258,10 @@ interface WorkOrderContextType {
   setFilters: (filters: FilterConfig) => void;
   setSort: (sort: SortConfig) => void;
   getFilteredWorkOrders: () => WorkOrder[];
-  refreshWorkOrders: () => Promise<void>;
+  refreshWorkOrders: (forceFullSync?: boolean) => Promise<void>;
   claimWorkOrder: (workOrderId: number) => Promise<void>;
   fetchSingleWorkOrder: (workOrderId: number) => Promise<WorkOrder | null>;
+  clearAllData: () => Promise<void>;
 }
 
 const WorkOrderContext = createContext<WorkOrderContextType | undefined>(undefined);
@@ -350,7 +351,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const refreshWorkOrders = useCallback(async () => {
+  const refreshWorkOrders = useCallback(async (forceFullSync: boolean = false) => {
     if (!serverUrl || !projectId) return;
     
     setIsLoading(true);
@@ -359,7 +360,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     try {
       let path = `/api/projects/${projectId}/mobile/sync/download?includeCompleted=false`;
       
-      if (lastSyncTime) {
+      if (lastSyncTime && !forceFullSync) {
         path += `&lastSyncTimestamp=${encodeURIComponent(lastSyncTime)}`;
       }
 
@@ -385,7 +386,10 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       
       const newServerTimestamp: string = data.serverTimestamp;
 
-      if (lastSyncTime && newWorkOrders.length > 0) {
+      if (forceFullSync || !lastSyncTime) {
+        setWorkOrdersState(newWorkOrders);
+        await AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(newWorkOrders));
+      } else if (newWorkOrders.length > 0) {
         setWorkOrdersState(prev => {
           const merged = [...prev];
           newWorkOrders.forEach(newWo => {
@@ -401,9 +405,6 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
           AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(merged));
           return merged;
         });
-      } else if (newWorkOrders.length > 0) {
-        setWorkOrdersState(newWorkOrders);
-        await AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(newWorkOrders));
       }
 
       if (newReferenceData) {
@@ -485,6 +486,17 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       throw err;
     }
   }, [serverUrl, projectId]);
+
+  const clearAllData = useCallback(async () => {
+    setWorkOrdersState([]);
+    setReferenceData(null);
+    setLastSyncTime(null);
+    await AsyncStorage.multiRemove([
+      STORAGE_KEYS.WORK_ORDERS,
+      STORAGE_KEYS.REFERENCE_DATA,
+      STORAGE_KEYS.LAST_SYNC,
+    ]);
+  }, []);
 
   const setWorkOrders = useCallback((orders: WorkOrder[]) => {
     setWorkOrdersState(orders);
@@ -586,6 +598,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         refreshWorkOrders,
         claimWorkOrder,
         fetchSingleWorkOrder,
+        clearAllData,
       }}
     >
       {children}

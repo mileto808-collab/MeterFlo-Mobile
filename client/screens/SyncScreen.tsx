@@ -1,5 +1,5 @@
-import React from "react";
-import { View, ScrollView, StyleSheet, Pressable, ActivityIndicator } from "react-native";
+import React, { useState } from "react";
+import { View, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -18,7 +18,8 @@ export default function SyncScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const { isOnline, pendingActions, isSyncing, syncPendingActions, clearAllPending } = useOffline();
-  const { lastSyncTime, isLoading, refreshWorkOrders } = useWorkOrders();
+  const { lastSyncTime, isLoading, refreshWorkOrders, clearAllData, workOrders } = useWorkOrders();
+  const [isClearing, setIsClearing] = useState(false);
 
   const formatTime = (dateString: string | null) => {
     if (!dateString) return "Never";
@@ -44,6 +45,44 @@ export default function SyncScreen() {
     await refreshWorkOrders();
     if (pendingActions.length > 0) {
       await syncPendingActions();
+    }
+  };
+
+  const handleClearAllData = async () => {
+    const doClear = async () => {
+      setIsClearing(true);
+      try {
+        await clearAllPending();
+        await clearAllData();
+        await refreshWorkOrders(true);
+        if (Platform.OS !== "web") {
+          Alert.alert("Success", "All data cleared and refreshed from server.");
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to clear data";
+        if (Platform.OS === "web") {
+          alert(message);
+        } else {
+          Alert.alert("Error", message);
+        }
+      } finally {
+        setIsClearing(false);
+      }
+    };
+
+    if (Platform.OS === "web") {
+      if (confirm("Clear all cached data and pending actions? This will fetch fresh data from the server.")) {
+        doClear();
+      }
+    } else {
+      Alert.alert(
+        "Clear All Data",
+        "This will clear all cached work orders and pending actions, then fetch fresh data from the server. Continue?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Clear & Refresh", style: "destructive", onPress: doClear },
+        ]
+      );
     }
   };
 
@@ -158,6 +197,38 @@ export default function SyncScreen() {
           </Pressable>
         ) : null}
       </View>
+
+      <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
+        <View style={styles.sectionHeader}>
+          <ThemedText type="h4">Cached Data</ThemedText>
+          <ThemedText type="body" style={{ color: theme.textSecondary }}>
+            {workOrders.length} work orders
+          </ThemedText>
+        </View>
+        <ThemedText type="small" style={{ color: theme.textSecondary }}>
+          Clear all cached data and fetch fresh work orders from the server.
+        </ThemedText>
+        <Pressable
+          onPress={handleClearAllData}
+          disabled={isClearing || !isOnline}
+          style={({ pressed }) => [
+            styles.clearDataButton,
+            { 
+              backgroundColor: theme.error + "15",
+              opacity: (pressed || isClearing || !isOnline) ? 0.5 : 1 
+            },
+          ]}
+        >
+          {isClearing ? (
+            <ActivityIndicator size="small" color={theme.error} />
+          ) : (
+            <Feather name="refresh-cw" size={18} color={theme.error} />
+          )}
+          <ThemedText type="body" style={{ color: theme.error }}>
+            {isClearing ? "Clearing..." : "Clear All Data & Refresh"}
+          </ThemedText>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
@@ -242,5 +313,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: Spacing.sm,
     padding: Spacing.md,
+  },
+  clearDataButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.md,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.sm,
   },
 });
