@@ -447,6 +447,11 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         const isLocallyCompleted = localStatus === "completed" || localStatus === "trouble";
         
         if (isLocallyCompleted && localWo.completedAt) {
+          console.log("[mergeLocalCompletionData] WO ID:", serverWo.id, "status:", localStatus, 
+            "serverWo.notes:", JSON.stringify(serverWo.notes), 
+            "localWo.notes:", JSON.stringify(localWo.notes),
+            "serverWo.troubleNote:", JSON.stringify(serverWo.troubleNote),
+            "localWo.troubleNote:", JSON.stringify(localWo.troubleNote));
           return {
             ...serverWo,
             customerWoId: localWo.customerWoId || serverWo.customerWoId,
