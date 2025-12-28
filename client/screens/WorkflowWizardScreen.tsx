@@ -7,7 +7,7 @@ import { HeaderButton } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
