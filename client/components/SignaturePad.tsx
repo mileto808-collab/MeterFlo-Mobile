@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
+import { captureRef } from "react-native-view-shot";
 
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
@@ -19,17 +20,46 @@ export function SignaturePad({ onSignatureChange, height = 200 }: SignaturePadPr
   const [paths, setPaths] = useState<string[]>([]);
   const [currentPath, setCurrentPath] = useState<string>("");
   const onSignatureChangeRef = useRef(onSignatureChange);
+  const viewRef = useRef<View>(null);
+  const captureTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   useEffect(() => {
     onSignatureChangeRef.current = onSignatureChange;
   }, [onSignatureChange]);
   
-  useEffect(() => {
-    if (paths.length > 0) {
-      const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="${height}" viewBox="0 0 300 ${height}"><path d="${paths.join(" ")}" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-      onSignatureChangeRef.current(svgString);
+  const captureSignature = useCallback(async () => {
+    if (viewRef.current && paths.length > 0) {
+      try {
+        const uri = await captureRef(viewRef, {
+          format: "png",
+          quality: 1,
+          result: "base64",
+        });
+        const base64WithPrefix = `data:image/png;base64,${uri}`;
+        onSignatureChangeRef.current(base64WithPrefix);
+      } catch (error) {
+        console.error("[SignaturePad] Failed to capture signature:", error);
+      }
     }
-  }, [paths, height]);
+  }, [paths.length]);
+  
+  useEffect(() => {
+    if (captureTimeoutRef.current) {
+      clearTimeout(captureTimeoutRef.current);
+    }
+    
+    if (paths.length > 0) {
+      captureTimeoutRef.current = setTimeout(() => {
+        captureSignature();
+      }, 100);
+    }
+    
+    return () => {
+      if (captureTimeoutRef.current) {
+        clearTimeout(captureTimeoutRef.current);
+      }
+    };
+  }, [paths, captureSignature]);
 
   const addPoint = useCallback((x: number, y: number, isStart: boolean) => {
     if (isStart) {
@@ -69,11 +99,13 @@ export function SignaturePad({ onSignatureChange, height = 200 }: SignaturePadPr
     <View style={styles.container}>
       <GestureDetector gesture={panGesture}>
         <View
+          ref={viewRef}
+          collapsable={false}
           style={[
             styles.signatureArea,
             { 
               height,
-              backgroundColor: theme.backgroundDefault,
+              backgroundColor: "#FFFFFF",
               borderColor: hasSignature ? theme.primary : theme.border,
             }
           ]}
@@ -83,7 +115,7 @@ export function SignaturePad({ onSignatureChange, height = 200 }: SignaturePadPr
               <Path
                 key={index}
                 d={path}
-                stroke={theme.text}
+                stroke="#000000"
                 strokeWidth={2}
                 fill="none"
                 strokeLinecap="round"
@@ -93,7 +125,7 @@ export function SignaturePad({ onSignatureChange, height = 200 }: SignaturePadPr
             {currentPath ? (
               <Path
                 d={currentPath}
-                stroke={theme.text}
+                stroke="#000000"
                 strokeWidth={2}
                 fill="none"
                 strokeLinecap="round"

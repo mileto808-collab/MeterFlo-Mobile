@@ -549,22 +549,31 @@ export default function WorkflowWizardScreen() {
         
         console.log(`[WorkflowWizard] Submitting to endpoint: ${endpoint}`);
         
+        const formatPhotosForServer = (photos: string[], prefix: string) => {
+          return photos.map((b64, idx) => ({
+            base64: b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`,
+            filename: `${prefix}_${idx + 1}.jpg`,
+          }));
+        };
+        
         const mobilePayload = canChange ? {
           projectId: Number(projectId),
+          oldMeterReading: parseReading(formData.oldMeterReading),
           newMeterId: formData.newMeterId,
           newMeterReading: parseReading(formData.newMeterReading) ?? 0,
-          newGps: formData.gpsCoordinates || null,
-          notes: null,
+          gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
-          beforePhotos: beforePhotosBase64,
-          afterPhotos: afterPhotosBase64,
+          completedAt: completedAt,
+          notes: null,
+          beforePhotos: formatPhotosForServer(beforePhotosBase64, 'before'),
+          afterPhotos: formatPhotosForServer(afterPhotosBase64, 'after'),
         } : {
           projectId: Number(projectId),
           troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
           notes: formData.troubleNote || null,
           oldMeterReading: parseReading(formData.oldMeterReading),
-          photos: troublePhotosBase64,
+          photos: formatPhotosForServer(troublePhotosBase64, 'trouble'),
         };
         
         const payloadSize = JSON.stringify(mobilePayload).length;

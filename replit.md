@@ -58,12 +58,14 @@ Preferred communication style: Simple, everyday language.
 - **Trouble Code Display**: Trouble codes display with labels (e.g., "02 - Unsafe") for better readability
 - **Photo Upload**: Photos captured during workflows are converted to base64 and sent to server
   - Uses expo-image-manipulator for reliable base64 conversion (1200px width, 0.7 quality JPEG compression)
-  - Photos sent as array of base64 strings directly (not objects): `["base64...", "base64..."]`
-  - Server accepts base64 with or without `data:image/jpeg;base64,` prefix
+  - Photos sent as objects: `[{ base64: "data:image/jpeg;base64,...", filename: "before_1.jpg" }]`
   - User feedback when photo conversion fails with option to continue or cancel
+- **Signature Capture**: Uses react-native-view-shot to capture signature as base64 PNG
+  - SignaturePad renders SVG paths but captures as PNG for server compatibility
+  - Output format: `data:image/png;base64,...`
 - **Mobile API Payload Fields**: Uses camelCase fields for mobile-specific endpoints
   - Trouble: `{ projectId, troubleCode, notes, oldMeterReading, photos }`
-  - Complete: `{ projectId, newMeterId, newMeterReading, newGps, notes, signatureData, signatureName, beforePhotos, afterPhotos }`
+  - Complete: `{ projectId, oldMeterReading, newMeterId, newMeterReading, gpsCoordinates, signatureData, signatureName, completedAt, beforePhotos, afterPhotos }`
 
 ### Sync History Tracking
 - **SyncHistoryEntry Interface**: Tracks timestamp, work order IDs/titles, status, counts, photo count, error messages
