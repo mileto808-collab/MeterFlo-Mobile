@@ -54,6 +54,12 @@ Preferred communication style: Simple, everyday language.
 - Automatic sync attempted when connectivity restored
 - Visual indicators for sync status and pending changes
 
+### Full Sync Behavior
+- **Pull-to-refresh and Sync button both trigger full syncs** to get fresh data from server
+- **Work order removal**: When a work order is no longer returned by the server (e.g., admin processed it), it's removed from the device
+- **Pending changes preserved**: Work orders with `syncPending=true` are never removed, ensuring offline completions aren't lost
+- **Edit completed orders**: Completed/trouble work orders can be edited via "Edit Completion" button, which launches the wizard with pre-filled data (skipping the "Can Meter Be Changed?" step)
+
 ### Workflow Wizard Features
 - **Trouble Code Display**: Trouble codes display with labels (e.g., "02 - Unsafe") for better readability
 - **Photo Upload**: Photos captured during workflows are converted to base64 and sent to server
