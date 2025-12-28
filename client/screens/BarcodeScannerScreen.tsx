@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { View, StyleSheet, Pressable, Platform } from "react-native";
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,6 +21,8 @@ interface ScanResult {
   workOrder: WorkOrder | undefined;
 }
 
+const HOLD_STEADY_DURATION = 700;
+
 export default function BarcodeScannerScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -30,9 +32,22 @@ export default function BarcodeScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isScanning, setIsScanning] = useState(true);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
+
+  const lastBarcodeRef = useRef<string | null>(null);
+  const lastBarcodeTimeRef = useRef<number>(0);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scanType = route.params?.scanType || "barcode";
   const isQRMode = scanType === "qrcode";
+
+  useEffect(() => {
+    return () => {
+      if (holdTimerRef.current) {
+        clearTimeout(holdTimerRef.current);
+      }
+    };
+  }, []);
 
   const findWorkOrderByMeterId = useCallback((meterId: string): WorkOrder | undefined => {
     const normalizedMeterId = meterId.trim().toLowerCase();
@@ -42,18 +57,38 @@ export default function BarcodeScannerScreen() {
     });
   }, [workOrders]);
 
-  const handleBarcodeScanned = useCallback((result: BarcodeScanningResult) => {
-    if (!isScanning) return;
+  const confirmScan = useCallback((scannedValue: string) => {
     setIsScanning(false);
-
-    const scannedValue = result.data;
+    setDetectedBarcode(null);
     const workOrder = findWorkOrderByMeterId(scannedValue);
-
     setScanResult({
       meterId: scannedValue,
       workOrder,
     });
-  }, [isScanning, findWorkOrderByMeterId]);
+  }, [findWorkOrderByMeterId]);
+
+  const handleBarcodeScanned = useCallback((result: BarcodeScanningResult) => {
+    if (!isScanning) return;
+
+    const scannedValue = result.data;
+    const now = Date.now();
+
+    if (scannedValue !== lastBarcodeRef.current) {
+      lastBarcodeRef.current = scannedValue;
+      lastBarcodeTimeRef.current = now;
+      setDetectedBarcode(scannedValue);
+
+      if (holdTimerRef.current) {
+        clearTimeout(holdTimerRef.current);
+      }
+
+      holdTimerRef.current = setTimeout(() => {
+        if (lastBarcodeRef.current === scannedValue) {
+          confirmScan(scannedValue);
+        }
+      }, HOLD_STEADY_DURATION);
+    }
+  }, [isScanning, confirmScan]);
 
   const handleConfirm = useCallback(() => {
     if (scanResult?.workOrder) {
@@ -66,6 +101,13 @@ export default function BarcodeScannerScreen() {
 
   const handleScanAgain = useCallback(() => {
     setScanResult(null);
+    setDetectedBarcode(null);
+    lastBarcodeRef.current = null;
+    lastBarcodeTimeRef.current = 0;
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
     setIsScanning(true);
   }, []);
 
@@ -231,7 +273,8 @@ export default function BarcodeScannerScreen() {
           <View style={[
             styles.scanRegion, 
             { 
-              borderColor: theme.primary,
+              borderColor: detectedBarcode ? theme.success : theme.primary,
+              borderWidth: detectedBarcode ? 3 : 2,
               width: isQRMode ? 200 : 280,
               height: isQRMode ? 200 : 100,
             }
@@ -255,12 +298,29 @@ export default function BarcodeScannerScreen() {
         <View style={{ width: 44 }} />
       </View>
 
+      {detectedBarcode ? (
+        <View style={styles.detectedBarcodeContainer}>
+          <View style={[styles.detectedBarcodeBox, { backgroundColor: "rgba(0, 0, 0, 0.7)" }]}>
+            <Feather name="loader" size={16} color={theme.success} style={{ marginRight: Spacing.sm }} />
+            <ThemedText type="body" style={{ color: "#FFFFFF", fontWeight: "600" }}>
+              {detectedBarcode}
+            </ThemedText>
+          </View>
+          <ThemedText type="small" style={{ color: "rgba(255, 255, 255, 0.8)", marginTop: Spacing.xs }}>
+            Hold steady...
+          </ThemedText>
+        </View>
+      ) : null}
+
       <View style={[styles.instructions, { paddingBottom: insets.bottom + Spacing.xl }]}>
         <ThemedText type="body" style={styles.instructionText}>
-          {isQRMode ? "Position QR code within the frame" : "Position barcode within the frame"}
+          {detectedBarcode 
+            ? "Hold steady to capture" 
+            : isQRMode ? "Position QR code within the frame" : "Position barcode within the frame"
+          }
         </ThemedText>
         <ThemedText type="small" style={styles.instructionSubtext}>
-          Scanning for meter ID to find work order
+          {detectedBarcode ? "Locking on to barcode..." : "Scanning for meter ID to find work order"}
         </ThemedText>
         
         <Button
@@ -397,5 +457,19 @@ const styles = StyleSheet.create({
   },
   cancelLink: {
     paddingVertical: Spacing.sm,
+  },
+  detectedBarcodeContainer: {
+    position: "absolute",
+    top: "45%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  detectedBarcodeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
   },
 });
