@@ -59,6 +59,7 @@ Preferred communication style: Simple, everyday language.
 - **Work order removal**: When a work order is no longer returned by the server (e.g., admin processed it), it's removed from the device
 - **Pending changes preserved**: Work orders with `syncPending=true` are never removed, ensuring offline completions aren't lost
 - **Sync clearing logic**: After successful sync, `syncPending` flag only cleared for work orders where ALL pending actions were synced (prevents premature badge removal if some actions fail)
+- **Offline completion sync**: Offline completions now use individual mobile endpoints (`/api/mobile/workorders/{id}/complete` or `/trouble`) with properly formatted camelCase payloads and photo objects, ensuring offline and online completions use identical API format
 - **Edit completed orders**: Completed/trouble work orders can be edited via "Edit Completion" button, which launches the wizard with pre-filled data (skipping the "Can Meter Be Changed?" step)
 
 ### Workflow Wizard Features
