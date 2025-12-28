@@ -88,7 +88,7 @@ const STEP_TITLES: Record<WizardStep, string> = {
   newReading: "New Meter Reading",
   afterPhotos: "After Photos",
   gps: "Capture GPS",
-  signature: "Customer Signature",
+  signature: "Signature",
   confirm: "Confirm & Submit",
   troubleCapture: "Report Issue",
   troubleConfirm: "Confirm & Submit",
@@ -1073,7 +1073,7 @@ export default function WorkflowWizardScreen() {
             </View>
             
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Have the customer sign below
+              Sign the Work Order
             </ThemedText>
             
             <SignaturePad
@@ -1129,7 +1129,7 @@ export default function WorkflowWizardScreen() {
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Feather name="user" size={20} color={theme.primary} />
-                <ThemedText type="body">Customer: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.signatureName}</ThemedText></ThemedText>
+                <ThemedText type="body">Signed By: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.signatureName}</ThemedText></ThemedText>
               </View>
             </View>
           </View>
