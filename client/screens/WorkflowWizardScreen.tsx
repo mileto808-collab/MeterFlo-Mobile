@@ -547,6 +547,9 @@ export default function WorkflowWizardScreen() {
         
         console.log(`[WorkflowWizard] Submitting to endpoint: ${endpoint}`);
         
+        const payloadSize = JSON.stringify(patchPayload).length;
+        console.log(`[WorkflowWizard] Payload size: ${Math.round(payloadSize / 1024)}KB`);
+        
         const response = await fetch(endpoint, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -554,13 +557,16 @@ export default function WorkflowWizardScreen() {
           body: JSON.stringify(patchPayload),
         });
 
+        console.log(`[WorkflowWizard] Response status: ${response.status}`);
+
         if (!response.ok) {
           const errorText = await response.text();
-          console.error("[WorkflowWizard] Server error response:", response.status, errorText);
+          console.error("[WorkflowWizard] Server error response:", response.status, errorText?.substring(0, 500));
           throw new Error(errorText || "Failed to complete work order");
         }
 
         const result = await response.json();
+        console.log(`[WorkflowWizard] Server response:`, JSON.stringify(result).substring(0, 300));
         
         const totalPhotoCount = troublePhotosBase64.length + beforePhotosBase64.length + afterPhotosBase64.length;
         try {
