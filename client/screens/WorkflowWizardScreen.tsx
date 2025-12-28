@@ -431,6 +431,7 @@ export default function WorkflowWizardScreen() {
     };
 
     try {
+      console.log("[WorkflowWizard] User object:", JSON.stringify(user, null, 2));
       console.log("[WorkflowWizard] Submitting work order update:", JSON.stringify(patchPayload, null, 2));
       
       if (isOnline && serverUrl && projectId) {
