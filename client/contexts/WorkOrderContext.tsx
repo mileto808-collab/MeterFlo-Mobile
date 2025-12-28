@@ -404,7 +404,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      let path = `/api/projects/${projectId}/mobile/sync/download?includeCompleted=false`;
+      let path = `/api/projects/${projectId}/mobile/sync/download?includeCompleted=true`;
       
       const currentLastSyncTime = lastSyncTimeRef.current;
       if (currentLastSyncTime && !forceFullSync) {
