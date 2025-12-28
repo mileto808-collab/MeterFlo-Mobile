@@ -476,10 +476,19 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
           const prevById = new Map(prev.map(wo => [wo.id, wo]));
           const serverWorkOrderIds = new Set(newWorkOrders.map(wo => wo.id));
           
-          const mergedServerWorkOrders = newWorkOrders.map(serverWo => {
-            const localWo = prevById.get(serverWo.id);
-            return mergeLocalCompletionData(serverWo, localWo);
-          });
+          const mergedServerWorkOrders = newWorkOrders
+            .filter(serverWo => {
+              if (!preserveLocal) return true;
+              const localWo = prevById.get(serverWo.id);
+              if (localWo) return true;
+              const serverStatus = serverWo.status?.toLowerCase();
+              const isServerCompleted = serverStatus === "completed" || serverStatus === "trouble";
+              return !isServerCompleted;
+            })
+            .map(serverWo => {
+              const localWo = prevById.get(serverWo.id);
+              return mergeLocalCompletionData(serverWo, localWo);
+            });
           
           const pendingNotOnServer = prev.filter(wo => wo.syncPending && !serverWorkOrderIds.has(wo.id));
           const pendingIds = new Set(pendingNotOnServer.map(wo => wo.id));
@@ -510,12 +519,22 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         console.log("[refreshWorkOrders] Incremental sync - merging work orders");
         setWorkOrdersState(prev => {
           const merged = [...prev];
+          const prevById = new Map(prev.map(wo => [wo.id, wo]));
           newWorkOrders.forEach(newWo => {
             const existingIndex = merged.findIndex(wo => wo.id === newWo.id);
             if (existingIndex >= 0) {
               merged[existingIndex] = mergeLocalCompletionData(newWo, merged[existingIndex]);
             } else {
-              merged.push(newWo);
+              const localWo = prevById.get(newWo.id);
+              if (localWo) {
+                merged.push(mergeLocalCompletionData(newWo, localWo));
+              } else {
+                const serverStatus = newWo.status?.toLowerCase();
+                const isServerCompleted = serverStatus === "completed" || serverStatus === "trouble";
+                if (!isServerCompleted) {
+                  merged.push(newWo);
+                }
+              }
             }
           });
           AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(merged));
