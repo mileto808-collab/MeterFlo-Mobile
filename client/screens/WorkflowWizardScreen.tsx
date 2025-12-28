@@ -107,9 +107,7 @@ export default function WorkflowWizardScreen() {
 
   const workOrder = route.params.workOrder;
   
-  const isEditingCompleted = workOrder.status?.toLowerCase() === "completed";
   const isEditingTrouble = workOrder.status?.toLowerCase() === "trouble";
-  const isEditing = isEditingCompleted || isEditingTrouble;
   
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -122,7 +120,7 @@ export default function WorkflowWizardScreen() {
   const [viewingPhoto, setViewingPhoto] = useState<{ uri: string; type: "before" | "after" | "trouble"; id: string } | null>(null);
   
   const [formData, setFormData] = useState<MeterChangeoutData>({
-    canChange: isEditingCompleted ? true : isEditingTrouble ? false : null,
+    canChange: null,
     troubleCode: workOrder.troubleCode || "",
     troubleNote: workOrder.troubleNote || "",
     troublePhotos: [],
@@ -137,11 +135,7 @@ export default function WorkflowWizardScreen() {
   });
 
   const getSteps = () => {
-    const baseSteps = formData.canChange === false ? TROUBLE_STEPS : SUCCESS_STEPS;
-    if (isEditing) {
-      return baseSteps.filter(step => step !== "canChange");
-    }
-    return baseSteps;
+    return formData.canChange === false ? TROUBLE_STEPS : SUCCESS_STEPS;
   };
   
   const steps = getSteps();
