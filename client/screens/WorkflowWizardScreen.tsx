@@ -618,6 +618,7 @@ export default function WorkflowWizardScreen() {
             newMeterId: formData.newMeterId,
             newMeterReading: formData.newMeterReading,
             newGps: formData.gpsCoordinates,
+            notes: formData.notes,
           } : {
             troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
             troubleNote: formData.troubleNote,
@@ -673,6 +674,7 @@ export default function WorkflowWizardScreen() {
             newMeterId: formData.newMeterId,
             newMeterReading: formData.newMeterReading,
             newGps: formData.gpsCoordinates,
+            notes: formData.notes,
           } : {
             troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
             troubleNote: formData.troubleNote,
