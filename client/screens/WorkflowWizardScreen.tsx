@@ -139,14 +139,14 @@ export default function WorkflowWizardScreen() {
   const isLastStep = currentStepIndex === totalSteps - 1;
 
   const troubleCodeOptions = referenceData?.troubleCodes || [
-    { code: "ACCESS_DENIED", description: "Access Denied" },
-    { code: "METER_LOCKED", description: "Meter Locked" },
-    { code: "UNSAFE_CONDITIONS", description: "Unsafe Conditions" },
-    { code: "CUSTOMER_REFUSED", description: "Customer Refused" },
-    { code: "OTHER", description: "Other" },
+    { code: "ACCESS_DENIED", label: "Access Denied", description: "" },
+    { code: "METER_LOCKED", label: "Meter Locked", description: "" },
+    { code: "UNSAFE_CONDITIONS", label: "Unsafe Conditions", description: "" },
+    { code: "CUSTOMER_REFUSED", label: "Customer Refused", description: "" },
+    { code: "OTHER", label: "Other", description: "" },
   ];
   
-  const troubleCodeDisplayStrings = troubleCodeOptions.map(tc => `${tc.code} - ${tc.description}`);
+  const troubleCodeDisplayStrings = troubleCodeOptions.map(tc => `${tc.code} - ${tc.label}`);
   
   const getTroubleCodeFromDisplay = (displayString: string): string => {
     const code = displayString.split(" - ")[0];
@@ -155,7 +155,7 @@ export default function WorkflowWizardScreen() {
   
   const getTroubleCodeDisplay = (code: string): string => {
     const tc = troubleCodeOptions.find(t => t.code === code);
-    return tc ? `${tc.code} - ${tc.description}` : code;
+    return tc ? `${tc.code} - ${tc.label}` : code;
   };
 
   useEffect(() => {
@@ -259,7 +259,7 @@ export default function WorkflowWizardScreen() {
           base64Photos.push(base64);
         } else {
           const base64 = await FileSystem.readAsStringAsync(photo.uri, {
-            encoding: FileSystem.EncodingType.Base64,
+            encoding: "base64",
           });
           base64Photos.push(base64);
         }

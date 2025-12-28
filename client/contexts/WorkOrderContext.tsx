@@ -106,7 +106,7 @@ interface ServerWorkOrder {
 
 interface ServerReferenceData {
   workOrderStatuses?: string[] | { code: string; label: string }[];
-  troubleCodes?: { code: string; description: string }[];
+  troubleCodes?: { code: string; label?: string; description?: string }[];
   meterTypes?: string[] | { id: string; name: string }[];
   serviceTypes?: string[];
   assignees?: {
@@ -117,7 +117,7 @@ interface ServerReferenceData {
 
 export interface ReferenceData {
   statuses: string[];
-  troubleCodes: { code: string; description: string }[];
+  troubleCodes: { code: string; label: string; description: string }[];
   meterTypes: string[];
   serviceTypes: string[];
   assignees: {
@@ -234,9 +234,15 @@ function mapServerReferenceData(serverRef: ServerReferenceData): ReferenceData {
     description: g.description || "",
   }));
 
+  const troubleCodes = (serverRef.troubleCodes || []).map(tc => ({
+    code: tc.code,
+    label: tc.label || tc.code,
+    description: tc.description || "",
+  }));
+
   return {
     statuses,
-    troubleCodes: serverRef.troubleCodes || [],
+    troubleCodes,
     meterTypes,
     serviceTypes: serverRef.serviceTypes || [],
     assignees: { users, groups },

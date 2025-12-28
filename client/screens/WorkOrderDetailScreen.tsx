@@ -152,7 +152,7 @@ export default function WorkOrderDetailScreen() {
   const getTroubleCodeLabel = (code?: string) => {
     if (!code) return null;
     const found = referenceData?.troubleCodes.find(tc => tc.code === code);
-    return found ? `${found.code} - ${found.description}` : code;
+    return found ? `${found.code} - ${found.label}` : code;
   };
 
   const handleClaim = async () => {
