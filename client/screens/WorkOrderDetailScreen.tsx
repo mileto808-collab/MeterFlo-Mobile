@@ -381,6 +381,12 @@ export default function WorkOrderDetailScreen() {
                 </ThemedText>
               </View>
               <ThemedText type="body">{getTroubleCodeLabel(workOrder.troubleCode)}</ThemedText>
+              {workOrder.troubleNote ? (
+                <View style={styles.troubleNoteSection}>
+                  <ThemedText type="caption" style={{ color: theme.error }}>Trouble Note</ThemedText>
+                  <ThemedText type="body">{workOrder.troubleNote}</ThemedText>
+                </View>
+              ) : null}
             </View>
           ) : null}
         </Accordion>
@@ -637,6 +643,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
+  },
+  troubleNoteSection: {
+    marginTop: Spacing.sm,
+    gap: 2,
   },
   auditGrid: {
     flexDirection: "row",
