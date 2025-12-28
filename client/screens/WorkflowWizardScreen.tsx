@@ -119,7 +119,15 @@ export default function WorkflowWizardScreen() {
   const [claimError, setClaimError] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [scannerType, setScannerType] = useState<"barcode" | "qr">("barcode");
+  const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [isCapturingGps, setIsCapturingGps] = useState(false);
+  
+  useEffect(() => {
+    if (showScanner && !cameraPermission) {
+      requestCameraPermission();
+    }
+  }, [showScanner, cameraPermission, requestCameraPermission]);
+  
   const [viewingPhoto, setViewingPhoto] = useState<{ uri: string; type: "before" | "after" | "trouble"; id: string } | null>(null);
   
   const hasUnsyncedDraft = Boolean(workOrder.syncPending);
@@ -358,11 +366,27 @@ export default function WorkflowWizardScreen() {
   };
 
   const handleBarcodeScanned = (result: BarcodeScanningResult) => {
-    setFormData(prev => ({ ...prev, newMeterId: result.data }));
-    setShowScanner(false);
-    if (Platform.OS !== "web") {
-      Alert.alert("Scanned Successfully", result.data);
+    const scannedValue = result.data?.trim();
+    if (scannedValue && scannedValue !== detectedBarcode) {
+      setDetectedBarcode(scannedValue);
     }
+  };
+  
+  const handleCaptureBarcode = () => {
+    if (detectedBarcode) {
+      setFormData(prev => ({ ...prev, newMeterId: detectedBarcode }));
+      setShowScanner(false);
+      setDetectedBarcode(null);
+    }
+  };
+  
+  const handleClearBarcode = () => {
+    setDetectedBarcode(null);
+  };
+  
+  const handleCancelScanner = () => {
+    setShowScanner(false);
+    setDetectedBarcode(null);
   };
 
   const captureGps = async () => {
@@ -943,16 +967,57 @@ export default function WorkflowWizardScreen() {
                   <View style={[
                     styles.scanRegion, 
                     { 
-                      borderColor: theme.primary,
+                      borderColor: detectedBarcode ? theme.success : theme.primary,
+                      borderWidth: detectedBarcode ? 3 : 2,
                       width: scannerType === "qr" ? 200 : 280,
                       height: scannerType === "qr" ? 200 : 100,
                     }
                   ]} />
                 </View>
               ) : null}
+              
+              {detectedBarcode ? (
+                <View style={styles.detectedBarcodeSection}>
+                  <View style={[styles.detectedBarcodeBox, { backgroundColor: theme.backgroundSecondary }]}>
+                    <Feather name="check-circle" size={20} color={theme.success} />
+                    <ThemedText type="body" style={{ fontWeight: "600", fontSize: 18, marginLeft: Spacing.sm }}>
+                      {detectedBarcode}
+                    </ThemedText>
+                  </View>
+                  <ThemedText type="body" style={{ textAlign: "center", marginTop: Spacing.md }}>
+                    Is this the correct meter ID?
+                  </ThemedText>
+                  <View style={styles.scannerButtonRow}>
+                    <Button
+                      onPress={handleClearBarcode}
+                      style={{ backgroundColor: theme.backgroundSecondary, flex: 1 }}
+                    >
+                      <Feather name="refresh-cw" size={18} color={theme.text} style={{ marginRight: Spacing.sm }} />
+                      <ThemedText>Scan Again</ThemedText>
+                    </Button>
+                    <Button
+                      onPress={handleCaptureBarcode}
+                      style={{ backgroundColor: theme.success, flex: 1 }}
+                    >
+                      <Feather name="check" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                      <ThemedText style={{ color: "#FFFFFF", fontWeight: "600" }}>Capture</ThemedText>
+                    </Button>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.scannerInstructions}>
+                  <ThemedText type="body" style={{ textAlign: "center" }}>
+                    Position {scannerType === "qr" ? "QR code" : "barcode"} within the frame
+                  </ThemedText>
+                  <ThemedText type="small" style={{ color: theme.textSecondary, textAlign: "center", marginTop: Spacing.xs }}>
+                    Waiting to detect code...
+                  </ThemedText>
+                </View>
+              )}
+              
               <Button
-                onPress={() => setShowScanner(false)}
-                style={{ backgroundColor: theme.backgroundSecondary, marginTop: Spacing.lg }}
+                onPress={handleCancelScanner}
+                style={{ backgroundColor: theme.backgroundSecondary, marginTop: Spacing.md }}
               >
                 <ThemedText>Cancel Scan</ThemedText>
               </Button>
@@ -975,7 +1040,7 @@ export default function WorkflowWizardScreen() {
             <View style={styles.scanButtonsRow}>
               <Pressable
                 style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
-                onPress={() => { setScannerType("barcode"); setShowScanner(true); }}
+                onPress={() => { setScannerType("barcode"); setDetectedBarcode(null); setShowScanner(true); }}
               >
                 <Feather name="maximize" size={32} color={theme.primary} />
                 <ThemedText type="body" style={{ marginTop: Spacing.sm, fontWeight: "500" }}>Scan Barcode</ThemedText>
@@ -983,7 +1048,7 @@ export default function WorkflowWizardScreen() {
               
               <Pressable
                 style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
-                onPress={() => { setScannerType("qr"); setShowScanner(true); }}
+                onPress={() => { setScannerType("qr"); setDetectedBarcode(null); setShowScanner(true); }}
               >
                 <Feather name="grid" size={32} color={theme.primary} />
                 <ThemedText type="body" style={{ marginTop: Spacing.sm, fontWeight: "500" }}>Scan QR Code</ThemedText>
@@ -1609,5 +1674,26 @@ const styles = StyleSheet.create({
   },
   buttonPlaceholder: {
     flex: 1,
+  },
+  detectedBarcodeSection: {
+    alignItems: "center",
+    marginTop: Spacing.lg,
+  },
+  detectedBarcodeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  scannerButtonRow: {
+    flexDirection: "row",
+    gap: Spacing.md,
+    marginTop: Spacing.md,
+    width: "100%",
+  },
+  scannerInstructions: {
+    alignItems: "center",
+    marginTop: Spacing.lg,
   },
 });

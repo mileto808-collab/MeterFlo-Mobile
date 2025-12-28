@@ -79,10 +79,10 @@ export default function WorkOrdersScreen() {
   const handleSearchOptionSelect = useCallback((option: SearchOption) => {
     switch (option) {
       case "barcode":
-        navigation.navigate("BarcodeScanner", { scanType: "barcode" });
+        navigation.navigate("TapToCaptureScan", { scanType: "barcode" });
         break;
       case "qrcode":
-        navigation.navigate("BarcodeScanner", { scanType: "qrcode" });
+        navigation.navigate("TapToCaptureScan", { scanType: "qrcode" });
         break;
       case "hid":
         setShowHIDScanner(true);
