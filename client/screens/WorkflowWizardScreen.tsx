@@ -125,7 +125,7 @@ export default function WorkflowWizardScreen() {
   const [formData, setFormData] = useState<MeterChangeoutData>({
     canChange: null,
     troubleCode: workOrder.troubleCode || "",
-    troubleNote: workOrder.troubleNote || "",
+    troubleNote: workOrder.notes || workOrder.troubleNote || "",
     troublePhotos: [],
     oldMeterReading: workOrder.oldMeterReading || "",
     beforePhotos: [],
@@ -621,7 +621,7 @@ export default function WorkflowWizardScreen() {
             notes: formData.notes,
           } : {
             troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
-            troubleNote: formData.troubleNote,
+            notes: formData.troubleNote,
           }),
         });
       } else {
@@ -677,7 +677,7 @@ export default function WorkflowWizardScreen() {
             notes: formData.notes,
           } : {
             troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
-            troubleNote: formData.troubleNote,
+            notes: formData.troubleNote,
           }),
         });
       }
