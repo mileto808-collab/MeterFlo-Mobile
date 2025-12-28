@@ -36,6 +36,7 @@ type WizardStep =
   | "afterPhotos"
   | "gps"
   | "signature"
+  | "notes"
   | "confirm"
   | "troubleCapture"
   | "troubleConfirm";
@@ -58,6 +59,7 @@ interface MeterChangeoutData {
   gpsCoordinates: string;
   signatureData: string;
   signatureName: string;
+  notes: string;
 }
 
 const SUCCESS_STEPS: WizardStep[] = [
@@ -70,6 +72,7 @@ const SUCCESS_STEPS: WizardStep[] = [
   "afterPhotos",
   "gps",
   "signature",
+  "notes",
   "confirm",
 ];
 
@@ -89,6 +92,7 @@ const STEP_TITLES: Record<WizardStep, string> = {
   afterPhotos: "After Photos",
   gps: "Capture GPS",
   signature: "Signature",
+  notes: "Notes",
   confirm: "Confirm & Submit",
   troubleCapture: "Report Issue",
   troubleConfirm: "Confirm & Submit",
@@ -131,6 +135,7 @@ export default function WorkflowWizardScreen() {
     gpsCoordinates: workOrder.newGps || "",
     signatureData: workOrder.signatureData || "",
     signatureName: workOrder.signatureName || "",
+    notes: workOrder.notes || "",
   });
 
   const getSteps = () => {
@@ -406,6 +411,8 @@ export default function WorkflowWizardScreen() {
         return formData.gpsCoordinates.trim().length > 0;
       case "signature": 
         return formData.signatureName.trim().length > 0;
+      case "notes":
+        return true;
       case "confirm":
         return true;
       case "troubleCapture":
@@ -515,7 +522,7 @@ export default function WorkflowWizardScreen() {
         signature_data: formData.signatureData || null,
         signature_name: formData.signatureName,
         trouble: null,
-        notes: null,
+        notes: formData.notes || null,
         completed_at: completedAt,
         completed_by: user?.id || null,
         updated_by: user?.username || null,
@@ -554,7 +561,7 @@ export default function WorkflowWizardScreen() {
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
           completedAt: completedAt,
-          notes: null,
+          notes: formData.notes || null,
           beforePhotos: formatPhotosForServer(beforePhotosBase64, 'before'),
           afterPhotos: formatPhotosForServer(afterPhotosBase64, 'after'),
         } : {
@@ -635,7 +642,7 @@ export default function WorkflowWizardScreen() {
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
           completedAt: completedAt,
-          notes: null,
+          notes: formData.notes || null,
           beforePhotos: formatPhotosForOffline(beforePhotosBase64, 'before'),
           afterPhotos: formatPhotosForOffline(afterPhotosBase64, 'after'),
         } : {
@@ -1094,6 +1101,28 @@ export default function WorkflowWizardScreen() {
           </View>
         );
 
+      case "notes":
+        return (
+          <View>
+            <View style={styles.iconHeader}>
+              <Feather name="file-text" size={48} color={theme.primary} />
+            </View>
+            
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
+              Add any additional notes (optional)
+            </ThemedText>
+            
+            <TextInput
+              value={formData.notes}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
+              placeholder="Enter notes here..."
+              multiline
+              numberOfLines={4}
+              style={{ minHeight: 120, textAlignVertical: "top" }}
+            />
+          </View>
+        );
+
       case "confirm":
         return (
           <View>
@@ -1131,6 +1160,12 @@ export default function WorkflowWizardScreen() {
                 <Feather name="user" size={20} color={theme.primary} />
                 <ThemedText type="body">Signed By: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.signatureName}</ThemedText></ThemedText>
               </View>
+              {formData.notes ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Feather name="file-text" size={20} color={theme.primary} />
+                  <ThemedText type="body" numberOfLines={2}>Notes: {formData.notes}</ThemedText>
+                </View>
+              ) : null}
             </View>
           </View>
         );
