@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { View, StyleSheet } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
@@ -18,6 +18,18 @@ export function SignaturePad({ onSignatureChange, height = 200 }: SignaturePadPr
   const { theme } = useTheme();
   const [paths, setPaths] = useState<string[]>([]);
   const [currentPath, setCurrentPath] = useState<string>("");
+  const onSignatureChangeRef = useRef(onSignatureChange);
+  
+  useEffect(() => {
+    onSignatureChangeRef.current = onSignatureChange;
+  }, [onSignatureChange]);
+  
+  useEffect(() => {
+    if (paths.length > 0) {
+      const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="${height}" viewBox="0 0 300 ${height}"><path d="${paths.join(" ")}" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      onSignatureChangeRef.current(svgString);
+    }
+  }, [paths, height]);
 
   const addPoint = useCallback((x: number, y: number, isStart: boolean) => {
     if (isStart) {
@@ -29,21 +41,16 @@ export function SignaturePad({ onSignatureChange, height = 200 }: SignaturePadPr
 
   const finishPath = useCallback(() => {
     if (currentPath) {
-      setPaths(prev => {
-        const newPaths = [...prev, currentPath];
-        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="${height}" viewBox="0 0 300 ${height}"><path d="${newPaths.join(" ")}" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-        onSignatureChange(svgString);
-        return newPaths;
-      });
+      setPaths(prev => [...prev, currentPath]);
       setCurrentPath("");
     }
-  }, [currentPath, height, onSignatureChange]);
+  }, [currentPath]);
 
   const clearSignature = useCallback(() => {
     setPaths([]);
     setCurrentPath("");
-    onSignatureChange("");
-  }, [onSignatureChange]);
+    onSignatureChangeRef.current("");
+  }, []);
 
   const panGesture = Gesture.Pan()
     .onStart((event) => {
