@@ -420,6 +420,7 @@ export default function WorkflowWizardScreen() {
       trouble: null,
       notes: null,
       completed_at: completedAt,
+      completed_by: user?.id || null,
       updated_by: user?.username || null,
     } : {
       status: "Trouble",
