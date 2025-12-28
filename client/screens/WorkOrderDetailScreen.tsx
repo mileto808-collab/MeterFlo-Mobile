@@ -154,6 +154,21 @@ export default function WorkOrderDetailScreen() {
   };
 
   const handleProcess = () => {
+    if (!workOrder.customerWoId || !workOrder.oldMeterId) {
+      const missing: string[] = [];
+      if (!workOrder.customerWoId) missing.push("Customer WO ID");
+      if (!workOrder.oldMeterId) missing.push("Old Meter ID");
+      
+      if (Platform.OS === "web") {
+        alert(`Cannot start workflow. Missing required fields: ${missing.join(", ")}`);
+      } else {
+        Alert.alert(
+          "Cannot Start Workflow",
+          `This work order is missing required fields: ${missing.join(", ")}. Please sync to get the latest data or contact your administrator.`
+        );
+      }
+      return;
+    }
     navigation.navigate("WorkflowWizard", { workOrder });
   };
 

@@ -557,7 +557,17 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     if (data.workOrder) {
       const mappedWorkOrder = mapServerWorkOrder(data.workOrder);
       setWorkOrdersState(prev => {
-        const updated = prev.map(wo => wo.id === workOrderId ? { ...wo, ...mappedWorkOrder } : wo);
+        const updated = prev.map(wo => {
+          if (wo.id !== workOrderId) return wo;
+          const merged: WorkOrder = { ...wo };
+          for (const key of Object.keys(mappedWorkOrder) as (keyof WorkOrder)[]) {
+            const serverValue = mappedWorkOrder[key];
+            if (serverValue !== undefined && serverValue !== "" && serverValue !== null) {
+              (merged as any)[key] = serverValue;
+            }
+          }
+          return merged;
+        });
         AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
         return updated;
       });
