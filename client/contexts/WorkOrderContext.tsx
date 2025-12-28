@@ -555,7 +555,12 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     setWorkOrdersState(prev => {
       const updated = prev.map(wo =>
         wo.id === id 
-          ? { ...wo, ...updates, localUpdatedAt: new Date().toISOString(), syncPending: true } 
+          ? { 
+              ...wo, 
+              ...updates, 
+              localUpdatedAt: new Date().toISOString(), 
+              syncPending: updates.syncPending !== undefined ? updates.syncPending : true 
+            } 
           : wo
       );
       AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
