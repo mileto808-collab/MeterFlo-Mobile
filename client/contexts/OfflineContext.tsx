@@ -123,7 +123,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         clientTimestamp: new Date(action.timestamp).toISOString(),
       }));
 
-      const response = await fetch(`${serverUrl}/api/projects/${projectId}/mobile/sync/upload`, {
+      const response = await fetch(`${serverUrl}/api/mobile/sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

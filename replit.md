@@ -22,10 +22,17 @@ Preferred communication style: Simple, everyday language.
 - **Animations**: React Native Reanimated for gesture-based interactions and transitions
 
 ### Backend Architecture
-- **Server**: Express.js server handling API proxy and authentication
+- **Server**: Express.js server serves landing page and Expo static files only
 - **Database**: PostgreSQL with Drizzle ORM (schema defined, migrations ready)
-- **Current Implementation**: Mock authentication endpoint with demo credentials (demo/demo123)
-- **Intended Pattern**: Server acts as proxy to external MeterFlo Server instances configured per-user
+- **API Backend**: Mobile app connects to external WorkFlow Pro server (entered during login)
+- **API Endpoints**: Mobile app uses `/api/mobile/*` endpoints on the WorkFlow Pro server:
+  - `POST /api/mobile/auth/login` - Mobile authentication
+  - `GET /api/mobile/sync` - Download work orders to mobile
+  - `POST /api/mobile/sync` - Upload completed work orders from mobile (batch sync)
+  - `POST /api/mobile/workorders/:id/complete` - Complete a meter changeout
+  - `POST /api/mobile/workorders/:id/trouble` - Submit a trouble code
+  - `POST /api/mobile/workorders/:id/claim` - Claim a work order
+  - `GET /api/mobile/workorders/:id` - Fetch single work order
 
 ### Data Storage Solutions
 - **Secure Storage**: Expo SecureStore for authentication tokens and credentials (encrypted on-device)

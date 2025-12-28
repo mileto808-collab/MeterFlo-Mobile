@@ -543,15 +543,18 @@ export default function WorkflowWizardScreen() {
       };
 
       if (isOnline && serverUrl && projectId) {
-        const response = await fetch(
-          `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}`,
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify(patchPayload),
-          }
-        );
+        const endpoint = canChange 
+          ? `${serverUrl}/api/mobile/workorders/${workOrder.id}/complete`
+          : `${serverUrl}/api/mobile/workorders/${workOrder.id}/trouble`;
+        
+        console.log(`[WorkflowWizard] Submitting to endpoint: ${endpoint}`);
+        
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(patchPayload),
+        });
 
         if (!response.ok) {
           const errorText = await response.text();

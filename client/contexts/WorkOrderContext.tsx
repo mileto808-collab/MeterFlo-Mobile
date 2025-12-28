@@ -369,7 +369,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      let path = `/api/projects/${projectId}/mobile/sync/download?includeCompleted=false`;
+      let path = `/api/mobile/sync?includeCompleted=false`;
       
       const currentLastSyncTime = lastSyncTimeRef.current;
       if (currentLastSyncTime && !forceFullSync) {
@@ -446,7 +446,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   const claimWorkOrder = useCallback(async (workOrderId: number) => {
     if (!serverUrl || !projectId) return;
 
-    const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}/claim`, {
+    const response = await fetch(`${serverUrl}/api/mobile/workorders/${workOrderId}/claim`, {
       method: "POST",
       credentials: "include",
     });
@@ -472,7 +472,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     if (!serverUrl || !projectId) return null;
 
     try {
-      const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}`, {
+      const response = await fetch(`${serverUrl}/api/mobile/workorders/${workOrderId}`, {
         method: "GET",
         credentials: "include",
       });
