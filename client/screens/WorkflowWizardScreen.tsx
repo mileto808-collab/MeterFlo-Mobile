@@ -641,6 +641,8 @@ export default function WorkflowWizardScreen() {
           troubleCode: canChange ? undefined : getTroubleCodeFromDisplay(formData.troubleCode),
           troubleNote: canChange ? undefined : formData.troubleNote,
           completedAt: completedAt,
+          completedBy: user?.id,
+          completedByUsername: user?.displayName || user?.username,
           syncPending: false,
         });
       } else {
@@ -663,6 +665,8 @@ export default function WorkflowWizardScreen() {
           troubleCode: canChange ? undefined : getTroubleCodeFromDisplay(formData.troubleCode),
           troubleNote: canChange ? undefined : formData.troubleNote,
           completedAt: completedAt,
+          completedBy: user?.id,
+          completedByUsername: user?.displayName || user?.username,
         });
       }
 
