@@ -64,11 +64,11 @@ export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
     >
       <View style={styles.header}>
         <View style={styles.badges}>
-          <StatusBadge status={workOrder.status} color={getStatusColor(workOrder.status)} />
+          <StatusBadge status={workOrder.status} color={getStatusColor(workOrder.status)} size="medium" />
         </View>
         {workOrder.syncPending ? (
           <View style={[styles.syncPending, { backgroundColor: theme.syncPending }]}>
-            <Feather name="upload-cloud" size={12} color="#FFFFFF" />
+            <Feather name="upload-cloud" size={14} color="#FFFFFF" />
           </View>
         ) : null}
       </View>
@@ -77,15 +77,14 @@ export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
         {displayAddress}
       </ThemedText>
 
-      <ThemedText type="caption" style={[styles.id, { color: theme.textSecondary }]}>
-        {workOrder.customerWoId} - {workOrder.oldMeterId || "No meter ID"}
-      </ThemedText>
-
-      {workOrder.customerName ? (
-        <ThemedText type="small" style={{ color: theme.textSecondary }} numberOfLines={1}>
-          {workOrder.customerName}
+      <View style={styles.idRow}>
+        <ThemedText type="body" style={[styles.idLabel, { color: theme.text }]}>
+          WO: {workOrder.customerWoId}
         </ThemedText>
-      ) : null}
+        <ThemedText type="body" style={[styles.idLabel, { color: theme.text }]}>
+          Meter: {workOrder.oldMeterId || "N/A"}
+        </ThemedText>
+      </View>
 
       <View style={styles.footer}>
         <View style={styles.footerItem}>
@@ -122,16 +121,22 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   syncPending: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
   },
   title: {
     marginTop: Spacing.xs,
   },
-  id: {},
+  idRow: {
+    flexDirection: "row",
+    gap: Spacing.lg,
+  },
+  idLabel: {
+    fontWeight: "600",
+  },
   footer: {
     flexDirection: "row",
     gap: Spacing.lg,

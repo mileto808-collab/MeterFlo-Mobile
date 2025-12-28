@@ -6,6 +6,7 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 interface StatusBadgeProps {
   status: string;
   color?: string;
+  size?: "small" | "medium";
 }
 
 const getDefaultStatusColor = (status: string): string => {
@@ -32,12 +33,17 @@ const getDefaultStatusColor = (status: string): string => {
   }
 };
 
-export function StatusBadge({ status, color }: StatusBadgeProps) {
+export function StatusBadge({ status, color, size = "small" }: StatusBadgeProps) {
   const badgeColor = color || getDefaultStatusColor(status);
+  const isMedium = size === "medium";
 
   return (
-    <View style={[styles.badge, { backgroundColor: badgeColor }]}>
-      <ThemedText style={styles.text}>{status}</ThemedText>
+    <View style={[
+      styles.badge, 
+      { backgroundColor: badgeColor },
+      isMedium && styles.badgeMedium,
+    ]}>
+      <ThemedText style={[styles.text, isMedium && styles.textMedium]}>{status}</ThemedText>
     </View>
   );
 }
@@ -48,9 +54,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     borderRadius: BorderRadius.xs,
   },
+  badgeMedium: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.sm,
+  },
   text: {
     color: "#FFFFFF",
     fontSize: 11,
     fontWeight: "600",
+  },
+  textMedium: {
+    fontSize: 13,
+    fontWeight: "700",
   },
 });

@@ -765,10 +765,10 @@ export default function WorkflowWizardScreen() {
                 ]}
                 onPress={() => setFormData(prev => ({ ...prev, canChange: false }))}
               >
-                <Feather name="x-circle" size={24} color={formData.canChange === false ? "#FFFFFF" : theme.error} />
+                <Feather name="x-circle" size={40} color={formData.canChange === false ? "#FFFFFF" : theme.error} />
                 <ThemedText 
-                  type="body" 
-                  style={{ color: formData.canChange === false ? "#FFFFFF" : theme.text, marginTop: Spacing.sm }}
+                  type="h4" 
+                  style={{ color: formData.canChange === false ? "#FFFFFF" : theme.text, marginTop: Spacing.md, textAlign: "center" }}
                 >
                   No - Report Issue
                 </ThemedText>
@@ -781,10 +781,10 @@ export default function WorkflowWizardScreen() {
                 ]}
                 onPress={() => setFormData(prev => ({ ...prev, canChange: true }))}
               >
-                <Feather name="check-circle" size={24} color={formData.canChange === true ? "#FFFFFF" : theme.success} />
+                <Feather name="check-circle" size={40} color={formData.canChange === true ? "#FFFFFF" : theme.success} />
                 <ThemedText 
-                  type="body" 
-                  style={{ color: formData.canChange === true ? "#FFFFFF" : theme.text, marginTop: Spacing.sm }}
+                  type="h4" 
+                  style={{ color: formData.canChange === true ? "#FFFFFF" : theme.text, marginTop: Spacing.md, textAlign: "center" }}
                 >
                   Yes - Proceed
                 </ThemedText>
@@ -797,9 +797,9 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="activity" size={32} color={theme.primary} />
+              <Feather name="activity" size={48} color={theme.primary} />
             </View>
-            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.md, textAlign: "center" }}>
               Enter the final reading from the old meter
             </ThemedText>
             <TextInput
@@ -815,9 +815,9 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="camera" size={32} color={theme.primary} />
+              <Feather name="camera" size={48} color={theme.primary} />
             </View>
-            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               Take photos of the old meter before removal (minimum 1 required)
             </ThemedText>
             
@@ -841,10 +841,10 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="tool" size={32} color={theme.primary} />
+              <Feather name="tool" size={48} color={theme.primary} />
             </View>
-            <ThemedText type="body" style={{ marginBottom: Spacing.lg }}>
-              Safely remove the old meter and install the new meter.
+            <ThemedText type="h4" style={{ marginBottom: Spacing.lg, textAlign: "center" }}>
+              Safely remove the old meter and install the new meter
             </ThemedText>
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
@@ -932,9 +932,9 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="hash" size={32} color={theme.primary} />
+              <Feather name="hash" size={48} color={theme.primary} />
             </View>
-            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.lg }}>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               Scan or enter the new meter ID
             </ThemedText>
             
@@ -979,9 +979,9 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="activity" size={32} color={theme.primary} />
+              <Feather name="activity" size={48} color={theme.primary} />
             </View>
-            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.md, textAlign: "center" }}>
               Enter the initial reading from the new meter (usually 0)
             </ThemedText>
             <TextInput
@@ -997,9 +997,9 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="camera" size={32} color={theme.primary} />
+              <Feather name="camera" size={48} color={theme.primary} />
             </View>
-            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               Take photos of the new meter after installation (minimum 1 required)
             </ThemedText>
             
@@ -1023,9 +1023,9 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="map-pin" size={32} color={theme.primary} />
+              <Feather name="map-pin" size={48} color={theme.primary} />
             </View>
-            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               Capture GPS coordinates of the meter location
             </ThemedText>
             
@@ -1066,10 +1066,10 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="edit-3" size={32} color={theme.primary} />
+              <Feather name="edit-3" size={48} color={theme.primary} />
             </View>
             
-            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               Have the customer sign below
             </ThemedText>
             
@@ -1132,7 +1132,10 @@ export default function WorkflowWizardScreen() {
       case "troubleCapture":
         return (
           <View>
-            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.md }}>
+            <View style={styles.iconHeader}>
+              <Feather name="alert-triangle" size={48} color={theme.warning} />
+            </View>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               Select a trouble code and take at least one photo
             </ThemedText>
             
@@ -1366,8 +1369,8 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   progressDot: {
-    height: 8,
-    borderRadius: 4,
+    height: 10,
+    borderRadius: 5,
   },
   scrollView: {
     flex: 1,
@@ -1384,7 +1387,7 @@ const styles = StyleSheet.create({
   stepCard: {
     padding: Spacing.xl,
     borderRadius: BorderRadius.md,
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   stepTitle: {},
   requiredText: {
@@ -1417,7 +1420,7 @@ const styles = StyleSheet.create({
   },
   iconHeader: {
     alignItems: "center",
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   photoGrid: {
     flexDirection: "row",
@@ -1507,7 +1510,7 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   signaturePlaceholder: {
     height: 120,
