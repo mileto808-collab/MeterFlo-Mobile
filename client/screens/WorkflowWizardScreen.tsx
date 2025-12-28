@@ -543,18 +543,39 @@ export default function WorkflowWizardScreen() {
       };
 
       if (isOnline && serverUrl && projectId) {
-        const endpoint = `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}`;
+        const endpoint = canChange 
+          ? `${serverUrl}/api/mobile/workorders/${workOrder.id}/complete`
+          : `${serverUrl}/api/mobile/workorders/${workOrder.id}/trouble`;
         
         console.log(`[WorkflowWizard] Submitting to endpoint: ${endpoint}`);
         
-        const payloadSize = JSON.stringify(patchPayload).length;
+        const mobilePayload = canChange ? {
+          projectId: Number(projectId),
+          oldMeterReading: parseReading(formData.oldMeterReading),
+          newMeterReading: parseReading(formData.newMeterReading) ?? 0,
+          newMeterId: formData.newMeterId,
+          gpsCoordinates: formData.gpsCoordinates || null,
+          signatureData: formData.signatureData || null,
+          signatureName: formData.signatureName,
+          completedAt: completedAt,
+          beforePhotos: beforePhotosBase64.map((b64, idx) => ({ base64: b64, filename: `before_${idx}.jpg` })),
+          afterPhotos: afterPhotosBase64.map((b64, idx) => ({ base64: b64, filename: `after_${idx}.jpg` })),
+        } : {
+          projectId: Number(projectId),
+          troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
+          notes: formData.troubleNote || null,
+          oldMeterReading: parseReading(formData.oldMeterReading),
+          photos: troublePhotosBase64.map((b64, idx) => ({ base64: b64, filename: `trouble_${idx}.jpg` })),
+        };
+        
+        const payloadSize = JSON.stringify(mobilePayload).length;
         console.log(`[WorkflowWizard] Payload size: ${Math.round(payloadSize / 1024)}KB`);
         
         const response = await fetch(endpoint, {
-          method: "PATCH",
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify(patchPayload),
+          body: JSON.stringify(mobilePayload),
         });
 
         console.log(`[WorkflowWizard] Response status: ${response.status}`);

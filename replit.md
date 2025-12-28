@@ -25,12 +25,13 @@ Preferred communication style: Simple, everyday language.
 - **Server**: Express.js server serves landing page and Expo static files only
 - **Database**: PostgreSQL with Drizzle ORM (schema defined, migrations ready)
 - **API Backend**: Mobile app connects to external WorkFlow Pro server (entered during login)
-- **API Endpoints**: Mobile app uses `/api/projects/{projectId}/*` endpoints on the WorkFlow Pro server:
+- **API Endpoints**: Mobile app uses a mix of project-scoped and mobile-specific endpoints:
   - `POST /api/auth/local/login` - Authentication
   - `GET /api/users/{userId}/projects` - Get user's available projects
   - `GET /api/projects/{projectId}/mobile/sync/download` - Download work orders to mobile
   - `POST /api/projects/{projectId}/mobile/sync/upload` - Upload completed work orders from mobile (batch sync)
-  - `PATCH /api/projects/{projectId}/work-orders/{id}` - Update a work order (complete or trouble)
+  - `POST /api/mobile/workorders/{id}/complete` - Complete a meter changeout with photos (mobile-specific)
+  - `POST /api/mobile/workorders/{id}/trouble` - Submit a trouble code with photos (mobile-specific)
   - `POST /api/projects/{projectId}/work-orders/{id}/claim` - Claim a work order
   - `GET /api/projects/{projectId}/work-orders/{id}` - Fetch single work order
 
