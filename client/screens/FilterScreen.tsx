@@ -31,11 +31,13 @@ export default function FilterScreen() {
 
   const [localFilters, setLocalFilters] = useState<FilterConfig>(filters);
 
-  const statusOptions = referenceData?.statuses?.map(status => ({
+  const statusOptions = (referenceData?.statuses?.filter(status => 
+    status.label.toLowerCase() !== 'closed' && status.code.toLowerCase() !== 'closed'
+  ).map(status => ({
     value: status.label,
     label: status.label,
     color: status.color,
-  })) || DEFAULT_STATUS_OPTIONS;
+  }))) || DEFAULT_STATUS_OPTIONS;
 
   const handleApply = () => {
     setFilters(localFilters);
