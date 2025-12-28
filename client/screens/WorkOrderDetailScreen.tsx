@@ -9,6 +9,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders } from "@/contexts/WorkOrderContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOffline } from "@/contexts/OfflineContext";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { ThemedText } from "@/components/ThemedText";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -70,8 +71,9 @@ export default function WorkOrderDetailScreen() {
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { workOrders, referenceData, claimWorkOrder, fetchSingleWorkOrder } = useWorkOrders();
+  const { workOrders, referenceData, claimWorkOrder, fetchSingleWorkOrder, updateWorkOrder } = useWorkOrders();
   const { user } = useAuth();
+  const { pendingActions } = useOffline();
   const [isClaiming, setIsClaiming] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -125,7 +127,52 @@ export default function WorkOrderDetailScreen() {
   const isAssignedToMe = workOrder.assignedUserId === user?.id;
   const canClaim = !workOrder.assignedUserId || !isAssignedToMe;
   const isCompleted = workOrder.status.toLowerCase() === "completed";
+  const isTrouble = workOrder.status.toLowerCase() === "trouble";
   const isCancelled = workOrder.status.toLowerCase() === "cancelled";
+
+  const pendingAction = useMemo(() => {
+    const woIdStr = String(workOrder.id);
+    return pendingActions.find(a => String(a.workOrderId) === woIdStr);
+  }, [pendingActions, workOrder.id]);
+
+  const getPendingChangeLabel = () => {
+    if (pendingAction) {
+      switch (pendingAction.type) {
+        case "complete": return "Pending: Completion";
+        case "workflow": return "Pending: Workflow";
+        case "claim": return "Pending: Claim";
+        case "update": return "Pending: Update";
+        default: return "Pending";
+      }
+    }
+    if (isCompleted) return "Pending: Completion";
+    if (isTrouble) return "Pending: Trouble";
+    return "Pending: Unknown";
+  };
+
+  const handleClearPendingFlag = () => {
+    const doClear = () => {
+      updateWorkOrder(workOrder.id, { syncPending: false });
+      if (Platform.OS !== "web") {
+        Alert.alert("Cleared", "Pending flag has been cleared.");
+      }
+    };
+
+    if (Platform.OS === "web") {
+      if (confirm("Clear the pending flag? This marks the work order as synced.")) {
+        doClear();
+      }
+    } else {
+      Alert.alert(
+        "Clear Pending Flag",
+        "This will clear the pending flag and mark this work order as synced. Only do this if you're sure all changes have been uploaded.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Clear", style: "destructive", onPress: doClear },
+        ]
+      );
+    }
+  };
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return null;
@@ -243,10 +290,19 @@ export default function WorkOrderDetailScreen() {
                   </View>
                 ) : null}
                 {workOrder.syncPending ? (
-                  <View style={[styles.syncBadge, { backgroundColor: theme.warning }]}>
+                  <Pressable 
+                    onPress={!pendingAction ? handleClearPendingFlag : undefined}
+                    style={({ pressed }) => [
+                      styles.syncBadge, 
+                      { backgroundColor: theme.warning, opacity: pressed && !pendingAction ? 0.7 : 1 }
+                    ]}
+                  >
                     <Feather name="upload-cloud" size={12} color="#FFFFFF" />
-                    <ThemedText style={styles.syncBadgeText}>Pending</ThemedText>
-                  </View>
+                    <ThemedText style={styles.syncBadgeText}>{getPendingChangeLabel()}</ThemedText>
+                    {!pendingAction ? (
+                      <Feather name="x" size={10} color="#FFFFFF" style={{ marginLeft: 2 }} />
+                    ) : null}
+                  </Pressable>
                 ) : null}
               </View>
             </View>
