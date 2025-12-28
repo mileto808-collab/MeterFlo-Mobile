@@ -104,6 +104,12 @@ export default function WorkOrdersScreen() {
         </View>
       </View>
 
+      <View style={styles.countContainer}>
+        <ThemedText type="small" style={{ color: theme.textSecondary }}>
+          {filteredWorkOrders.length} {filteredWorkOrders.length === 1 ? "work order" : "work orders"}
+        </ThemedText>
+      </View>
+
       <FlatList
         data={filteredWorkOrders}
         renderItem={renderItem}
@@ -163,6 +169,10 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 10,
     fontWeight: "700",
+  },
+  countContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xs,
   },
   listContent: {
     paddingHorizontal: Spacing.lg,
