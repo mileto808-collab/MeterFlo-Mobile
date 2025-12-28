@@ -420,12 +420,14 @@ export default function WorkflowWizardScreen() {
       trouble: null,
       notes: null,
       completed_at: completedAt,
+      updated_by: user?.username || null,
     } : {
       status: "Trouble",
       old_meter_reading: parseReading(formData.oldMeterReading),
       trouble: formData.troubleCode,
       notes: formData.troubleNote || null,
       completed_at: completedAt,
+      updated_by: user?.username || null,
     };
 
     try {
