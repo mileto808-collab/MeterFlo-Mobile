@@ -10,6 +10,7 @@ import WorkOrderDetailScreen from "@/screens/WorkOrderDetailScreen";
 import WorkflowWizardScreen from "@/screens/WorkflowWizardScreen";
 import FilterScreen from "@/screens/FilterScreen";
 import SortScreen from "@/screens/SortScreen";
+import BarcodeScannerScreen from "@/screens/BarcodeScannerScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 import { WorkOrder } from "@/contexts/WorkOrderContext";
 
@@ -21,6 +22,7 @@ export type RootStackParamList = {
   WorkflowWizard: { workOrder: WorkOrder };
   Filter: undefined;
   Sort: undefined;
+  BarcodeScanner: { scanType: "barcode" | "qrcode" };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -89,6 +91,14 @@ export default function RootStackNavigator() {
             options={{
               headerTitle: "Sort",
               presentation: "modal",
+            }}
+          />
+          <Stack.Screen
+            name="BarcodeScanner"
+            component={BarcodeScannerScreen}
+            options={{
+              headerShown: false,
+              presentation: "fullScreenModal",
             }}
           />
         </>

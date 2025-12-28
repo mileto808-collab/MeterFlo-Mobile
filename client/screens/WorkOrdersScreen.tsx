@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo } from "react";
-import { View, FlatList, StyleSheet, Pressable, RefreshControl } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { View, FlatList, StyleSheet, Pressable, RefreshControl, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -15,6 +15,9 @@ import { ThemedText } from "@/components/ThemedText";
 import { SearchBar } from "@/components/SearchBar";
 import { WorkOrderCard } from "@/components/WorkOrderCard";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { SearchOptionsModal, SearchOption } from "@/components/SearchOptionsModal";
+import { HIDScannerModal } from "@/components/HIDScannerModal";
+import { ManualSearchModal } from "@/components/ManualSearchModal";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -25,10 +28,52 @@ export default function WorkOrdersScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { filters, setFilters, getFilteredWorkOrders, isLoading, refreshWorkOrders, error } = useWorkOrders();
+  const { filters, setFilters, getFilteredWorkOrders, workOrders, isLoading, refreshWorkOrders, error } = useWorkOrders();
   const { isOnline } = useOffline();
 
+  const [showSearchOptions, setShowSearchOptions] = useState(false);
+  const [showHIDScanner, setShowHIDScanner] = useState(false);
+  const [showManualSearch, setShowManualSearch] = useState(false);
+
   const filteredWorkOrders = useMemo(() => getFilteredWorkOrders(), [getFilteredWorkOrders]);
+
+  const findWorkOrderByMeterId = useCallback((meterId: string): WorkOrder | undefined => {
+    const normalizedMeterId = meterId.trim().toLowerCase();
+    return workOrders.find(wo => {
+      const oldMeterId = wo.oldMeterId?.trim().toLowerCase();
+      return oldMeterId === normalizedMeterId;
+    });
+  }, [workOrders]);
+
+  const handleScanResult = useCallback((scannedValue: string) => {
+    const workOrder = findWorkOrderByMeterId(scannedValue);
+    if (workOrder) {
+      navigation.navigate("WorkflowWizard", { workOrder });
+    } else {
+      Alert.alert(
+        "Work Order Not Found",
+        `No work order found with meter ID: ${scannedValue}`,
+        [{ text: "OK" }]
+      );
+    }
+  }, [findWorkOrderByMeterId, navigation]);
+
+  const handleSearchOptionSelect = useCallback((option: SearchOption) => {
+    switch (option) {
+      case "barcode":
+        navigation.navigate("BarcodeScanner", { scanType: "barcode" });
+        break;
+      case "qrcode":
+        navigation.navigate("BarcodeScanner", { scanType: "qrcode" });
+        break;
+      case "hid":
+        setShowHIDScanner(true);
+        break;
+      case "manual":
+        setShowManualSearch(true);
+        break;
+    }
+  }, [navigation]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -76,6 +121,7 @@ export default function WorkOrdersScreen() {
           value={filters.searchQuery}
           onChangeText={handleSearchChange}
           placeholder="Search work orders..."
+          onSearchPress={() => setShowSearchOptions(true)}
         />
         <View style={styles.actionButtons}>
           <Pressable
@@ -129,6 +175,25 @@ export default function WorkOrdersScreen() {
         }
         ListEmptyComponent={ListEmptyComponent}
         showsVerticalScrollIndicator={false}
+      />
+
+      <SearchOptionsModal
+        visible={showSearchOptions}
+        onClose={() => setShowSearchOptions(false)}
+        onSelectOption={handleSearchOptionSelect}
+      />
+
+      <HIDScannerModal
+        visible={showHIDScanner}
+        onClose={() => setShowHIDScanner(false)}
+        onScan={handleScanResult}
+      />
+
+      <ManualSearchModal
+        visible={showManualSearch}
+        value={filters.searchQuery}
+        onClose={() => setShowManualSearch(false)}
+        onChangeText={handleSearchChange}
       />
     </View>
   );
