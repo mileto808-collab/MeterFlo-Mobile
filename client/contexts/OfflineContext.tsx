@@ -11,6 +11,7 @@ interface PendingAction {
   data: any;
   timestamp: number;
   photoCount?: number;
+  completionMode?: "complete" | "trouble";
 }
 
 interface SyncHistoryEntry {
@@ -71,7 +72,64 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     try {
       const storedActions = await AsyncStorage.getItem(STORAGE_KEYS.PENDING_ACTIONS);
       if (storedActions) {
-        setPendingActions(JSON.parse(storedActions));
+        let actions: PendingAction[] = JSON.parse(storedActions);
+        
+        let needsMigration = false;
+        actions = actions.map(action => {
+          if (action.type === "complete" && !action.completionMode) {
+            needsMigration = true;
+            const data = action.data;
+            const isComplete = data.status === "Completed" || data.new_meter_id !== undefined;
+            
+            const formatLegacyPhotos = (photos: any[], prefix: string) => {
+              if (!photos || !Array.isArray(photos)) return [];
+              return photos.map((photo, idx) => {
+                if (typeof photo === 'string') {
+                  return {
+                    base64: photo.startsWith('data:') ? photo : `data:image/jpeg;base64,${photo}`,
+                    filename: `${prefix}_${idx + 1}.jpg`,
+                  };
+                }
+                return photo;
+              });
+            };
+            
+            const migratedPayload = isComplete ? {
+              projectId: data.projectId || 0,
+              oldMeterReading: data.old_meter_reading ?? data.oldMeterReading,
+              newMeterId: data.new_meter_id ?? data.newMeterId,
+              newMeterReading: data.new_meter_reading ?? data.newMeterReading ?? 0,
+              gpsCoordinates: data.new_gps ?? data.gpsCoordinates ?? null,
+              signatureData: data.signature_data ?? data.signatureData ?? null,
+              signatureName: data.signature_name ?? data.signatureName,
+              completedAt: data.completed_at ?? data.completedAt,
+              notes: data.notes ?? null,
+              beforePhotos: formatLegacyPhotos(data.before_photos ?? data.beforePhotos ?? [], 'before'),
+              afterPhotos: formatLegacyPhotos(data.after_photos ?? data.afterPhotos ?? [], 'after'),
+            } : {
+              projectId: data.projectId || 0,
+              troubleCode: data.trouble ?? data.troubleCode,
+              notes: data.notes ?? null,
+              oldMeterReading: data.old_meter_reading ?? data.oldMeterReading,
+              photos: formatLegacyPhotos(data.trouble_photos ?? data.photos ?? [], 'trouble'),
+            };
+            
+            console.log(`[OfflineContext] Migrated legacy pending action for WO ${action.workOrderId}`);
+            return {
+              ...action,
+              data: migratedPayload,
+              completionMode: isComplete ? "complete" as const : "trouble" as const,
+            };
+          }
+          return action;
+        });
+        
+        if (needsMigration) {
+          await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(actions));
+          console.log("[OfflineContext] Migrated legacy pending actions to new format");
+        }
+        
+        setPendingActions(actions);
       }
       
       const storedHistory = await AsyncStorage.getItem(STORAGE_KEYS.SYNC_HISTORY);
@@ -115,46 +173,94 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     const workOrderTitles = pendingActions.map(a => a.workOrderTitle);
     const totalPhotoCount = pendingActions.reduce((sum, a) => sum + (a.photoCount || 0), 0);
     
+    const successfulActionIds: string[] = [];
+    const failedActionIds: string[] = [];
+    let lastError: string | undefined;
+    
     try {
-      const changes = pendingActions.map(action => ({
-        workOrderId: parseInt(action.workOrderId, 10),
-        changeType: action.type,
-        data: action.data,
-        clientTimestamp: new Date(action.timestamp).toISOString(),
-      }));
-
-      const response = await fetch(`${serverUrl}/api/projects/${projectId}/mobile/sync/upload`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          workOrders: changes,
-          clientTimestamp: new Date().toISOString(),
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Sync failed");
+      for (const action of pendingActions) {
+        try {
+          if (action.type === "complete" && action.completionMode) {
+            const endpoint = action.completionMode === "complete"
+              ? `${serverUrl}/api/mobile/workorders/${action.workOrderId}/complete`
+              : `${serverUrl}/api/mobile/workorders/${action.workOrderId}/trouble`;
+            
+            console.log(`[syncPendingActions] Syncing ${action.completionMode} for WO ${action.workOrderId} to ${endpoint}`);
+            
+            const payloadWithProjectId = {
+              ...action.data,
+              projectId: action.data.projectId || Number(projectId),
+            };
+            
+            const response = await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify(payloadWithProjectId),
+            });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error(`[syncPendingActions] Failed to sync WO ${action.workOrderId}:`, response.status, errorText?.substring(0, 200));
+              throw new Error(errorText || `Failed to sync work order ${action.workOrderId}`);
+            }
+            
+            console.log(`[syncPendingActions] Successfully synced WO ${action.workOrderId}`);
+            successfulActionIds.push(action.id);
+          } else if (action.type === "claim") {
+            const claimEndpoint = `${serverUrl}/api/projects/${projectId}/work-orders/${action.workOrderId}/claim`;
+            console.log(`[syncPendingActions] Syncing claim for WO ${action.workOrderId}`);
+            
+            const response = await fetch(claimEndpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+            });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error(`[syncPendingActions] Failed to claim WO ${action.workOrderId}:`, response.status, errorText?.substring(0, 200));
+              throw new Error(errorText || `Failed to claim work order ${action.workOrderId}`);
+            }
+            
+            console.log(`[syncPendingActions] Successfully claimed WO ${action.workOrderId}`);
+            successfulActionIds.push(action.id);
+          } else {
+            const batchResponse = await fetch(`${serverUrl}/api/projects/${projectId}/mobile/sync/upload`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                workOrders: [{
+                  workOrderId: parseInt(action.workOrderId, 10),
+                  changeType: action.type,
+                  data: action.data,
+                  clientTimestamp: new Date(action.timestamp).toISOString(),
+                }],
+                clientTimestamp: new Date().toISOString(),
+              }),
+            });
+            
+            if (!batchResponse.ok) {
+              const errorText = await batchResponse.text();
+              throw new Error(errorText || `Failed to sync work order ${action.workOrderId}`);
+            }
+            
+            successfulActionIds.push(action.id);
+          }
+        } catch (actionError) {
+          console.error(`[syncPendingActions] Error syncing action ${action.id}:`, actionError);
+          failedActionIds.push(action.id);
+          lastError = actionError instanceof Error ? actionError.message : "Unknown error";
+        }
       }
-
-      const result = await response.json();
       
-      if (result.conflicts && result.conflicts.length > 0) {
-        console.warn("Sync conflicts detected:", result.conflicts);
-      }
-
-      const successfulIds = result.successful || pendingActions.map(a => a.id);
-      
-      const remainingActions = pendingActions.filter(
-        action => !successfulIds.includes(action.id) && !successfulIds.includes(parseInt(action.workOrderId, 10))
-      );
-      
-      const successCount = pendingActions.length - remainingActions.length;
-      const failedCount = remainingActions.length;
+      const remainingActions = pendingActions.filter(a => !successfulActionIds.includes(a.id));
+      const successCount = successfulActionIds.length;
+      const failedCount = failedActionIds.length;
       
       const syncedWorkOrderIds = pendingActions
-        .filter(action => !remainingActions.some(ra => ra.id === action.id))
+        .filter(action => successfulActionIds.includes(action.id))
         .map(action => parseInt(action.workOrderId, 10))
         .filter(woId => !remainingActions.some(ra => parseInt(ra.workOrderId, 10) === woId));
       
@@ -167,6 +273,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         successCount,
         failedCount,
         photoCount: totalPhotoCount,
+        errorMessage: lastError,
       });
       
       if (remainingActions.length === 0) {

@@ -650,12 +650,41 @@ export default function WorkflowWizardScreen() {
         });
       } else {
         const offlinePhotoCount = troublePhotosBase64.length + beforePhotosBase64.length + afterPhotosBase64.length;
+        
+        const formatPhotosForOffline = (photos: string[], prefix: string) => {
+          return photos.map((b64, idx) => ({
+            base64: b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`,
+            filename: `${prefix}_${idx + 1}.jpg`,
+          }));
+        };
+        
+        const offlineMobilePayload = canChange ? {
+          projectId: Number(projectId),
+          oldMeterReading: parseReading(formData.oldMeterReading),
+          newMeterId: formData.newMeterId,
+          newMeterReading: parseReading(formData.newMeterReading) ?? 0,
+          gpsCoordinates: formData.gpsCoordinates || null,
+          signatureData: formData.signatureData || null,
+          signatureName: formData.signatureName,
+          completedAt: completedAt,
+          notes: null,
+          beforePhotos: formatPhotosForOffline(beforePhotosBase64, 'before'),
+          afterPhotos: formatPhotosForOffline(afterPhotosBase64, 'after'),
+        } : {
+          projectId: Number(projectId),
+          troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
+          notes: formData.troubleNote || null,
+          oldMeterReading: parseReading(formData.oldMeterReading),
+          photos: formatPhotosForOffline(troublePhotosBase64, 'trouble'),
+        };
+        
         await addPendingAction({
           type: "complete",
           workOrderId: String(workOrder.id),
           workOrderTitle: workOrder.serviceAddress,
-          data: patchPayload,
+          data: offlineMobilePayload,
           photoCount: offlinePhotoCount,
+          completionMode: canChange ? "complete" : "trouble",
         });
         
         updateWorkOrder(workOrder.id, {
