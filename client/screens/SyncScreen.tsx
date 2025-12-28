@@ -74,7 +74,7 @@ export default function SyncScreen() {
   };
 
   const handleSync = async () => {
-    await refreshWorkOrders();
+    await refreshWorkOrders(true);
     if (pendingActions.length > 0) {
       await syncPendingActions();
     }

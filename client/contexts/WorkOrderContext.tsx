@@ -405,9 +405,34 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       console.log("[refreshWorkOrders] Received", newWorkOrders.length, "work orders from server");
       
       if (forceFullSync || !currentLastSyncTime) {
-        console.log("[refreshWorkOrders] Full sync - replacing all work orders");
-        setWorkOrdersState(newWorkOrders);
-        await AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(newWorkOrders));
+        console.log("[refreshWorkOrders] Full sync - replacing work orders, preserving pending");
+        setWorkOrdersState(prev => {
+          const prevById = new Map(prev.map(wo => [wo.id, wo]));
+          const serverWorkOrderIds = new Set(newWorkOrders.map(wo => wo.id));
+          
+          const mergedServerWorkOrders = newWorkOrders.map(serverWo => {
+            const localWo = prevById.get(serverWo.id);
+            if (localWo?.syncPending) {
+              return localWo;
+            }
+            return serverWo;
+          });
+          
+          const pendingNotOnServer = prev.filter(wo => wo.syncPending && !serverWorkOrderIds.has(wo.id));
+          
+          const removedWorkOrders = prev.filter(wo => !wo.syncPending && !serverWorkOrderIds.has(wo.id));
+          
+          if (pendingNotOnServer.length > 0) {
+            console.log("[refreshWorkOrders] Preserving", pendingNotOnServer.length, "pending work orders not on server");
+          }
+          if (removedWorkOrders.length > 0) {
+            console.log("[refreshWorkOrders] Removing", removedWorkOrders.length, "work orders no longer on server");
+          }
+          
+          const finalWorkOrders = [...mergedServerWorkOrders, ...pendingNotOnServer];
+          AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(finalWorkOrders));
+          return finalWorkOrders;
+        });
       } else if (newWorkOrders.length > 0) {
         console.log("[refreshWorkOrders] Incremental sync - merging work orders");
         setWorkOrdersState(prev => {
