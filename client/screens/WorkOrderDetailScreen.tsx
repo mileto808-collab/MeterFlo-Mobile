@@ -3,7 +3,7 @@ import { View, ScrollView, StyleSheet, Pressable, Alert, Platform, ActivityIndic
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useHeaderHeight, HeaderButton } from "@react-navigation/elements";
+import { useHeaderHeight } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
@@ -101,17 +101,23 @@ export default function WorkOrderDetailScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <HeaderButton
+        <Pressable
           onPress={handleRefresh}
           disabled={isRefreshing}
           accessibilityLabel="Refresh work order"
+          accessibilityRole="button"
+          style={({ pressed }) => ({
+            opacity: pressed || isRefreshing ? 0.5 : 1,
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+          })}
         >
           {isRefreshing ? (
             <ActivityIndicator size="small" color={theme.primary} />
           ) : (
-            <Feather name="refresh-cw" size={20} color={theme.primary} />
+            <Feather name="refresh-cw" size={22} color={theme.primary} />
           )}
-        </HeaderButton>
+        </Pressable>
       ),
     });
   }, [navigation, handleRefresh, isRefreshing, theme.primary]);
