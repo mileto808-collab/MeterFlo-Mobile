@@ -25,14 +25,14 @@ Preferred communication style: Simple, everyday language.
 - **Server**: Express.js server serves landing page and Expo static files only
 - **Database**: PostgreSQL with Drizzle ORM (schema defined, migrations ready)
 - **API Backend**: Mobile app connects to external WorkFlow Pro server (entered during login)
-- **API Endpoints**: Mobile app uses `/api/mobile/*` endpoints on the WorkFlow Pro server:
-  - `POST /api/mobile/auth/login` - Mobile authentication
-  - `GET /api/mobile/sync` - Download work orders to mobile
-  - `POST /api/mobile/sync` - Upload completed work orders from mobile (batch sync)
-  - `POST /api/mobile/workorders/:id/complete` - Complete a meter changeout
-  - `POST /api/mobile/workorders/:id/trouble` - Submit a trouble code
-  - `POST /api/mobile/workorders/:id/claim` - Claim a work order
-  - `GET /api/mobile/workorders/:id` - Fetch single work order
+- **API Endpoints**: Mobile app uses `/api/projects/{projectId}/*` endpoints on the WorkFlow Pro server:
+  - `POST /api/auth/local/login` - Authentication
+  - `GET /api/users/{userId}/projects` - Get user's available projects
+  - `GET /api/projects/{projectId}/mobile/sync/download` - Download work orders to mobile
+  - `POST /api/projects/{projectId}/mobile/sync/upload` - Upload completed work orders from mobile (batch sync)
+  - `PATCH /api/projects/{projectId}/work-orders/{id}` - Update a work order (complete or trouble)
+  - `POST /api/projects/{projectId}/work-orders/{id}/claim` - Claim a work order
+  - `GET /api/projects/{projectId}/work-orders/{id}` - Fetch single work order
 
 ### Data Storage Solutions
 - **Secure Storage**: Expo SecureStore for authentication tokens and credentials (encrypted on-device)

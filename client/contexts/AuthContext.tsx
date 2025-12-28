@@ -128,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const normalizedUrl = serverUrl.endsWith("/") ? serverUrl.slice(0, -1) : serverUrl;
       
-      const loginResponse = await fetch(`${normalizedUrl}/api/mobile/auth/login`, {
+      const loginResponse = await fetch(`${normalizedUrl}/api/auth/local/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: loginData.user?.role || loginData.role || "User",
       };
 
-      const projectsResponse = await fetch(`${normalizedUrl}/api/mobile/users/${user.id}/projects`, {
+      const projectsResponse = await fetch(`${normalizedUrl}/api/users/${user.id}/projects`, {
         method: "GET",
         credentials: "include",
       });
@@ -209,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedServerUrl = await secureGet(STORAGE_KEYS.SERVER_URL);
     if (storedServerUrl) {
       try {
-        await fetch(`${storedServerUrl}/api/mobile/auth/logout`, {
+        await fetch(`${storedServerUrl}/api/auth/logout`, {
           method: "POST",
           credentials: "include",
         });

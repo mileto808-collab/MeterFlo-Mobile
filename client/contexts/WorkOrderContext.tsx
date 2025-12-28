@@ -369,22 +369,24 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      let path = `/api/mobile/sync?projectId=${projectId}&includeCompleted=false`;
+      let path = `/api/projects/${projectId}/mobile/sync/download?includeCompleted=false`;
       
       const currentLastSyncTime = lastSyncTimeRef.current;
       if (currentLastSyncTime && !forceFullSync) {
         path += `&lastSyncTimestamp=${encodeURIComponent(currentLastSyncTime)}`;
       }
       
-      console.log("[refreshWorkOrders] forceFullSync:", forceFullSync, "lastSyncTime:", currentLastSyncTime, "path:", path);
+      const fullUrl = `${serverUrl}${path}`;
+      console.log("[refreshWorkOrders] forceFullSync:", forceFullSync, "lastSyncTime:", currentLastSyncTime, "fullUrl:", fullUrl);
 
-      const response = await fetch(`${serverUrl}${path}`, {
+      const response = await fetch(fullUrl, {
         method: "GET",
         credentials: "include",
       });
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error("[refreshWorkOrders] Server error:", response.status, errorText?.substring(0, 200));
         throw new Error(errorText || "Failed to fetch work orders");
       }
 
@@ -446,7 +448,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   const claimWorkOrder = useCallback(async (workOrderId: number) => {
     if (!serverUrl || !projectId) return;
 
-    const response = await fetch(`${serverUrl}/api/mobile/workorders/${workOrderId}/claim`, {
+    const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}/claim`, {
       method: "POST",
       credentials: "include",
     });
@@ -472,7 +474,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     if (!serverUrl || !projectId) return null;
 
     try {
-      const response = await fetch(`${serverUrl}/api/mobile/workorders/${workOrderId}`, {
+      const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}`, {
         method: "GET",
         credentials: "include",
       });
