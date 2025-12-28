@@ -391,10 +391,10 @@ export default function WorkOrderDetailScreen() {
           ) : null}
         </Accordion>
 
-        {workOrder.notes ? (
+        {workOrder.notes || workOrder.troubleNote ? (
           <Accordion title="Notes" icon="file-text">
             <ThemedText type="body" style={{ color: theme.textSecondary }}>
-              {workOrder.notes}
+              {workOrder.notes || workOrder.troubleNote}
             </ThemedText>
           </Accordion>
         ) : null}
