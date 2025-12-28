@@ -551,21 +551,20 @@ export default function WorkflowWizardScreen() {
         
         const mobilePayload = canChange ? {
           projectId: Number(projectId),
-          oldMeterReading: parseReading(formData.oldMeterReading),
-          newMeterReading: parseReading(formData.newMeterReading) ?? 0,
           newMeterId: formData.newMeterId,
-          gpsCoordinates: formData.gpsCoordinates || null,
+          newMeterReading: parseReading(formData.newMeterReading) ?? 0,
+          newGps: formData.gpsCoordinates || null,
+          notes: null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
-          completedAt: completedAt,
-          beforePhotos: beforePhotosBase64.map((b64, idx) => ({ base64: b64, filename: `before_${idx}.jpg` })),
-          afterPhotos: afterPhotosBase64.map((b64, idx) => ({ base64: b64, filename: `after_${idx}.jpg` })),
+          beforePhotos: beforePhotosBase64,
+          afterPhotos: afterPhotosBase64,
         } : {
           projectId: Number(projectId),
           troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
           notes: formData.troubleNote || null,
           oldMeterReading: parseReading(formData.oldMeterReading),
-          photos: troublePhotosBase64.map((b64, idx) => ({ base64: b64, filename: `trouble_${idx}.jpg` })),
+          photos: troublePhotosBase64,
         };
         
         const payloadSize = JSON.stringify(mobilePayload).length;

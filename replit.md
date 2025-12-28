@@ -58,13 +58,12 @@ Preferred communication style: Simple, everyday language.
 - **Trouble Code Display**: Trouble codes display with labels (e.g., "02 - Unsafe") for better readability
 - **Photo Upload**: Photos captured during workflows are converted to base64 and sent to server
   - Uses expo-image-manipulator for reliable base64 conversion (1200px width, 0.7 quality JPEG compression)
-  - `trouble_photos`: Base64 array for trouble path photos
-  - `before_photos`: Base64 array for before meter photos (success path)
-  - `after_photos`: Base64 array for after meter photos (success path)
+  - Photos sent as array of base64 strings directly (not objects): `["base64...", "base64..."]`
+  - Server accepts base64 with or without `data:image/jpeg;base64,` prefix
   - User feedback when photo conversion fails with option to continue or cancel
-- **Server Payload Fields**: Uses snake_case fields per server API requirements
-  - `updated_by`: Username (not display name) for tracking changes
-  - `completed_by`: User ID for completion attribution
+- **Mobile API Payload Fields**: Uses camelCase fields for mobile-specific endpoints
+  - Trouble: `{ projectId, troubleCode, notes, oldMeterReading, photos }`
+  - Complete: `{ projectId, newMeterId, newMeterReading, newGps, notes, signatureData, signatureName, beforePhotos, afterPhotos }`
 
 ### Sync History Tracking
 - **SyncHistoryEntry Interface**: Tracks timestamp, work order IDs/titles, status, counts, photo count, error messages
