@@ -46,6 +46,16 @@ Preferred communication style: Simple, everyday language.
 - Automatic sync attempted when connectivity restored
 - Visual indicators for sync status and pending changes
 
+### Workflow Wizard Features
+- **Trouble Code Display**: Trouble codes display with labels (e.g., "02 - Unsafe") for better readability
+- **Photo Upload**: Photos captured during workflows are converted to base64 and sent to server
+  - `trouble_photos`: Base64 array for trouble path photos
+  - `before_photos`: Base64 array for before meter photos (success path)
+  - `after_photos`: Base64 array for after meter photos (success path)
+- **Server Payload Fields**: Uses snake_case fields per server API requirements
+  - `updated_by`: Username (not display name) for tracking changes
+  - `completed_by`: User ID for completion attribution
+
 ### Key Design Patterns
 - **Path Aliases**: `@/` maps to `client/`, `@shared/` maps to `shared/`
 - **Component Structure**: Themed components (ThemedText, ThemedView) for consistent styling
