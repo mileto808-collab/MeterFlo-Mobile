@@ -535,22 +535,22 @@ export default function WorkOrderDetailScreen() {
         ) : null}
         <Button
           onPress={handleProcess}
-          style={[styles.processButton, { backgroundColor: isCompleted || isCancelled ? theme.backgroundSecondary : theme.primary }]}
-          disabled={isCompleted || isCancelled}
+          style={[styles.processButton, { backgroundColor: isCancelled ? theme.backgroundSecondary : theme.primary }]}
+          disabled={isCancelled}
         >
           <Feather 
-            name={isCompleted ? "check-circle" : isCancelled ? "x-circle" : "play-circle"} 
+            name={isCompleted ? "edit-2" : isCancelled ? "x-circle" : "play-circle"} 
             size={18} 
-            color={isCompleted || isCancelled ? theme.textSecondary : "#FFFFFF"} 
+            color={isCancelled ? theme.textSecondary : "#FFFFFF"} 
           />
           <ThemedText 
             style={{ 
               marginLeft: Spacing.sm, 
-              color: isCompleted || isCancelled ? theme.textSecondary : "#FFFFFF",
+              color: isCancelled ? theme.textSecondary : "#FFFFFF",
               fontWeight: "600",
             }}
           >
-            {isCompleted ? "Completed" : isCancelled ? "Cancelled" : "Start Meter Changeout"}
+            {isCompleted ? "Edit Completion" : isCancelled ? "Cancelled" : "Start Meter Changeout"}
           </ThemedText>
         </Button>
       </View>

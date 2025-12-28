@@ -107,6 +107,10 @@ export default function WorkflowWizardScreen() {
 
   const workOrder = route.params.workOrder;
   
+  const isEditingCompleted = workOrder.status?.toLowerCase() === "completed";
+  const isEditingTrouble = workOrder.status?.toLowerCase() === "trouble";
+  const isEditing = isEditingCompleted || isEditingTrouble;
+  
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
@@ -118,21 +122,29 @@ export default function WorkflowWizardScreen() {
   const [viewingPhoto, setViewingPhoto] = useState<{ uri: string; type: "before" | "after" | "trouble"; id: string } | null>(null);
   
   const [formData, setFormData] = useState<MeterChangeoutData>({
-    canChange: null,
-    troubleCode: "",
-    troubleNote: "",
+    canChange: isEditingCompleted ? true : isEditingTrouble ? false : null,
+    troubleCode: workOrder.troubleCode || "",
+    troubleNote: workOrder.troubleNote || "",
     troublePhotos: [],
     oldMeterReading: workOrder.oldMeterReading || "",
     beforePhotos: [],
-    newMeterId: "",
-    newMeterReading: "",
+    newMeterId: workOrder.newMeterId || "",
+    newMeterReading: workOrder.newMeterReading || "",
     afterPhotos: [],
-    gpsCoordinates: "",
-    signatureData: "",
-    signatureName: "",
+    gpsCoordinates: workOrder.newGps || "",
+    signatureData: workOrder.signatureData || "",
+    signatureName: workOrder.signatureName || "",
   });
 
-  const steps = formData.canChange === false ? TROUBLE_STEPS : SUCCESS_STEPS;
+  const getSteps = () => {
+    const baseSteps = formData.canChange === false ? TROUBLE_STEPS : SUCCESS_STEPS;
+    if (isEditing) {
+      return baseSteps.filter(step => step !== "canChange");
+    }
+    return baseSteps;
+  };
+  
+  const steps = getSteps();
   const currentStep = steps[currentStepIndex];
   const totalSteps = steps.length;
   const isFirstStep = currentStepIndex === 0;
@@ -161,6 +173,15 @@ export default function WorkflowWizardScreen() {
   useEffect(() => {
     claimWorkOrderOnStart();
   }, []);
+  
+  useEffect(() => {
+    if (isEditingTrouble && workOrder.troubleCode && !formData.troubleCode.includes(" - ")) {
+      const displayString = getTroubleCodeDisplay(workOrder.troubleCode);
+      if (displayString !== workOrder.troubleCode) {
+        setFormData(prev => ({ ...prev, troubleCode: displayString }));
+      }
+    }
+  }, [referenceData, isEditingTrouble, workOrder.troubleCode]);
 
   useEffect(() => {
     navigation.setOptions({
