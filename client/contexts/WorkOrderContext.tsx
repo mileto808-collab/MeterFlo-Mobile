@@ -139,10 +139,12 @@ export interface FilterConfig {
   searchQuery: string;
 }
 
-export interface SortConfig {
+export interface SortCriterion {
   field: string;
   direction: "asc" | "desc";
 }
+
+export type SortConfig = SortCriterion[];
 
 function mapServerWorkOrder(serverWo: ServerWorkOrder): WorkOrder {
   return {
@@ -297,10 +299,7 @@ const defaultFilters: FilterConfig = {
   searchQuery: "",
 };
 
-const defaultSort: SortConfig = {
-  field: "customerWoId",
-  direction: "asc",
-};
+const defaultSort: SortConfig = [];
 
 export function WorkOrderProvider({ children }: { children: ReactNode }) {
   const { serverUrl, projectId, isAuthenticated } = useAuth();
@@ -352,7 +351,15 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         setColumnsState(JSON.parse(storedColumns));
       }
       if (storedSort) {
-        setSortState(JSON.parse(storedSort));
+        const parsedSort = JSON.parse(storedSort);
+        let normalizedSort: SortConfig = [];
+        if (Array.isArray(parsedSort)) {
+          normalizedSort = parsedSort.filter(s => s && typeof s === "object" && s.field);
+        } else if (parsedSort && typeof parsedSort === "object" && parsedSort.field) {
+          normalizedSort = [parsedSort];
+        }
+        setSortState(normalizedSort);
+        AsyncStorage.setItem(STORAGE_KEYS.SORT, JSON.stringify(normalizedSort));
       }
       if (storedLastSync) {
         setLastSyncTime(storedLastSync);
@@ -602,8 +609,11 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setSort = useCallback((newSort: SortConfig) => {
-    setSortState(newSort);
-    AsyncStorage.setItem(STORAGE_KEYS.SORT, JSON.stringify(newSort));
+    const normalizedSort = Array.isArray(newSort) 
+      ? newSort.filter(s => s && typeof s === "object" && s.field)
+      : [];
+    setSortState(normalizedSort);
+    AsyncStorage.setItem(STORAGE_KEYS.SORT, JSON.stringify(normalizedSort));
   }, []);
 
   const getFilteredWorkOrders = useCallback(() => {
@@ -631,26 +641,36 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       );
     }
 
-    filtered.sort((a, b) => {
-      const aValue = a[sort.field as keyof WorkOrder];
-      const bValue = b[sort.field as keyof WorkOrder];
+    if (sort.length > 0) {
+      filtered.sort((a, b) => {
+        for (const criterion of sort) {
+          const aValue = a[criterion.field as keyof WorkOrder];
+          const bValue = b[criterion.field as keyof WorkOrder];
 
-      if (aValue === undefined || aValue === null) return 1;
-      if (bValue === undefined || bValue === null) return -1;
+          if (aValue === undefined || aValue === null) {
+            if (bValue !== undefined && bValue !== null) return 1;
+            continue;
+          }
+          if (bValue === undefined || bValue === null) return -1;
 
-      let comparison = 0;
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        comparison = aValue.localeCompare(bValue);
-      } else if (typeof aValue === "number" && typeof bValue === "number") {
-        comparison = aValue - bValue;
-      } else if (aValue < bValue) {
-        comparison = -1;
-      } else if (aValue > bValue) {
-        comparison = 1;
-      }
+          let comparison = 0;
+          if (typeof aValue === "string" && typeof bValue === "string") {
+            comparison = aValue.localeCompare(bValue);
+          } else if (typeof aValue === "number" && typeof bValue === "number") {
+            comparison = aValue - bValue;
+          } else if (aValue < bValue) {
+            comparison = -1;
+          } else if (aValue > bValue) {
+            comparison = 1;
+          }
 
-      return sort.direction === "desc" ? -comparison : comparison;
-    });
+          if (comparison !== 0) {
+            return criterion.direction === "desc" ? -comparison : comparison;
+          }
+        }
+        return 0;
+      });
+    }
 
     return filtered;
   }, [workOrders, filters, sort]);
