@@ -1117,8 +1117,6 @@ export default function WorkflowWizardScreen() {
               onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
               placeholder="Enter notes here..."
               multiline
-              numberOfLines={4}
-              style={{ minHeight: 120, textAlignVertical: "top" }}
             />
           </View>
         );
