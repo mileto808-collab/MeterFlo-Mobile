@@ -429,6 +429,8 @@ export default function WorkflowWizardScreen() {
     };
 
     try {
+      console.log("[WorkflowWizard] Submitting work order update:", JSON.stringify(patchPayload, null, 2));
+      
       if (isOnline && serverUrl && projectId) {
         const response = await fetch(
           `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}`,
@@ -442,6 +444,7 @@ export default function WorkflowWizardScreen() {
 
         if (!response.ok) {
           const errorText = await response.text();
+          console.error("[WorkflowWizard] Server error response:", response.status, errorText);
           throw new Error(errorText || "Failed to complete work order");
         }
 
