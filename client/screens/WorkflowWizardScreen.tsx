@@ -1083,12 +1083,12 @@ export default function WorkflowWizardScreen() {
             
             <View style={{ marginTop: Spacing.lg }}>
               <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
-                Customer Name (Required)
+                Signed By (Required)
               </ThemedText>
               <TextInput
                 value={formData.signatureName}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, signatureName: text }))}
-                placeholder="Enter customer name"
+                placeholder="Enter printed name"
               />
             </View>
           </View>
