@@ -126,13 +126,6 @@ export interface ReferenceData {
   };
 }
 
-export interface ColumnConfig {
-  key: string;
-  label: string;
-  visible: boolean;
-  order: number;
-}
-
 export interface FilterConfig {
   status: string[];
   assignedTo: string;
@@ -254,7 +247,6 @@ function mapServerReferenceData(serverRef: ServerReferenceData): ReferenceData {
 interface WorkOrderContextType {
   workOrders: WorkOrder[];
   referenceData: ReferenceData | null;
-  columns: ColumnConfig[];
   filters: FilterConfig;
   sort: SortConfig;
   isLoading: boolean;
@@ -262,7 +254,6 @@ interface WorkOrderContextType {
   error: string | null;
   setWorkOrders: (orders: WorkOrder[]) => void;
   updateWorkOrder: (id: number, updates: Partial<WorkOrder>) => void;
-  setColumns: (columns: ColumnConfig[]) => Promise<void>;
   setFilters: (filters: FilterConfig) => void;
   setSort: (sort: SortConfig) => void;
   getFilteredWorkOrders: () => WorkOrder[];
@@ -277,21 +268,9 @@ const WorkOrderContext = createContext<WorkOrderContextType | undefined>(undefin
 const STORAGE_KEYS = {
   WORK_ORDERS: "meterflo_work_orders",
   REFERENCE_DATA: "meterflo_reference_data",
-  COLUMNS: "meterflo_columns",
   SORT: "meterflo_sort",
   LAST_SYNC: "meterflo_last_sync",
 };
-
-const defaultColumns: ColumnConfig[] = [
-  { key: "customerWoId", label: "WO #", visible: true, order: 0 },
-  { key: "status", label: "Status", visible: true, order: 1 },
-  { key: "serviceAddress", label: "Address", visible: true, order: 2 },
-  { key: "customerName", label: "Customer", visible: true, order: 3 },
-  { key: "oldMeterId", label: "Old Meter", visible: true, order: 4 },
-  { key: "meterType", label: "Meter Type", visible: false, order: 5 },
-  { key: "scheduledDate", label: "Scheduled", visible: true, order: 6 },
-  { key: "assignedUserDisplayName", label: "Assigned To", visible: false, order: 7 },
-];
 
 const defaultFilters: FilterConfig = {
   status: [],
@@ -305,7 +284,6 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   const { serverUrl, projectId, isAuthenticated } = useAuth();
   const [workOrders, setWorkOrdersState] = useState<WorkOrder[]>([]);
   const [referenceData, setReferenceData] = useState<ReferenceData | null>(null);
-  const [columns, setColumnsState] = useState<ColumnConfig[]>(defaultColumns);
   const [filters, setFiltersState] = useState<FilterConfig>(defaultFilters);
   const [sort, setSortState] = useState<SortConfig>(defaultSort);
   const [isLoading, setIsLoading] = useState(false);
@@ -329,10 +307,9 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
   const loadStoredData = async () => {
     try {
-      const [storedOrders, storedRefData, storedColumns, storedSort, storedLastSync] = await Promise.all([
+      const [storedOrders, storedRefData, storedSort, storedLastSync] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.WORK_ORDERS),
         AsyncStorage.getItem(STORAGE_KEYS.REFERENCE_DATA),
-        AsyncStorage.getItem(STORAGE_KEYS.COLUMNS),
         AsyncStorage.getItem(STORAGE_KEYS.SORT),
         AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC),
       ]);
@@ -346,9 +323,6 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         const parsedRefData = JSON.parse(storedRefData);
         const normalizedRefData = normalizeStoredReferenceData(parsedRefData);
         setReferenceData(normalizedRefData);
-      }
-      if (storedColumns) {
-        setColumnsState(JSON.parse(storedColumns));
       }
       if (storedSort) {
         const parsedSort = JSON.parse(storedSort);
@@ -599,11 +573,6 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const setColumns = useCallback(async (newColumns: ColumnConfig[]) => {
-    setColumnsState(newColumns);
-    await AsyncStorage.setItem(STORAGE_KEYS.COLUMNS, JSON.stringify(newColumns));
-  }, []);
-
   const setFilters = useCallback((newFilters: FilterConfig) => {
     setFiltersState(newFilters);
   }, []);
@@ -680,7 +649,6 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       value={{
         workOrders,
         referenceData,
-        columns,
         filters,
         sort,
         isLoading,
@@ -688,7 +656,6 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         error,
         setWorkOrders,
         updateWorkOrder,
-        setColumns,
         setFilters,
         setSort,
         getFilteredWorkOrders,

@@ -5,7 +5,6 @@ import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View } from "react-native";
 import WorkOrdersStackNavigator from "@/navigation/WorkOrdersStackNavigator";
 import SyncStackNavigator from "@/navigation/SyncStackNavigator";
-import ColumnsStackNavigator from "@/navigation/ColumnsStackNavigator";
 import AccountStackNavigator from "@/navigation/AccountStackNavigator";
 import { useTheme } from "@/hooks/useTheme";
 import { useOffline } from "@/contexts/OfflineContext";
@@ -15,7 +14,6 @@ import { BorderRadius } from "@/constants/theme";
 export type MainTabParamList = {
   WorkOrdersTab: undefined;
   SyncTab: undefined;
-  ColumnsTab: undefined;
   AccountTab: undefined;
 };
 
@@ -83,16 +81,6 @@ export default function MainTabNavigator() {
               <Feather name="refresh-cw" size={size} color={color} />
               <PendingBadge count={pendingActions.length} />
             </View>
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="ColumnsTab"
-        component={ColumnsStackNavigator}
-        options={{
-          title: "Columns",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="columns" size={size} color={color} />
           ),
         }}
       />
