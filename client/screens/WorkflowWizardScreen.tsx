@@ -3,7 +3,6 @@ import { View, StyleSheet, Alert, Platform, ActivityIndicator, Pressable, Image,
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { HeaderButton } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
@@ -177,15 +176,6 @@ export default function WorkflowWizardScreen() {
     }
   }, [referenceData, isEditingTrouble, workOrder.troubleCode]);
 
-  useEffect(() => {
-    navigation.setOptions({
-      headerLeft: () => (
-        <HeaderButton onPress={handleCancel}>
-          <ThemedText style={{ color: theme.error }}>Cancel</ThemedText>
-        </HeaderButton>
-      ),
-    });
-  }, [navigation, theme]);
 
   const claimWorkOrderOnStart = async () => {
     const isAlreadyAssignedToMe = workOrder.assignedUserId === user?.id && !workOrder.assignedGroupId;
@@ -225,22 +215,6 @@ export default function WorkflowWizardScreen() {
   const handleRetryClaimOrCancel = () => {
     setClaimError(null);
     navigation.goBack();
-  };
-
-  const handleCancel = () => {
-    if (Platform.OS === "web") {
-      navigation.goBack();
-      return;
-    }
-    
-    Alert.alert(
-      "Cancel Workflow",
-      "Your progress will not be saved. Are you sure you want to leave?",
-      [
-        { text: "Stay", style: "cancel" },
-        { text: "Leave", style: "destructive", onPress: () => navigation.goBack() },
-      ]
-    );
   };
 
   const openSettings = async () => {
