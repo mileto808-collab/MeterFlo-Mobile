@@ -105,7 +105,7 @@ interface ServerWorkOrder {
 }
 
 interface ServerReferenceData {
-  workOrderStatuses?: string[] | { code: string; label: string }[];
+  workOrderStatuses?: string[] | { code: string; label: string; color?: string }[];
   troubleCodes?: { code: string; label?: string; description?: string }[];
   meterTypes?: string[] | { id: string; name: string }[];
   serviceTypes?: string[];
@@ -115,8 +115,14 @@ interface ServerReferenceData {
   };
 }
 
+export interface StatusInfo {
+  code: string;
+  label: string;
+  color: string;
+}
+
 export interface ReferenceData {
-  statuses: string[];
+  statuses: StatusInfo[];
   troubleCodes: { code: string; label: string; description: string }[];
   meterTypes: string[];
   serviceTypes: string[];
@@ -200,15 +206,61 @@ function normalizeStoredReferenceData(ref: any): ReferenceData {
   if (ref.workOrderStatuses !== undefined) {
     return mapServerReferenceData(ref as ServerReferenceData);
   }
+  if (ref.statuses && Array.isArray(ref.statuses)) {
+    const normalizedStatuses: StatusInfo[] = ref.statuses.map((s: any) => {
+      if (typeof s === "string") {
+        return { code: s, label: s, color: getDefaultStatusColor(s) };
+      }
+      if (s && typeof s === "object") {
+        return {
+          code: s.code || s.label || "Unknown",
+          label: s.label || s.code || "Unknown",
+          color: s.color || getDefaultStatusColor(s.code || s.label || ""),
+        };
+      }
+      return { code: "Unknown", label: "Unknown", color: "#6B7280" };
+    });
+    return { ...ref, statuses: normalizedStatuses };
+  }
   return ref as ReferenceData;
 }
 
+function getDefaultStatusColor(status: string): string {
+  const normalizedStatus = status.toLowerCase().replace(/\s+/g, "_");
+  switch (normalizedStatus) {
+    case "open":
+    case "pending":
+      return "#3B82F6";
+    case "in_progress":
+    case "in progress":
+      return "#F59E0B";
+    case "completed":
+    case "complete":
+      return "#10B981";
+    case "trouble":
+    case "on_hold":
+    case "on hold":
+      return "#EF4444";
+    case "scheduled":
+      return "#8B5CF6";
+    default:
+      return "#6B7280";
+  }
+}
+
 function mapServerReferenceData(serverRef: ServerReferenceData): ReferenceData {
-  let statuses: string[] = [];
+  let statuses: StatusInfo[] = [];
   if (Array.isArray(serverRef.workOrderStatuses)) {
-    statuses = serverRef.workOrderStatuses.map(s => 
-      typeof s === "string" ? s : s.label || s.code
-    );
+    statuses = serverRef.workOrderStatuses.map(s => {
+      if (typeof s === "string") {
+        return { code: s, label: s, color: getDefaultStatusColor(s) };
+      }
+      return {
+        code: s.code,
+        label: s.label || s.code,
+        color: s.color || getDefaultStatusColor(s.code),
+      };
+    });
   }
 
   let meterTypes: string[] = [];
@@ -257,6 +309,7 @@ interface WorkOrderContextType {
   setFilters: (filters: FilterConfig) => void;
   setSort: (sort: SortConfig) => void;
   getFilteredWorkOrders: () => WorkOrder[];
+  getStatusColor: (status: string) => string;
   refreshWorkOrders: (forceFullSync?: boolean) => Promise<void>;
   claimWorkOrder: (workOrderId: number) => Promise<void>;
   fetchSingleWorkOrder: (workOrderId: number) => Promise<WorkOrder | null>;
@@ -323,6 +376,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         const parsedRefData = JSON.parse(storedRefData);
         const normalizedRefData = normalizeStoredReferenceData(parsedRefData);
         setReferenceData(normalizedRefData);
+        AsyncStorage.setItem(STORAGE_KEYS.REFERENCE_DATA, JSON.stringify(normalizedRefData));
       }
       if (storedSort) {
         const parsedSort = JSON.parse(storedSort);
@@ -585,6 +639,19 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem(STORAGE_KEYS.SORT, JSON.stringify(normalizedSort));
   }, []);
 
+  const getStatusColor = useCallback((status: string): string => {
+    if (referenceData?.statuses) {
+      const statusInfo = referenceData.statuses.find(
+        s => s.code.toLowerCase() === status.toLowerCase() || 
+             s.label.toLowerCase() === status.toLowerCase()
+      );
+      if (statusInfo) {
+        return statusInfo.color;
+      }
+    }
+    return getDefaultStatusColor(status);
+  }, [referenceData]);
+
   const getFilteredWorkOrders = useCallback(() => {
     let filtered = [...workOrders];
 
@@ -600,7 +667,8 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     }
 
     if (filters.status.length > 0) {
-      filtered = filtered.filter(wo => filters.status.includes(wo.status));
+      const normalizedFilters = filters.status.map(s => s.toLowerCase());
+      filtered = filtered.filter(wo => normalizedFilters.includes(wo.status.toLowerCase()));
     }
 
     if (filters.assignedTo) {
@@ -659,6 +727,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         setFilters,
         setSort,
         getFilteredWorkOrders,
+        getStatusColor,
         refreshWorkOrders,
         claimWorkOrder,
         fetchSingleWorkOrder,

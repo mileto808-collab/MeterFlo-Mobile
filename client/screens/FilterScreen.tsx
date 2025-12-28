@@ -16,10 +16,10 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const DEFAULT_STATUS_OPTIONS = [
-  { value: "Open", color: "#3B82F6" },
-  { value: "In Progress", color: "#F59E0B" },
-  { value: "Completed", color: "#10B981" },
-  { value: "Trouble", color: "#EF4444" },
+  { value: "Open", label: "Open", color: "#3B82F6" },
+  { value: "In Progress", label: "In Progress", color: "#F59E0B" },
+  { value: "Completed", label: "Completed", color: "#10B981" },
+  { value: "Trouble", label: "Trouble", color: "#EF4444" },
 ];
 
 export default function FilterScreen() {
@@ -32,29 +32,25 @@ export default function FilterScreen() {
   const [localFilters, setLocalFilters] = useState<FilterConfig>(filters);
 
   const statusOptions = referenceData?.statuses?.map(status => ({
-    value: status,
-    color: getStatusColor(status),
+    value: status.label,
+    label: status.label,
+    color: status.color,
   })) || DEFAULT_STATUS_OPTIONS;
-
-  function getStatusColor(status: string): string {
-    const normalized = status.toLowerCase();
-    if (normalized === "open") return "#3B82F6";
-    if (normalized.includes("progress")) return "#F59E0B";
-    if (normalized === "completed") return "#10B981";
-    if (normalized === "trouble") return "#EF4444";
-    return "#6B7280";
-  }
 
   const handleApply = () => {
     setFilters(localFilters);
     navigation.goBack();
   };
 
+  const isStatusSelected = (status: string) => {
+    return localFilters.status.some(s => s.toLowerCase() === status.toLowerCase());
+  };
+
   const toggleStatus = (status: string) => {
     setLocalFilters(prev => ({
       ...prev,
-      status: prev.status.includes(status)
-        ? prev.status.filter(s => s !== status)
+      status: isStatusSelected(status)
+        ? prev.status.filter(s => s.toLowerCase() !== status.toLowerCase())
         : [...prev.status, status],
     }));
   };
@@ -75,7 +71,7 @@ export default function FilterScreen() {
           <ThemedText type="h4" style={styles.sectionTitle}>Status</ThemedText>
           <View style={styles.optionsGrid}>
             {statusOptions.map(option => {
-              const isSelected = localFilters.status.includes(option.value);
+              const isSelected = isStatusSelected(option.value);
               return (
                 <Pressable
                   key={option.value}

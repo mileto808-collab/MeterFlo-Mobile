@@ -5,9 +5,10 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 
 interface StatusBadgeProps {
   status: string;
+  color?: string;
 }
 
-const getStatusColor = (status: string): string => {
+const getDefaultStatusColor = (status: string): string => {
   const normalizedStatus = status.toLowerCase().replace(/\s+/g, "_");
   
   switch (normalizedStatus) {
@@ -31,11 +32,11 @@ const getStatusColor = (status: string): string => {
   }
 };
 
-export function StatusBadge({ status }: StatusBadgeProps) {
-  const color = getStatusColor(status);
+export function StatusBadge({ status, color }: StatusBadgeProps) {
+  const badgeColor = color || getDefaultStatusColor(status);
 
   return (
-    <View style={[styles.badge, { backgroundColor: color }]}>
+    <View style={[styles.badge, { backgroundColor: badgeColor }]}>
       <ThemedText style={styles.text}>{status}</ThemedText>
     </View>
   );

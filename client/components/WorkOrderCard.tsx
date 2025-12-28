@@ -3,7 +3,7 @@ import { View, StyleSheet, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, WithSpringConfig } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
-import { WorkOrder } from "@/contexts/WorkOrderContext";
+import { WorkOrder, useWorkOrders } from "@/contexts/WorkOrderContext";
 import { ThemedText } from "@/components/ThemedText";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Spacing, BorderRadius } from "@/constants/theme";
@@ -24,6 +24,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
   const { theme } = useTheme();
+  const { getStatusColor } = useWorkOrders();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -63,7 +64,7 @@ export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
     >
       <View style={styles.header}>
         <View style={styles.badges}>
-          <StatusBadge status={workOrder.status} />
+          <StatusBadge status={workOrder.status} color={getStatusColor(workOrder.status)} />
         </View>
         {workOrder.syncPending ? (
           <View style={[styles.syncPending, { backgroundColor: theme.syncPending }]}>

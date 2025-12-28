@@ -70,7 +70,7 @@ export default function WorkOrderDetailScreen() {
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { workOrders, referenceData, updateWorkOrder } = useWorkOrders();
+  const { workOrders, referenceData, updateWorkOrder, getStatusColor } = useWorkOrders();
   const { pendingActions } = useOffline();
 
   const workOrder = useMemo(() => {
@@ -201,7 +201,7 @@ export default function WorkOrderDetailScreen() {
                 {workOrder.customerWoId || `WO #${workOrder.id}`}
               </ThemedText>
               <View style={styles.badgeRow}>
-                <StatusBadge status={workOrder.status} />
+                <StatusBadge status={workOrder.status} color={getStatusColor(workOrder.status)} />
                 {workOrder.serviceType ? (
                   <View style={[styles.serviceTypeBadge, { backgroundColor: theme.primary + "20" }]}>
                     <ThemedText type="caption" style={{ color: theme.primary, fontWeight: "600" }}>
