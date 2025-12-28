@@ -727,8 +727,19 @@ export default function WorkflowWizardScreen() {
         });
       }
 
-      navigation.goBack();
-      navigation.goBack();
+      // Navigate back to the work orders list
+      // Use reset to handle cases where wizard was opened via replace() from scanner
+      // Set nested state to ensure Work Orders tab is selected
+      navigation.reset({
+        index: 0,
+        routes: [{ 
+          name: "Main",
+          state: {
+            index: 0,
+            routes: [{ name: "WorkOrdersStack" }]
+          }
+        }],
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to complete work order";
       
