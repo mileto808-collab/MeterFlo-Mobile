@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useLayoutEffect, useCallback } from "react";
 import { View, ScrollView, StyleSheet, Pressable, Alert, Platform, ActivityIndicator, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useHeaderHeight } from "@react-navigation/elements";
+import { useHeaderHeight, HeaderButton } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
@@ -70,13 +70,50 @@ export default function WorkOrderDetailScreen() {
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { workOrders, referenceData, claimWorkOrder } = useWorkOrders();
+  const { workOrders, referenceData, claimWorkOrder, fetchSingleWorkOrder } = useWorkOrders();
   const { user } = useAuth();
   const [isClaiming, setIsClaiming] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const workOrder = useMemo(() => {
     return workOrders.find(wo => wo.id === route.params.workOrder.id) || route.params.workOrder;
   }, [workOrders, route.params.workOrder]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchSingleWorkOrder(workOrder.id);
+      if (Platform.OS !== "web") {
+        Alert.alert("Refreshed", "Work order details updated from server.");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to refresh work order";
+      if (Platform.OS === "web") {
+        alert(message);
+      } else {
+        Alert.alert("Error", message);
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [fetchSingleWorkOrder, workOrder.id]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <HeaderButton
+          onPress={handleRefresh}
+          disabled={isRefreshing}
+        >
+          {isRefreshing ? (
+            <ActivityIndicator size="small" color={theme.primary} />
+          ) : (
+            <Feather name="refresh-cw" size={20} color={theme.primary} />
+          )}
+        </HeaderButton>
+      ),
+    });
+  }, [navigation, handleRefresh, isRefreshing, theme.primary]);
 
   const isAssignedToMe = workOrder.assignedUserId === user?.id;
   const canClaim = !workOrder.assignedUserId || !isAssignedToMe;

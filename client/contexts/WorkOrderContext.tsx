@@ -260,6 +260,7 @@ interface WorkOrderContextType {
   getFilteredWorkOrders: () => WorkOrder[];
   refreshWorkOrders: () => Promise<void>;
   claimWorkOrder: (workOrderId: number) => Promise<void>;
+  fetchSingleWorkOrder: (workOrderId: number) => Promise<WorkOrder | null>;
 }
 
 const WorkOrderContext = createContext<WorkOrderContextType | undefined>(undefined);
@@ -448,6 +449,43 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     }
   }, [serverUrl, projectId]);
 
+  const fetchSingleWorkOrder = useCallback(async (workOrderId: number): Promise<WorkOrder | null> => {
+    if (!serverUrl || !projectId) return null;
+
+    try {
+      const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to fetch work order");
+      }
+
+      const data = await response.json();
+      const serverWo = data.workOrder || data;
+      const mappedWorkOrder = mapServerWorkOrder(serverWo);
+      
+      setWorkOrdersState(prev => {
+        const existingIndex = prev.findIndex(wo => wo.id === workOrderId);
+        let updated: WorkOrder[];
+        if (existingIndex >= 0) {
+          updated = prev.map(wo => wo.id === workOrderId ? { ...wo, ...mappedWorkOrder } : wo);
+        } else {
+          updated = [...prev, mappedWorkOrder];
+        }
+        AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
+        return updated;
+      });
+
+      return mappedWorkOrder;
+    } catch (err) {
+      console.error("Failed to fetch single work order:", err);
+      throw err;
+    }
+  }, [serverUrl, projectId]);
+
   const setWorkOrders = useCallback((orders: WorkOrder[]) => {
     setWorkOrdersState(orders);
     AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(orders));
@@ -547,6 +585,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         getFilteredWorkOrders,
         refreshWorkOrders,
         claimWorkOrder,
+        fetchSingleWorkOrder,
       }}
     >
       {children}
