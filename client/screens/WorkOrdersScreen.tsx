@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, FlatList, StyleSheet, Pressable, RefreshControl, Alert } from "react-native";
+import { View, FlatList, StyleSheet, Pressable, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -18,7 +18,13 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { SearchOptionsModal, SearchOption } from "@/components/SearchOptionsModal";
 import { HIDScannerModal } from "@/components/HIDScannerModal";
 import { ManualSearchModal } from "@/components/ManualSearchModal";
+import { ScanConfirmModal } from "@/components/ScanConfirmModal";
 import { Spacing, BorderRadius } from "@/constants/theme";
+
+interface ScanResult {
+  meterId: string;
+  workOrder: WorkOrder | undefined;
+}
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -34,6 +40,7 @@ export default function WorkOrdersScreen() {
   const [showSearchOptions, setShowSearchOptions] = useState(false);
   const [showHIDScanner, setShowHIDScanner] = useState(false);
   const [showManualSearch, setShowManualSearch] = useState(false);
+  const [scanConfirmResult, setScanConfirmResult] = useState<ScanResult | null>(null);
 
   const filteredWorkOrders = useMemo(() => getFilteredWorkOrders(), [getFilteredWorkOrders]);
 
@@ -47,16 +54,27 @@ export default function WorkOrdersScreen() {
 
   const handleScanResult = useCallback((scannedValue: string) => {
     const workOrder = findWorkOrderByMeterId(scannedValue);
-    if (workOrder) {
-      navigation.navigate("WorkflowWizard", { workOrder });
-    } else {
-      Alert.alert(
-        "Work Order Not Found",
-        `No work order found with meter ID: ${scannedValue}`,
-        [{ text: "OK" }]
-      );
+    setScanConfirmResult({
+      meterId: scannedValue,
+      workOrder,
+    });
+  }, [findWorkOrderByMeterId]);
+
+  const handleConfirmScan = useCallback(() => {
+    if (scanConfirmResult?.workOrder) {
+      setScanConfirmResult(null);
+      navigation.navigate("WorkflowWizard", { workOrder: scanConfirmResult.workOrder });
     }
-  }, [findWorkOrderByMeterId, navigation]);
+  }, [scanConfirmResult, navigation]);
+
+  const handleScanAgain = useCallback(() => {
+    setScanConfirmResult(null);
+    setShowHIDScanner(true);
+  }, []);
+
+  const handleCloseScanConfirm = useCallback(() => {
+    setScanConfirmResult(null);
+  }, []);
 
   const handleSearchOptionSelect = useCallback((option: SearchOption) => {
     switch (option) {
@@ -194,6 +212,15 @@ export default function WorkOrdersScreen() {
         value={filters.searchQuery}
         onClose={() => setShowManualSearch(false)}
         onChangeText={handleSearchChange}
+      />
+
+      <ScanConfirmModal
+        visible={scanConfirmResult !== null}
+        meterId={scanConfirmResult?.meterId || ""}
+        workOrder={scanConfirmResult?.workOrder}
+        onConfirm={handleConfirmScan}
+        onScanAgain={handleScanAgain}
+        onClose={handleCloseScanConfirm}
       />
     </View>
   );

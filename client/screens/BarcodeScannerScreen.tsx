@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { View, StyleSheet, Pressable, Alert, Platform } from "react-native";
+import { View, StyleSheet, Pressable, Platform } from "react-native";
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
@@ -9,11 +9,17 @@ import { Linking } from "react-native";
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders, WorkOrder } from "@/contexts/WorkOrderContext";
 import { ThemedText } from "@/components/ThemedText";
+import { Button } from "@/components/Button";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type ScannerRouteProp = RouteProp<RootStackParamList, "BarcodeScanner">;
+
+interface ScanResult {
+  meterId: string;
+  workOrder: WorkOrder | undefined;
+}
 
 export default function BarcodeScannerScreen() {
   const { theme } = useTheme();
@@ -23,6 +29,7 @@ export default function BarcodeScannerScreen() {
   const { workOrders } = useWorkOrders();
   const [permission, requestPermission] = useCameraPermissions();
   const [isScanning, setIsScanning] = useState(true);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
 
   const scanType = route.params?.scanType || "barcode";
   const isQRMode = scanType === "qrcode";
@@ -42,161 +49,230 @@ export default function BarcodeScannerScreen() {
     const scannedValue = result.data;
     const workOrder = findWorkOrderByMeterId(scannedValue);
 
-    if (workOrder) {
+    setScanResult({
+      meterId: scannedValue,
+      workOrder,
+    });
+  }, [isScanning, findWorkOrderByMeterId]);
+
+  const handleConfirm = useCallback(() => {
+    if (scanResult?.workOrder) {
       navigation.goBack();
       setTimeout(() => {
-        navigation.navigate("WorkflowWizard", { workOrder });
+        navigation.navigate("WorkflowWizard", { workOrder: scanResult.workOrder! });
       }, 100);
-    } else {
-      Alert.alert(
-        "Work Order Not Found",
-        `No work order found with meter ID: ${scannedValue}`,
-        [
-          { 
-            text: "Scan Again", 
-            onPress: () => setIsScanning(true) 
-          },
-          { 
-            text: "Close", 
-            style: "cancel",
-            onPress: () => navigation.goBack()
-          },
-        ]
-      );
     }
-  }, [isScanning, findWorkOrderByMeterId, navigation]);
+  }, [scanResult, navigation]);
+
+  const handleScanAgain = useCallback(() => {
+    setScanResult(null);
+    setIsScanning(true);
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    navigation.goBack();
+  }, [navigation]);
 
   if (!permission) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
+      <View style={[styles.container, styles.centered, { backgroundColor: theme.backgroundRoot }]}>
         <ThemedText>Loading camera...</ThemedText>
       </View>
     );
   }
 
-  if (!permission.granted) {
-    if (permission.status === "denied" && !permission.canAskAgain) {
-      return (
-        <View style={[styles.container, styles.centered, { backgroundColor: theme.backgroundRoot }]}>
-          <View style={[styles.permissionCard, { backgroundColor: theme.backgroundSecondary }]}>
-            <Feather name="camera-off" size={48} color={theme.textSecondary} />
-            <ThemedText type="h4" style={styles.permissionTitle}>
-              Camera Access Required
-            </ThemedText>
-            <ThemedText type="body" style={[styles.permissionText, { color: theme.textSecondary }]}>
-              Camera permission is needed to scan barcodes. Please enable it in Settings.
-            </ThemedText>
-            {Platform.OS !== "web" ? (
-              <Pressable
-                onPress={async () => {
-                  try {
-                    await Linking.openSettings();
-                  } catch (error) {
-                  }
-                }}
-                style={({ pressed }) => [
-                  styles.button,
-                  { backgroundColor: theme.primary, opacity: pressed ? 0.7 : 1 },
-                ]}
-              >
-                <ThemedText style={{ color: "#FFFFFF" }}>Open Settings</ThemedText>
-              </Pressable>
-            ) : null}
-            <Pressable
-              onPress={() => navigation.goBack()}
-              style={({ pressed }) => [
-                styles.button,
-                { backgroundColor: theme.backgroundTertiary, opacity: pressed ? 0.7 : 1 },
-              ]}
-            >
-              <ThemedText>Go Back</ThemedText>
-            </Pressable>
-          </View>
-        </View>
-      );
-    }
+  const permissionDenied = permission && !permission.granted && !permission.canAskAgain;
 
+  if (!permission.granted) {
     return (
       <View style={[styles.container, styles.centered, { backgroundColor: theme.backgroundRoot }]}>
         <View style={[styles.permissionCard, { backgroundColor: theme.backgroundSecondary }]}>
-          <Feather name="camera" size={48} color={theme.primary} />
+          <Feather name={permissionDenied ? "camera-off" : "camera"} size={48} color={permissionDenied ? theme.textSecondary : theme.primary} />
           <ThemedText type="h4" style={styles.permissionTitle}>
-            Camera Permission
+            {permissionDenied ? "Camera Access Required" : "Camera Permission"}
           </ThemedText>
           <ThemedText type="body" style={[styles.permissionText, { color: theme.textSecondary }]}>
-            We need camera access to scan {isQRMode ? "QR codes" : "barcodes"} and find work orders.
+            {permissionDenied 
+              ? "Camera access denied. Please enable in Settings."
+              : `We need camera access to scan ${isQRMode ? "QR codes" : "barcodes"} and find work orders.`
+            }
           </ThemedText>
-          <Pressable
-            onPress={requestPermission}
-            style={({ pressed }) => [
-              styles.button,
-              { backgroundColor: theme.primary, opacity: pressed ? 0.7 : 1 },
-            ]}
-          >
-            <ThemedText style={{ color: "#FFFFFF" }}>Enable Camera</ThemedText>
-          </Pressable>
-          <Pressable
-            onPress={() => navigation.goBack()}
-            style={({ pressed }) => [
-              styles.button,
-              { backgroundColor: theme.backgroundTertiary, opacity: pressed ? 0.7 : 1 },
-            ]}
+          {permissionDenied ? (
+            Platform.OS !== "web" ? (
+              <Button
+                onPress={async () => {
+                  try {
+                    await Linking.openSettings();
+                  } catch (error) {}
+                }}
+                style={{ backgroundColor: theme.primary }}
+              >
+                Open Settings
+              </Button>
+            ) : null
+          ) : (
+            <Button
+              onPress={requestPermission}
+              style={{ backgroundColor: theme.primary }}
+            >
+              Grant Permission
+            </Button>
+          )}
+          <Button
+            onPress={handleCancel}
+            style={{ backgroundColor: theme.backgroundTertiary }}
           >
             <ThemedText>Cancel</ThemedText>
-          </Pressable>
+          </Button>
         </View>
       </View>
     );
   }
 
   const barcodeTypes = isQRMode 
-    ? ["qr"] as const
-    : ["code128", "code39", "code93", "ean13", "ean8", "upc_a", "upc_e", "itf14", "codabar"] as const;
+    ? ["qr", "datamatrix"] as const
+    : ["code128", "code39", "ean13", "ean8", "upc_a", "upc_e", "itf14", "codabar"] as const;
+
+  if (scanResult) {
+    return (
+      <View style={[styles.container, styles.centered, { backgroundColor: theme.backgroundRoot }]}>
+        <View style={[styles.resultCard, { backgroundColor: theme.backgroundSecondary }]}>
+          <Feather 
+            name={scanResult.workOrder ? "check-circle" : "alert-circle"} 
+            size={56} 
+            color={scanResult.workOrder ? theme.success : theme.warning} 
+          />
+          
+          <ThemedText type="h4" style={styles.resultTitle}>
+            {scanResult.workOrder ? "Work Order Found" : "No Match Found"}
+          </ThemedText>
+          
+          <View style={[styles.meterIdBox, { backgroundColor: theme.backgroundTertiary }]}>
+            <ThemedText type="small" style={{ color: theme.textSecondary }}>
+              Scanned Meter ID
+            </ThemedText>
+            <ThemedText type="h3" style={{ fontWeight: "700", marginTop: Spacing.xs }}>
+              {scanResult.meterId}
+            </ThemedText>
+          </View>
+
+          {scanResult.workOrder ? (
+            <View style={styles.workOrderInfo}>
+              <View style={styles.infoRow}>
+                <ThemedText type="body" style={{ color: theme.textSecondary }}>Work Order:</ThemedText>
+                <ThemedText type="body" style={{ fontWeight: "600" }}>{scanResult.workOrder.customerWoId || `#${scanResult.workOrder.id}`}</ThemedText>
+              </View>
+              <View style={styles.infoRow}>
+                <ThemedText type="body" style={{ color: theme.textSecondary }}>Address:</ThemedText>
+                <ThemedText type="body" style={{ fontWeight: "500", flex: 1, textAlign: "right" }} numberOfLines={2}>
+                  {scanResult.workOrder.serviceAddress || "No address"}
+                </ThemedText>
+              </View>
+              <View style={styles.infoRow}>
+                <ThemedText type="body" style={{ color: theme.textSecondary }}>Status:</ThemedText>
+                <ThemedText type="body" style={{ fontWeight: "500" }}>{scanResult.workOrder.status}</ThemedText>
+              </View>
+            </View>
+          ) : (
+            <ThemedText type="body" style={[styles.noMatchText, { color: theme.textSecondary }]}>
+              No work order found with this meter ID. Please try scanning again or search manually.
+            </ThemedText>
+          )}
+
+          <View style={styles.buttonRow}>
+            {scanResult.workOrder ? (
+              <Button
+                onPress={handleConfirm}
+                style={{ backgroundColor: theme.primary, flex: 1 }}
+              >
+                <Feather name="arrow-right" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                Start Wizard
+              </Button>
+            ) : (
+              <Button
+                onPress={handleCancel}
+                style={{ backgroundColor: theme.backgroundTertiary, flex: 1 }}
+              >
+                <Feather name="x" size={18} color={theme.text} style={{ marginRight: Spacing.sm }} />
+                <ThemedText>Close</ThemedText>
+              </Button>
+            )}
+            <Button
+              onPress={handleScanAgain}
+              style={{ backgroundColor: scanResult.workOrder ? theme.backgroundTertiary : theme.primary, flex: 1, minWidth: 120 }}
+            >
+              <Feather name="refresh-cw" size={18} color={scanResult.workOrder ? theme.text : "#FFFFFF"} style={{ marginRight: Spacing.sm }} />
+              <ThemedText style={{ color: scanResult.workOrder ? theme.text : "#FFFFFF" }}>Scan Again</ThemedText>
+            </Button>
+          </View>
+          
+          {scanResult.workOrder ? (
+            <Pressable onPress={handleCancel} style={styles.cancelLink}>
+              <ThemedText type="body" style={{ color: theme.textSecondary }}>Cancel</ThemedText>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: "#000" }]}>
-      <CameraView
-        style={StyleSheet.absoluteFill}
-        facing="back"
-        barcodeScannerSettings={{
-          barcodeTypes: barcodeTypes as any,
-        }}
-        onBarcodeScanned={isScanning ? handleBarcodeScanned : undefined}
-      />
+      <View style={styles.scannerContainer}>
+        <CameraView
+          style={styles.camera}
+          facing="back"
+          barcodeScannerSettings={{
+            barcodeTypes: barcodeTypes as any,
+          }}
+          onBarcodeScanned={isScanning ? handleBarcodeScanned : undefined}
+        />
+        <View style={styles.scannerOverlay}>
+          <View style={[
+            styles.scanRegion, 
+            { 
+              borderColor: theme.primary,
+              width: isQRMode ? 200 : 280,
+              height: isQRMode ? 200 : 100,
+            }
+          ]} />
+        </View>
+      </View>
       
-      <View style={[styles.overlay, { paddingTop: insets.top }]}>
+      <View style={[styles.header, { paddingTop: insets.top + Spacing.md }]}>
         <Pressable
-          onPress={() => navigation.goBack()}
+          onPress={handleCancel}
           style={({ pressed }) => [
             styles.closeButton,
             { opacity: pressed ? 0.7 : 1 },
           ]}
         >
-          <Feather name="x" size={28} color="#FFFFFF" />
+          <Feather name="x" size={24} color="#FFFFFF" />
         </Pressable>
+        <ThemedText type="h4" style={styles.headerTitle}>
+          {isQRMode ? "Scan QR Code" : "Scan Barcode"}
+        </ThemedText>
+        <View style={{ width: 44 }} />
+      </View>
 
-        <View style={styles.scanArea}>
-          <View style={[styles.corner, styles.topLeft]} />
-          <View style={[styles.corner, styles.topRight]} />
-          <View style={[styles.corner, styles.bottomLeft]} />
-          <View style={[styles.corner, styles.bottomRight]} />
-        </View>
-
-        <View style={styles.instructions}>
-          <ThemedText type="body" style={styles.instructionText}>
-            {isQRMode ? "Position QR code within the frame" : "Position barcode within the frame"}
-          </ThemedText>
-          <ThemedText type="small" style={styles.instructionSubtext}>
-            Scanning for meter ID to find work order
-          </ThemedText>
-        </View>
+      <View style={[styles.instructions, { paddingBottom: insets.bottom + Spacing.xl }]}>
+        <ThemedText type="body" style={styles.instructionText}>
+          {isQRMode ? "Position QR code within the frame" : "Position barcode within the frame"}
+        </ThemedText>
+        <ThemedText type="small" style={styles.instructionSubtext}>
+          Scanning for meter ID to find work order
+        </ThemedText>
+        
+        <Button
+          onPress={handleCancel}
+          style={{ backgroundColor: "rgba(255, 255, 255, 0.2)", marginTop: Spacing.lg }}
+        >
+          <ThemedText style={{ color: "#FFFFFF" }}>Cancel Scan</ThemedText>
+        </Button>
       </View>
     </View>
   );
 }
-
-const CORNER_SIZE = 30;
-const CORNER_WIDTH = 4;
 
 const styles = StyleSheet.create({
   container: {
@@ -213,6 +289,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: Spacing.md,
     maxWidth: 320,
+    width: "100%",
   },
   permissionTitle: {
     textAlign: "center",
@@ -220,20 +297,45 @@ const styles = StyleSheet.create({
   permissionText: {
     textAlign: "center",
   },
-  button: {
-    width: "100%",
-    padding: Spacing.md,
+  scannerContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  camera: {
+    width: 300,
+    height: 300,
     borderRadius: BorderRadius.md,
+  },
+  scannerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
     alignItems: "center",
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "space-between",
+  scanRegion: {
+    borderWidth: 2,
+    borderRadius: BorderRadius.sm,
+    borderStyle: "dashed",
+  },
+  header: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
     alignItems: "center",
-    padding: Spacing.lg,
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.lg,
+  },
+  headerTitle: {
+    color: "#FFFFFF",
+    textAlign: "center",
   },
   closeButton: {
-    alignSelf: "flex-start",
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -241,55 +343,59 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  scanArea: {
-    width: 280,
-    height: 200,
-    position: "relative",
-  },
-  corner: {
-    position: "absolute",
-    width: CORNER_SIZE,
-    height: CORNER_SIZE,
-  },
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderTopWidth: CORNER_WIDTH,
-    borderLeftWidth: CORNER_WIDTH,
-    borderColor: "#FFFFFF",
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderTopWidth: CORNER_WIDTH,
-    borderRightWidth: CORNER_WIDTH,
-    borderColor: "#FFFFFF",
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: CORNER_WIDTH,
-    borderLeftWidth: CORNER_WIDTH,
-    borderColor: "#FFFFFF",
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: CORNER_WIDTH,
-    borderRightWidth: CORNER_WIDTH,
-    borderColor: "#FFFFFF",
-  },
   instructions: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     alignItems: "center",
-    paddingBottom: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
   },
   instructionText: {
     color: "#FFFFFF",
     textAlign: "center",
+    fontWeight: "500",
   },
   instructionSubtext: {
     color: "rgba(255, 255, 255, 0.7)",
     textAlign: "center",
     marginTop: Spacing.xs,
+  },
+  resultCard: {
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    alignItems: "center",
+    gap: Spacing.lg,
+    maxWidth: 360,
+    width: "100%",
+  },
+  resultTitle: {
+    textAlign: "center",
+  },
+  meterIdBox: {
+    width: "100%",
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    alignItems: "center",
+  },
+  workOrderInfo: {
+    width: "100%",
+    gap: Spacing.sm,
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  noMatchText: {
+    textAlign: "center",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: Spacing.md,
+    width: "100%",
+  },
+  cancelLink: {
+    paddingVertical: Spacing.sm,
   },
 });
