@@ -32,7 +32,7 @@ interface OfflineContextType {
   isSyncing: boolean;
   addPendingAction: (action: Omit<PendingAction, "id" | "timestamp">) => Promise<void>;
   removePendingAction: (id: string) => Promise<void>;
-  syncPendingActions: () => Promise<void>;
+  syncPendingActions: () => Promise<number[]>;
   clearAllPending: () => Promise<void>;
   clearSyncHistory: () => Promise<void>;
   addDirectSubmissionHistory: (entry: Omit<SyncHistoryEntry, "id" | "timestamp">) => Promise<void>;
@@ -107,8 +107,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(updatedActions));
   }, [pendingActions]);
 
-  const syncPendingActions = useCallback(async () => {
-    if (!isOnline || pendingActions.length === 0 || isSyncing || !serverUrl || !projectId) return;
+  const syncPendingActions = useCallback(async (): Promise<number[]> => {
+    if (!isOnline || pendingActions.length === 0 || isSyncing || !serverUrl || !projectId) return [];
 
     setIsSyncing(true);
     const workOrderIds = pendingActions.map(a => a.workOrderId);
@@ -153,6 +153,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       const successCount = pendingActions.length - remainingActions.length;
       const failedCount = remainingActions.length;
       
+      const syncedWorkOrderIds = pendingActions
+        .filter(action => !remainingActions.some(ra => ra.id === action.id))
+        .map(action => parseInt(action.workOrderId, 10))
+        .filter(woId => !remainingActions.some(ra => parseInt(ra.workOrderId, 10) === woId));
+      
       await addSyncHistoryEntry({
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         timestamp: Date.now(),
@@ -171,6 +176,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         setPendingActions(remainingActions);
         await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(remainingActions));
       }
+      
+      return syncedWorkOrderIds;
 
     } catch (error) {
       console.error("Sync failed:", error);
@@ -186,6 +193,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         photoCount: totalPhotoCount,
         errorMessage: error instanceof Error ? error.message : "Unknown error",
       });
+      
+      return [];
     } finally {
       setIsSyncing(false);
     }

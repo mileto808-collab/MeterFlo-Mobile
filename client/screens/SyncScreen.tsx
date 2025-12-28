@@ -18,7 +18,7 @@ export default function SyncScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const { isOnline, pendingActions, syncHistory, isSyncing, syncPendingActions, clearAllPending, clearSyncHistory } = useOffline();
-  const { lastSyncTime, isLoading, refreshWorkOrders, clearAllData, workOrders } = useWorkOrders();
+  const { lastSyncTime, isLoading, refreshWorkOrders, clearAllData, workOrders, updateWorkOrder } = useWorkOrders();
   const [isClearing, setIsClearing] = useState(false);
 
   const formatTime = (dateString: string | null) => {
@@ -76,7 +76,10 @@ export default function SyncScreen() {
   const handleSync = async () => {
     await refreshWorkOrders(true);
     if (pendingActions.length > 0) {
-      await syncPendingActions();
+      const syncedWorkOrderIds = await syncPendingActions();
+      for (const workOrderId of syncedWorkOrderIds) {
+        updateWorkOrder(workOrderId, { syncPending: false });
+      }
     }
   };
 
