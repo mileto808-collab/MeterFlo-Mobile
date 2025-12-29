@@ -223,19 +223,21 @@ export default function WorkOrdersScreen() {
         onClose={handleCloseScanConfirm}
       />
 
-      <Pressable
-        onPress={() => navigation.navigate("NewWorkOrderWizard")}
-        style={({ pressed }) => [
-          styles.fab,
-          { 
-            backgroundColor: theme.primary, 
-            opacity: pressed ? 0.8 : 1,
-            bottom: tabBarHeight + Spacing.lg,
-          },
-        ]}
-      >
-        <Feather name="plus" size={28} color="#FFFFFF" />
-      </Pressable>
+      {!isOnline ? (
+        <Pressable
+          onPress={() => navigation.navigate("NewWorkOrderWizard")}
+          style={({ pressed }) => [
+            styles.fab,
+            { 
+              backgroundColor: theme.primary, 
+              opacity: pressed ? 0.8 : 1,
+              bottom: tabBarHeight + Spacing.lg,
+            },
+          ]}
+        >
+          <Feather name="plus" size={28} color="#FFFFFF" />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
