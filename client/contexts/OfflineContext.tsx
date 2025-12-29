@@ -26,6 +26,21 @@ interface SyncHistoryEntry {
   errorMessage?: string;
 }
 
+interface SyncedOfflineWorkOrder {
+  oldMeterId: string;
+  serverWorkOrderId: number;
+  customerWoId?: string;
+  status?: string;
+  serviceAddress?: string;
+  oldGps?: string;
+  newGps?: string;
+}
+
+interface SyncResult {
+  syncedWorkOrderIds: number[];
+  syncedOfflineWorkOrders: SyncedOfflineWorkOrder[];
+}
+
 interface OfflineContextType {
   isOnline: boolean;
   pendingActions: PendingAction[];
@@ -33,7 +48,7 @@ interface OfflineContextType {
   isSyncing: boolean;
   addPendingAction: (action: Omit<PendingAction, "id" | "timestamp">) => Promise<void>;
   removePendingAction: (id: string) => Promise<void>;
-  syncPendingActions: () => Promise<number[]>;
+  syncPendingActions: () => Promise<SyncResult>;
   clearAllPending: () => Promise<void>;
   clearSyncHistory: () => Promise<void>;
   addDirectSubmissionHistory: (entry: Omit<SyncHistoryEntry, "id" | "timestamp">) => Promise<void>;
@@ -165,8 +180,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(updatedActions));
   }, [pendingActions]);
 
-  const syncPendingActions = useCallback(async (): Promise<number[]> => {
-    if (!isOnline || pendingActions.length === 0 || isSyncing || !serverUrl || !projectId) return [];
+  const syncPendingActions = useCallback(async (): Promise<SyncResult> => {
+    if (!isOnline || pendingActions.length === 0 || isSyncing || !serverUrl || !projectId) {
+      return { syncedWorkOrderIds: [], syncedOfflineWorkOrders: [] };
+    }
 
     setIsSyncing(true);
     const workOrderIds = pendingActions.map(a => a.workOrderId);
@@ -176,6 +193,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     const successfulActionIds: string[] = [];
     const failedActionIds: string[] = [];
     const offlineToServerIdMap: Map<string, number> = new Map();
+    const syncedOfflineWorkOrders: SyncedOfflineWorkOrder[] = [];
     let lastError: string | undefined;
     
     try {
@@ -280,6 +298,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               oldMeterReading: offlineData.oldMeterReading,
               newMeterId: offlineData.newMeterId,
               newMeterReading: offlineData.newMeterReading,
+              oldGps: offlineData.oldGps || null,
               gpsCoordinates: offlineData.newGps || null,
               signatureData: offlineData.signatureData || null,
               signatureName: offlineData.signatureName,
@@ -305,9 +324,28 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               throw new Error(errorText || `Failed to complete work order ${serverWorkOrderId}`);
             }
             
+            let serverResponseData: any = null;
+            try {
+              serverResponseData = await completeResponse.json();
+              console.log(`[syncPendingActions] Server response for WO ${serverWorkOrderId}:`, JSON.stringify(serverResponseData).substring(0, 200));
+            } catch (e) {
+              console.log(`[syncPendingActions] No JSON response from completion endpoint`);
+            }
+            
             console.log(`[syncPendingActions] Successfully synced offline work order for meter ${offlineData.oldMeterId} to server WO ${serverWorkOrderId}`);
             successfulActionIds.push(action.id);
             offlineToServerIdMap.set(action.id, serverWorkOrderId);
+            
+            const serverWo = serverResponseData?.workOrder || serverResponseData;
+            syncedOfflineWorkOrders.push({
+              oldMeterId: offlineData.oldMeterId,
+              serverWorkOrderId: serverWo?.id || serverWorkOrderId,
+              customerWoId: serverWo?.customer_wo_id || serverWo?.customerWoId || eligibleWorkOrder.customer_wo_id || eligibleWorkOrder.customerWoId,
+              status: serverWo?.status || "Completed",
+              serviceAddress: serverWo?.service_address || serverWo?.serviceAddress || eligibleWorkOrder.service_address || eligibleWorkOrder.serviceAddress,
+              oldGps: serverWo?.old_gps || serverWo?.oldGps || offlineData.oldGps,
+              newGps: serverWo?.new_gps || serverWo?.newGps || offlineData.newGps,
+            });
             
           } else if (action.type === "claim") {
             const claimEndpoint = `${serverUrl}/api/projects/${projectId}/work-orders/${action.workOrderId}/claim`;
@@ -391,7 +429,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(remainingActions));
       }
       
-      return syncedWorkOrderIds;
+      return { syncedWorkOrderIds, syncedOfflineWorkOrders };
 
     } catch (error) {
       console.error("Sync failed:", error);
@@ -408,7 +446,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         errorMessage: error instanceof Error ? error.message : "Unknown error",
       });
       
-      return [];
+      return { syncedWorkOrderIds: [], syncedOfflineWorkOrders: [] };
     } finally {
       setIsSyncing(false);
     }

@@ -339,6 +339,14 @@ interface WorkOrderContextType {
   clearAllData: () => Promise<void>;
   addOfflineWorkOrder: (data: OfflineWorkOrderData) => Promise<void>;
   removeOfflineWorkOrder: (oldMeterId: string) => Promise<void>;
+  transformOfflineToServerWorkOrder: (oldMeterId: string, serverData: {
+    id: number;
+    customerWoId?: string;
+    status?: string;
+    serviceAddress?: string;
+    oldGps?: string;
+    newGps?: string;
+  }) => Promise<void>;
 }
 
 const WorkOrderContext = createContext<WorkOrderContextType | undefined>(undefined);
@@ -781,6 +789,40 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const transformOfflineToServerWorkOrder = useCallback(async (oldMeterId: string, serverData: {
+    id: number;
+    customerWoId?: string;
+    status?: string;
+    serviceAddress?: string;
+    oldGps?: string;
+    newGps?: string;
+  }) => {
+    console.log("[transformOfflineToServerWorkOrder] Transforming offline WO for meter:", oldMeterId, "to server ID:", serverData.id);
+    const offlineCustomerWoId = `OFFLINE-${oldMeterId}`;
+    
+    setWorkOrdersState(prev => {
+      const updated = prev.map(wo => {
+        if (wo.customerWoId === offlineCustomerWoId) {
+          console.log("[transformOfflineToServerWorkOrder] Found offline WO, updating with server data");
+          return {
+            ...wo,
+            id: serverData.id,
+            customerWoId: serverData.customerWoId || wo.customerWoId,
+            status: serverData.status || wo.status,
+            serviceAddress: serverData.serviceAddress || wo.serviceAddress,
+            oldGps: serverData.oldGps || wo.oldGps,
+            newGps: serverData.newGps || wo.newGps,
+            syncPending: false,
+            localUpdatedAt: new Date().toISOString(),
+          };
+        }
+        return wo;
+      });
+      AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   const setWorkOrders = useCallback((orders: WorkOrder[]) => {
     setWorkOrdersState(orders);
     AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(orders));
@@ -911,6 +953,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         clearAllData,
         addOfflineWorkOrder,
         removeOfflineWorkOrder,
+        transformOfflineToServerWorkOrder,
       }}
     >
       {children}
