@@ -34,6 +34,7 @@ Preferred communication style: Simple, everyday language.
   - `POST /api/mobile/workorders/{id}/trouble` - Submit a trouble code with photos (mobile-specific)
   - `POST /api/projects/{projectId}/work-orders/{id}/claim` - Claim a work order
   - `GET /api/projects/{projectId}/work-orders/{id}` - Fetch single work order
+  - `GET /api/projects/{projectId}/work-orders/search?meterId=xxx` - Search work orders by meter ID (requires server support)
 
 ### Data Storage Solutions
 - **Secure Storage**: Expo SecureStore for authentication tokens and credentials (encrypted on-device)

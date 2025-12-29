@@ -9,6 +9,7 @@ import * as Haptics from "expo-haptics";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders, WorkOrder } from "@/contexts/WorkOrderContext";
+import { useOffline } from "@/contexts/OfflineContext";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -20,12 +21,15 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 type Phase = "scanning" | "confirming";
 
+type MatchSource = "local" | "server";
+
 export default function TapToCaptureScanScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { workOrders } = useWorkOrders();
+  const { workOrders, searchWorkOrdersByMeterIdOnServer, claimWorkOrder, fetchSingleWorkOrder } = useWorkOrders();
+  const { isOnline } = useOffline();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const scanType = route.params.scanType;
@@ -35,6 +39,10 @@ export default function TapToCaptureScanScreen() {
   const [detectedValue, setDetectedValue] = useState<string | null>(null);
   const [matchedWorkOrders, setMatchedWorkOrders] = useState<WorkOrder[]>([]);
   const [selectedWorkOrderIndex, setSelectedWorkOrderIndex] = useState(0);
+  const [matchSource, setMatchSource] = useState<MatchSource>("local");
+  const [isSearchingServer, setIsSearchingServer] = useState(false);
+  const [serverSearchError, setServerSearchError] = useState<string | null>(null);
+  const [isClaimingWorkOrder, setIsClaimingWorkOrder] = useState(false);
   
   const matchedWorkOrder = matchedWorkOrders.length > 0 ? matchedWorkOrders[selectedWorkOrderIndex] : null;
   const hasMultipleMatches = matchedWorkOrders.length > 1;
@@ -66,7 +74,7 @@ export default function TapToCaptureScanScreen() {
     }
   }, [detectedValue]);
 
-  const handleCapture = useCallback(() => {
+  const handleCapture = useCallback(async () => {
     if (!detectedValue) return;
     
     if (Platform.OS !== "web") {
@@ -74,16 +82,57 @@ export default function TapToCaptureScanScreen() {
     }
     
     const normalizedValue = detectedValue.trim().toUpperCase();
+    
+    // First, search locally
     const foundWorkOrders = workOrders.filter(wo => {
       const oldMeterId = (wo.oldMeterId || "").trim().toUpperCase();
       const newMeterId = (wo.newMeterId || "").trim().toUpperCase();
       return oldMeterId === normalizedValue || newMeterId === normalizedValue;
     });
     
-    setMatchedWorkOrders(foundWorkOrders);
-    setSelectedWorkOrderIndex(0);
-    setPhase("confirming");
-  }, [detectedValue, workOrders]);
+    if (foundWorkOrders.length > 0) {
+      // Found locally
+      setMatchedWorkOrders(foundWorkOrders);
+      setSelectedWorkOrderIndex(0);
+      setMatchSource("local");
+      setServerSearchError(null);
+      setPhase("confirming");
+      return;
+    }
+    
+    // No local match - search server if online
+    if (isOnline) {
+      setIsSearchingServer(true);
+      setServerSearchError(null);
+      setPhase("confirming");
+      
+      try {
+        const serverResults = await searchWorkOrdersByMeterIdOnServer(normalizedValue);
+        
+        // Filter out Completed and Closed work orders
+        const eligibleWorkOrders = serverResults.filter(wo => {
+          const status = wo.status?.toLowerCase();
+          return status !== "completed" && status !== "closed";
+        });
+        
+        setMatchedWorkOrders(eligibleWorkOrders);
+        setSelectedWorkOrderIndex(0);
+        setMatchSource("server");
+      } catch (error) {
+        console.error("[TapToCaptureScan] Server search failed:", error);
+        setServerSearchError(error instanceof Error ? error.message : "Server search failed");
+        setMatchedWorkOrders([]);
+      } finally {
+        setIsSearchingServer(false);
+      }
+    } else {
+      // Offline and no local match
+      setMatchedWorkOrders([]);
+      setMatchSource("local");
+      setServerSearchError(null);
+      setPhase("confirming");
+    }
+  }, [detectedValue, workOrders, isOnline, searchWorkOrdersByMeterIdOnServer]);
 
   const handleClear = useCallback(() => {
     setDetectedValue(null);
@@ -97,6 +146,10 @@ export default function TapToCaptureScanScreen() {
     setDetectedValue(null);
     setMatchedWorkOrders([]);
     setSelectedWorkOrderIndex(0);
+    setMatchSource("local");
+    setServerSearchError(null);
+    setIsSearchingServer(false);
+    setIsClaimingWorkOrder(false);
     setPhase("scanning");
   }, []);
   
@@ -124,6 +177,40 @@ export default function TapToCaptureScanScreen() {
     }
   }, [matchedWorkOrder, navigation]);
 
+  const handleClaimAndStart = useCallback(async () => {
+    if (!matchedWorkOrder) return;
+    
+    setIsClaimingWorkOrder(true);
+    try {
+      // Claim the work order
+      await claimWorkOrder(matchedWorkOrder.id);
+      
+      // Fetch the full work order data to ensure we have latest
+      const fullWorkOrder = await fetchSingleWorkOrder(matchedWorkOrder.id);
+      
+      if (fullWorkOrder) {
+        if (Platform.OS !== "web") {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        navigation.replace("WorkflowWizard", { workOrder: fullWorkOrder });
+      } else {
+        // Fallback to the existing work order if fetch failed
+        navigation.replace("WorkflowWizard", { workOrder: matchedWorkOrder });
+      }
+    } catch (error) {
+      console.error("[TapToCaptureScan] Failed to claim work order:", error);
+      const message = error instanceof Error ? error.message : "Failed to claim work order";
+      if (Platform.OS === "web") {
+        alert(message);
+      } else {
+        const { Alert } = require("react-native");
+        Alert.alert("Error", message);
+      }
+    } finally {
+      setIsClaimingWorkOrder(false);
+    }
+  }, [matchedWorkOrder, claimWorkOrder, fetchSingleWorkOrder, navigation]);
+
   if (phase === "confirming") {
     return (
       <ThemedView style={styles.container}>
@@ -143,21 +230,48 @@ export default function TapToCaptureScanScreen() {
 
         <View style={styles.content}>
           <View style={[styles.resultCard, { backgroundColor: theme.backgroundSecondary }]}>
-            <View style={styles.iconContainer}>
-              <Feather 
-                name={matchedWorkOrder ? "check-circle" : "alert-circle"} 
-                size={56} 
-                color={matchedWorkOrder ? theme.success : theme.warning} 
-              />
-            </View>
+            {isSearchingServer ? (
+              <>
+                <View style={styles.iconContainer}>
+                  <ActivityIndicator size="large" color={theme.primary} />
+                </View>
+                <ThemedText type="h3" style={styles.resultTitle}>
+                  Searching Server...
+                </ThemedText>
+                <ThemedText type="body" style={[styles.noMatchText, { color: theme.textSecondary }]}>
+                  Looking for work orders with this meter ID on the server.
+                </ThemedText>
+              </>
+            ) : (
+              <>
+                <View style={styles.iconContainer}>
+                  <Feather 
+                    name={matchedWorkOrder ? "check-circle" : "alert-circle"} 
+                    size={56} 
+                    color={matchedWorkOrder ? theme.success : theme.warning} 
+                  />
+                </View>
 
-            <ThemedText type="h3" style={styles.resultTitle}>
-              {matchedWorkOrder 
-                ? hasMultipleMatches 
-                  ? `${matchedWorkOrders.length} Work Orders Found` 
-                  : "Work Order Found" 
-                : "No Match Found"}
-            </ThemedText>
+                <ThemedText type="h3" style={styles.resultTitle}>
+                  {matchedWorkOrder 
+                    ? hasMultipleMatches 
+                      ? `${matchedWorkOrders.length} Work Orders Found` 
+                      : matchSource === "server" 
+                        ? "Work Order Found on Server"
+                        : "Work Order Found" 
+                    : serverSearchError
+                      ? "Search Failed"
+                      : "No Match Found"}
+                </ThemedText>
+                
+                {matchSource === "server" && matchedWorkOrder ? (
+                  <View style={[styles.serverBadge, { backgroundColor: theme.primary + "20" }]}>
+                    <Feather name="cloud" size={14} color={theme.primary} />
+                    <ThemedText type="small" style={{ color: theme.primary, marginLeft: Spacing.xs }}>
+                      From Server - Requires Claim
+                    </ThemedText>
+                  </View>
+                ) : null}
             
             {hasMultipleMatches ? (
               <View style={styles.multipleMatchNav}>
@@ -239,35 +353,67 @@ export default function TapToCaptureScanScreen() {
                   </ThemedText>
                 </View>
               </View>
+            ) : serverSearchError ? (
+              <ThemedText type="body" style={[styles.noMatchText, { color: theme.error || theme.warning }]}>
+                {serverSearchError}
+              </ThemedText>
             ) : (
               <ThemedText type="body" style={[styles.noMatchText, { color: theme.textSecondary }]}>
-                No work order found with this meter ID. Try scanning again or search manually.
+                {isOnline 
+                  ? "No work order found with this meter ID on the server."
+                  : "No work order found locally. Go online to search the server."}
               </ThemedText>
+            )}
+              </>
             )}
           </View>
 
-          <View style={styles.buttonContainer}>
+          {!isSearchingServer ? (
+            <View style={styles.buttonContainer}>
             {matchedWorkOrder ? (
               <>
-                <Button
-                  onPress={handleProceedToWizard}
-                  style={{ backgroundColor: theme.primary }}
-                >
-                  <Feather name="arrow-right" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
-                  <ThemedText style={{ color: "#FFFFFF", fontWeight: "600" }}>Start Wizard</ThemedText>
-                </Button>
+                {matchSource === "server" ? (
+                  <Button
+                    onPress={handleClaimAndStart}
+                    disabled={isClaimingWorkOrder}
+                    style={{ backgroundColor: theme.primary, opacity: isClaimingWorkOrder ? 0.7 : 1 }}
+                  >
+                    {isClaimingWorkOrder ? (
+                      <>
+                        <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                        <ThemedText style={{ color: "#FFFFFF", fontWeight: "600" }}>Claiming...</ThemedText>
+                      </>
+                    ) : (
+                      <>
+                        <Feather name="download" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                        <ThemedText style={{ color: "#FFFFFF", fontWeight: "600" }}>Claim & Start</ThemedText>
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    onPress={handleProceedToWizard}
+                    style={{ backgroundColor: theme.primary }}
+                  >
+                    <Feather name="arrow-right" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                    <ThemedText style={{ color: "#FFFFFF", fontWeight: "600" }}>Start Wizard</ThemedText>
+                  </Button>
+                )}
                 
                 <View style={styles.secondaryButtons}>
-                  <Button
-                    onPress={handleViewDetails}
-                    style={{ backgroundColor: theme.backgroundSecondary, flex: 1 }}
-                  >
-                    <ThemedText>View Details</ThemedText>
-                  </Button>
+                  {matchSource === "local" ? (
+                    <Button
+                      onPress={handleViewDetails}
+                      style={{ backgroundColor: theme.backgroundSecondary, flex: 1 }}
+                    >
+                      <ThemedText>View Details</ThemedText>
+                    </Button>
+                  ) : null}
                   
                   <Button
                     onPress={handleScanAgain}
-                    style={{ backgroundColor: theme.backgroundSecondary, flex: 1 }}
+                    disabled={isClaimingWorkOrder}
+                    style={{ backgroundColor: theme.backgroundSecondary, flex: matchSource === "local" ? 1 : undefined }}
                   >
                     <Feather name="refresh-cw" size={18} color={theme.text} style={{ marginRight: Spacing.sm }} />
                     <ThemedText>Scan Again</ThemedText>
@@ -293,6 +439,7 @@ export default function TapToCaptureScanScreen() {
               </>
             )}
           </View>
+          ) : null}
         </View>
       </ThemedView>
     );
@@ -620,5 +767,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
+  },
+  serverBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+    marginBottom: Spacing.md,
   },
 });
