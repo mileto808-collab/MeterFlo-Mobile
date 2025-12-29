@@ -338,6 +338,7 @@ interface WorkOrderContextType {
   searchWorkOrdersByMeterIdOnServer: (meterId: string) => Promise<WorkOrder[]>;
   clearAllData: () => Promise<void>;
   addOfflineWorkOrder: (data: OfflineWorkOrderData) => Promise<void>;
+  removeOfflineWorkOrder: (oldMeterId: string) => Promise<void>;
 }
 
 const WorkOrderContext = createContext<WorkOrderContextType | undefined>(undefined);
@@ -766,6 +767,20 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     console.log("[addOfflineWorkOrder] Work order added successfully");
   }, []);
 
+  const removeOfflineWorkOrder = useCallback(async (oldMeterId: string) => {
+    console.log("[removeOfflineWorkOrder] Removing offline work order for meter:", oldMeterId);
+    const customerWoId = `OFFLINE-${oldMeterId}`;
+    
+    setWorkOrdersState(prev => {
+      const updated = prev.filter(wo => wo.customerWoId !== customerWoId);
+      if (updated.length !== prev.length) {
+        console.log("[removeOfflineWorkOrder] Removed offline work order:", customerWoId);
+        AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
+      }
+      return updated;
+    });
+  }, []);
+
   const setWorkOrders = useCallback((orders: WorkOrder[]) => {
     setWorkOrdersState(orders);
     AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(orders));
@@ -895,6 +910,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         searchWorkOrdersByMeterIdOnServer,
         clearAllData,
         addOfflineWorkOrder,
+        removeOfflineWorkOrder,
       }}
     >
       {children}

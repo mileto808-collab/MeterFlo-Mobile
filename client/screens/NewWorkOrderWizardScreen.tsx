@@ -33,7 +33,6 @@ type WizardStep =
   | "newMeterId"
   | "newReading"
   | "afterPhotos"
-  | "newGps"
   | "signature"
   | "notes"
   | "confirm";
@@ -66,7 +65,6 @@ const STEPS: WizardStep[] = [
   "newMeterId",
   "newReading",
   "afterPhotos",
-  "newGps",
   "signature",
   "notes",
   "confirm",
@@ -75,13 +73,12 @@ const STEPS: WizardStep[] = [
 const STEP_TITLES: Record<WizardStep, string> = {
   oldMeterId: "Old Meter ID",
   oldReading: "Old Meter Final Reading",
-  oldGps: "Old Meter GPS",
+  oldGps: "Meter Location GPS",
   beforePhotos: "Before Photos",
   physicalChange: "Perform Physical Changeout",
   newMeterId: "New Meter ID",
   newReading: "New Meter Reading",
   afterPhotos: "After Photos",
-  newGps: "New Meter GPS",
   signature: "Signature",
   notes: "Notes",
   confirm: "Confirm & Submit",
@@ -269,7 +266,7 @@ export default function NewWorkOrderWizardScreen() {
     setDetectedBarcode(null);
   };
 
-  const captureGps = async (target: "old" | "new") => {
+  const captureGps = async () => {
     setIsCapturingGps(true);
     try {
       const permResult = await Location.requestForegroundPermissionsAsync();
@@ -299,11 +296,7 @@ export default function NewWorkOrderWizardScreen() {
 
       const coords = `${location.coords.latitude.toFixed(6)},${location.coords.longitude.toFixed(6)}`;
       
-      if (target === "old") {
-        setFormData(prev => ({ ...prev, oldGps: coords }));
-      } else {
-        setFormData(prev => ({ ...prev, newGps: coords }));
-      }
+      setFormData(prev => ({ ...prev, oldGps: coords, newGps: coords }));
       
       if (Platform.OS !== "web") {
         Alert.alert(
@@ -338,8 +331,6 @@ export default function NewWorkOrderWizardScreen() {
         return formData.newMeterReading.trim().length > 0;
       case "afterPhotos":
         return formData.afterPhotos.length >= 1;
-      case "newGps":
-        return formData.newGps.trim().length > 0;
       case "signature": 
         return formData.signatureName.trim().length > 0;
       case "notes":
@@ -713,11 +704,11 @@ export default function NewWorkOrderWizardScreen() {
               <Feather name="map-pin" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Capture GPS coordinates of the old meter location
+              Capture GPS coordinates of the meter location
             </ThemedText>
             
             <Button
-              onPress={() => captureGps("old")}
+              onPress={() => captureGps()}
               style={{ backgroundColor: theme.primary, marginBottom: Spacing.md }}
               disabled={isCapturingGps}
             >
@@ -743,7 +734,7 @@ export default function NewWorkOrderWizardScreen() {
             </ThemedText>
             <TextInput
               value={formData.oldGps}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, oldGps: text }))}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, oldGps: text, newGps: text }))}
               placeholder="e.g., 37.7749,-122.4194"
             />
           </View>
@@ -854,49 +845,6 @@ export default function NewWorkOrderWizardScreen() {
           </View>
         );
 
-      case "newGps":
-        return (
-          <View>
-            <View style={styles.iconHeader}>
-              <Feather name="map-pin" size={48} color={theme.primary} />
-            </View>
-            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Capture GPS coordinates of the new meter location
-            </ThemedText>
-            
-            <Button
-              onPress={() => captureGps("new")}
-              style={{ backgroundColor: theme.primary, marginBottom: Spacing.md }}
-              disabled={isCapturingGps}
-            >
-              {isCapturingGps ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <Feather name="navigation" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
-                  Get Current Location
-                </>
-              )}
-            </Button>
-            
-            {formData.newGps ? (
-              <View style={[styles.gpsResult, { backgroundColor: theme.backgroundSecondary }]}>
-                <Feather name="check-circle" size={20} color={theme.success} />
-                <ThemedText type="body" style={{ marginLeft: Spacing.sm }}>{formData.newGps}</ThemedText>
-              </View>
-            ) : null}
-            
-            <ThemedText type="caption" style={{ color: theme.textSecondary, marginTop: Spacing.lg, marginBottom: Spacing.sm }}>
-              Or enter manually (lat,lng)
-            </ThemedText>
-            <TextInput
-              value={formData.newGps}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, newGps: text }))}
-              placeholder="e.g., 37.7749,-122.4194"
-            />
-          </View>
-        );
-
       case "signature":
         return (
           <View>
@@ -965,7 +913,7 @@ export default function NewWorkOrderWizardScreen() {
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Feather name="map-pin" size={20} color={theme.primary} />
-                <ThemedText type="body" numberOfLines={1}>Old GPS: {formData.oldGps}</ThemedText>
+                <ThemedText type="body" numberOfLines={1}>GPS Location: {formData.oldGps}</ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Feather name="camera" size={20} color={theme.primary} />
@@ -982,10 +930,6 @@ export default function NewWorkOrderWizardScreen() {
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Feather name="camera" size={20} color={theme.primary} />
                 <ThemedText type="body">{formData.afterPhotos.length} After Photo(s)</ThemedText>
-              </View>
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Feather name="map-pin" size={20} color={theme.primary} />
-                <ThemedText type="body" numberOfLines={1}>New GPS: {formData.newGps}</ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Feather name="user" size={20} color={theme.primary} />

@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export function AutoSyncManager() {
   const { isOnline, pendingActions, isSyncing, syncPendingActions } = useOffline();
-  const { updateWorkOrder } = useWorkOrders();
+  const { updateWorkOrder, removeOfflineWorkOrder, refreshWorkOrders } = useWorkOrders();
   const { serverUrl, projectId } = useAuth();
   const wasOfflineRef = useRef(false);
   const autoSyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -23,6 +23,11 @@ export function AutoSyncManager() {
         clearTimeout(autoSyncTimeoutRef.current);
       }
       
+      const offlineWorkOrderMeterIds = pendingActions
+        .filter(a => a.type === "offlineWorkOrder")
+        .map(a => a.data?.oldMeterId)
+        .filter(Boolean) as string[];
+      
       autoSyncTimeoutRef.current = setTimeout(async () => {
         wasOfflineRef.current = false;
         
@@ -33,6 +38,14 @@ export function AutoSyncManager() {
             for (const workOrderId of syncedWorkOrderIds) {
               updateWorkOrder(workOrderId, { syncPending: false });
             }
+          }
+          
+          if (offlineWorkOrderMeterIds.length > 0) {
+            console.log("[AutoSyncManager] Removing synced offline work orders:", offlineWorkOrderMeterIds);
+            for (const oldMeterId of offlineWorkOrderMeterIds) {
+              await removeOfflineWorkOrder(oldMeterId);
+            }
+            await refreshWorkOrders(true);
           }
         } catch (err) {
           console.error("[AutoSyncManager] Auto-sync failed, will retry on next trigger:", err);
@@ -46,7 +59,7 @@ export function AutoSyncManager() {
         clearTimeout(autoSyncTimeoutRef.current);
       }
     };
-  }, [isOnline, pendingActions.length, isSyncing, serverUrl, projectId, syncPendingActions, updateWorkOrder]);
+  }, [isOnline, pendingActions.length, isSyncing, serverUrl, projectId, syncPendingActions, updateWorkOrder, removeOfflineWorkOrder, refreshWorkOrders]);
 
   return null;
 }

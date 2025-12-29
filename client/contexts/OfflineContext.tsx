@@ -175,6 +175,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     
     const successfulActionIds: string[] = [];
     const failedActionIds: string[] = [];
+    const offlineToServerIdMap: Map<string, number> = new Map();
     let lastError: string | undefined;
     
     try {
@@ -306,6 +307,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             console.log(`[syncPendingActions] Successfully synced offline work order for meter ${offlineData.oldMeterId} to server WO ${serverWorkOrderId}`);
             successfulActionIds.push(action.id);
+            offlineToServerIdMap.set(action.id, serverWorkOrderId);
             
           } else if (action.type === "claim") {
             const claimEndpoint = `${serverUrl}/api/projects/${projectId}/work-orders/${action.workOrderId}/claim`;
@@ -361,8 +363,13 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       
       const syncedWorkOrderIds = pendingActions
         .filter(action => successfulActionIds.includes(action.id))
-        .map(action => parseInt(action.workOrderId, 10))
-        .filter(woId => !remainingActions.some(ra => parseInt(ra.workOrderId, 10) === woId));
+        .map(action => {
+          if (action.type === "offlineWorkOrder" && offlineToServerIdMap.has(action.id)) {
+            return offlineToServerIdMap.get(action.id)!;
+          }
+          return parseInt(action.workOrderId, 10);
+        })
+        .filter(woId => !isNaN(woId) && !remainingActions.some(ra => parseInt(ra.workOrderId, 10) === woId));
       
       await addSyncHistoryEntry({
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
