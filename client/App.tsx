@@ -24,7 +24,7 @@ export default function App() {
     async function loadFonts() {
       try {
         await Font.loadAsync({
-          feather: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf"),
+          Feather: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf"),
         });
         setFontsLoaded(true);
       } catch (error) {
