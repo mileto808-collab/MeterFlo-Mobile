@@ -209,35 +209,49 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             successfulActionIds.push(action.id);
           } else if (action.type === "offlineWorkOrder") {
             const offlineData = action.data;
-            console.log(`[syncPendingActions] Syncing offline work order for old meter: ${offlineData.oldMeterId}`);
+            console.log(`[syncPendingActions] Syncing offline work order for old meter: ${offlineData.oldMeterId}, new meter: ${offlineData.newMeterId}`);
             
-            const searchResponse = await fetch(
-              `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(offlineData.oldMeterId)}`,
-              {
-                method: "GET",
-                credentials: "include",
-              }
-            );
+            let eligibleWorkOrder: any = null;
             
-            if (!searchResponse.ok) {
-              if (searchResponse.status === 404) {
-                console.log(`[syncPendingActions] No server work order found for meter ${offlineData.oldMeterId}, keeping in queue for retry`);
-                continue;
-              }
-              const errorText = await searchResponse.text();
-              throw new Error(errorText || `Failed to search for work order with meter ID ${offlineData.oldMeterId}`);
-            }
+            const searchByOldMeter = async () => {
+              const response = await fetch(
+                `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(offlineData.oldMeterId)}`,
+                { method: "GET", credentials: "include" }
+              );
+              if (!response.ok) return [];
+              const data = await response.json();
+              return data.workOrders || data || [];
+            };
             
-            const searchData = await searchResponse.json();
-            const serverWorkOrders = searchData.workOrders || searchData || [];
+            const searchByNewMeter = async () => {
+              if (!offlineData.newMeterId) return [];
+              const response = await fetch(
+                `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(offlineData.newMeterId)}`,
+                { method: "GET", credentials: "include" }
+              );
+              if (!response.ok) return [];
+              const data = await response.json();
+              return data.workOrders || data || [];
+            };
             
-            const eligibleWorkOrder = serverWorkOrders.find((wo: any) => {
-              const status = (wo.status || "").toLowerCase();
-              return status !== "completed" && status !== "closed";
-            });
+            const findEligible = (workOrders: any[]) => {
+              return workOrders.find((wo: any) => {
+                const status = (wo.status || "").toLowerCase();
+                return status !== "completed" && status !== "closed";
+              });
+            };
+            
+            const oldMeterResults = await searchByOldMeter();
+            eligibleWorkOrder = findEligible(oldMeterResults);
             
             if (!eligibleWorkOrder) {
-              console.log(`[syncPendingActions] No eligible work order found for meter ${offlineData.oldMeterId}, keeping in queue for retry`);
+              console.log(`[syncPendingActions] No match by old meter ID, searching by new meter ID: ${offlineData.newMeterId}`);
+              const newMeterResults = await searchByNewMeter();
+              eligibleWorkOrder = findEligible(newMeterResults);
+            }
+            
+            if (!eligibleWorkOrder) {
+              console.log(`[syncPendingActions] No eligible work order found for old meter ${offlineData.oldMeterId} or new meter ${offlineData.newMeterId}, keeping in queue for retry`);
               continue;
             }
             
