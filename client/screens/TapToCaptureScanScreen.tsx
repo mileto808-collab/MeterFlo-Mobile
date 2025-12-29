@@ -43,6 +43,7 @@ export default function TapToCaptureScanScreen() {
   const [isSearchingServer, setIsSearchingServer] = useState(false);
   const [serverSearchError, setServerSearchError] = useState<string | null>(null);
   const [isClaimingWorkOrder, setIsClaimingWorkOrder] = useState(false);
+  const [unavailableWorkOrders, setUnavailableWorkOrders] = useState<WorkOrder[]>([]);
   
   const matchedWorkOrder = matchedWorkOrders.length > 0 ? matchedWorkOrders[selectedWorkOrderIndex] : null;
   const hasMultipleMatches = matchedWorkOrders.length > 1;
@@ -96,6 +97,7 @@ export default function TapToCaptureScanScreen() {
       setSelectedWorkOrderIndex(0);
       setMatchSource("local");
       setServerSearchError(null);
+      setUnavailableWorkOrders([]);
       setPhase("confirming");
       return;
     }
@@ -109,19 +111,28 @@ export default function TapToCaptureScanScreen() {
       try {
         const serverResults = await searchWorkOrdersByMeterIdOnServer(normalizedValue);
         
-        // Filter out Completed and Closed work orders
-        const eligibleWorkOrders = serverResults.filter(wo => {
+        // Split into eligible and unavailable (Completed/Closed) work orders
+        const eligibleWorkOrders: WorkOrder[] = [];
+        const unavailable: WorkOrder[] = [];
+        
+        serverResults.forEach(wo => {
           const status = wo.status?.toLowerCase();
-          return status !== "completed" && status !== "closed";
+          if (status === "completed" || status === "closed") {
+            unavailable.push(wo);
+          } else {
+            eligibleWorkOrders.push(wo);
+          }
         });
         
         setMatchedWorkOrders(eligibleWorkOrders);
+        setUnavailableWorkOrders(unavailable);
         setSelectedWorkOrderIndex(0);
         setMatchSource("server");
       } catch (error) {
         console.error("[TapToCaptureScan] Server search failed:", error);
         setServerSearchError(error instanceof Error ? error.message : "Server search failed");
         setMatchedWorkOrders([]);
+        setUnavailableWorkOrders([]);
       } finally {
         setIsSearchingServer(false);
       }
@@ -130,6 +141,7 @@ export default function TapToCaptureScanScreen() {
       setMatchedWorkOrders([]);
       setMatchSource("local");
       setServerSearchError(null);
+      setUnavailableWorkOrders([]);
       setPhase("confirming");
     }
   }, [detectedValue, workOrders, isOnline, searchWorkOrdersByMeterIdOnServer]);
@@ -150,6 +162,7 @@ export default function TapToCaptureScanScreen() {
     setServerSearchError(null);
     setIsSearchingServer(false);
     setIsClaimingWorkOrder(false);
+    setUnavailableWorkOrders([]);
     setPhase("scanning");
   }, []);
   
@@ -246,9 +259,9 @@ export default function TapToCaptureScanScreen() {
               <>
                 <View style={styles.iconContainer}>
                   <Feather 
-                    name={matchedWorkOrder ? "check-circle" : "alert-circle"} 
+                    name={matchedWorkOrder ? "check-circle" : unavailableWorkOrders.length > 0 ? "lock" : "alert-circle"} 
                     size={56} 
-                    color={matchedWorkOrder ? theme.success : theme.warning} 
+                    color={matchedWorkOrder ? theme.success : unavailableWorkOrders.length > 0 ? theme.textSecondary : theme.warning} 
                   />
                 </View>
 
@@ -261,7 +274,11 @@ export default function TapToCaptureScanScreen() {
                         : "Work Order Found" 
                     : serverSearchError
                       ? "Search Failed"
-                      : "No Match Found"}
+                      : unavailableWorkOrders.length > 0
+                        ? unavailableWorkOrders.length === 1 
+                          ? "Work Order Already Processed"
+                          : `${unavailableWorkOrders.length} Work Orders Already Processed`
+                        : "No Match Found"}
                 </ThemedText>
                 
                 {matchSource === "server" && matchedWorkOrder ? (
@@ -357,6 +374,35 @@ export default function TapToCaptureScanScreen() {
               <ThemedText type="body" style={[styles.noMatchText, { color: theme.error || theme.warning }]}>
                 {serverSearchError}
               </ThemedText>
+            ) : unavailableWorkOrders.length > 0 ? (
+              <View style={styles.workOrderDetails}>
+                <ThemedText type="body" style={[styles.noMatchText, { color: theme.textSecondary, marginBottom: Spacing.md }]}>
+                  {unavailableWorkOrders.length === 1 
+                    ? "This meter ID belongs to a work order that has already been completed or closed. You cannot proceed with this work order."
+                    : "This meter ID matches work orders that have already been completed or closed. You cannot proceed with these work orders."}
+                </ThemedText>
+                {unavailableWorkOrders.slice(0, 3).map((wo, index) => (
+                  <View key={wo.id} style={[styles.detailRow, { paddingVertical: Spacing.xs }]}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>
+                      {wo.customerWoId}
+                    </ThemedText>
+                    <ThemedText 
+                      type="body" 
+                      style={{ 
+                        fontWeight: "500",
+                        color: wo.status?.toLowerCase() === "completed" ? theme.success : theme.textSecondary
+                      }}
+                    >
+                      {wo.status}
+                    </ThemedText>
+                  </View>
+                ))}
+                {unavailableWorkOrders.length > 3 ? (
+                  <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: Spacing.xs }}>
+                    + {unavailableWorkOrders.length - 3} more
+                  </ThemedText>
+                ) : null}
+              </View>
             ) : (
               <ThemedText type="body" style={[styles.noMatchText, { color: theme.textSecondary }]}>
                 {isOnline 
