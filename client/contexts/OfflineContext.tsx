@@ -299,6 +299,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               newMeterId: offlineData.newMeterId,
               newMeterReading: offlineData.newMeterReading,
               oldGps: offlineData.oldGps || null,
+              newGps: offlineData.newGps || null,
               gpsCoordinates: offlineData.newGps || null,
               signatureData: offlineData.signatureData || null,
               signatureName: offlineData.signatureName,
