@@ -78,7 +78,7 @@ export default function MainTabNavigator() {
           title: "Sync",
           tabBarIcon: ({ color, size }) => (
             <View>
-              <Feather name="refresh-cw" size={size} color={color} />
+              <Feather name="rotate-ccw" size={size} color={color} />
               <PendingBadge count={pendingActions.length} />
             </View>
           ),
@@ -90,7 +90,7 @@ export default function MainTabNavigator() {
         options={{
           title: "Account",
           tabBarIcon: ({ color, size }) => (
-            <Feather name="user" size={size} color={color} />
+            <Feather name="settings" size={size} color={color} />
           ),
         }}
       />
