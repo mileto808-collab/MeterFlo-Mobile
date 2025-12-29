@@ -787,6 +787,10 @@ export default function NewWorkOrderWizardScreen() {
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Feather name="check-circle" size={24} color={theme.success} />
+                <ThemedText type="body" style={{ fontWeight: "500" }} numberOfLines={1}>GPS: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldGps}</ThemedText></ThemedText>
+              </View>
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Feather name="check-circle" size={24} color={theme.success} />
                 <ThemedText type="body" style={{ fontWeight: "500" }}>{formData.beforePhotos.length} Before Photo(s) Captured</ThemedText>
               </View>
             </View>
