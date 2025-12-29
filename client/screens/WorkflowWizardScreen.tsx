@@ -874,6 +874,17 @@ export default function WorkflowWizardScreen() {
               keyboardType="numeric"
               style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg, minHeight: 60 }}
             />
+            
+            {(workOrder.oldMeterType || (workOrder as any).old_meter_type) ? (
+              <View style={{ marginTop: Spacing.xl, padding: Spacing.lg, backgroundColor: theme.backgroundSecondary, borderRadius: 12 }}>
+                <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
+                  Verify Old Meter Type
+                </ThemedText>
+                <ThemedText type="h4" style={{ fontWeight: "600" }}>
+                  {workOrder.oldMeterType || (workOrder as any).old_meter_type}
+                </ThemedText>
+              </View>
+            ) : null}
           </View>
         );
 
