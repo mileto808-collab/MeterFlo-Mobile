@@ -1,6 +1,5 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View } from "react-native";
 import WorkOrdersStackNavigator from "@/navigation/WorkOrdersStackNavigator";
@@ -10,6 +9,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useOffline } from "@/contexts/OfflineContext";
 import { ThemedText } from "@/components/ThemedText";
 import { BorderRadius } from "@/constants/theme";
+import { ClipboardIcon, RefreshIcon, UserIcon } from "@/components/TabBarIcons";
 
 export type MainTabParamList = {
   WorkOrdersTab: undefined;
@@ -67,7 +67,7 @@ export default function MainTabNavigator() {
         options={{
           title: "Work Orders",
           tabBarIcon: ({ color, size }) => (
-            <Feather name="clipboard" size={size} color={color} />
+            <ClipboardIcon size={size} color={color} />
           ),
         }}
       />
@@ -78,7 +78,7 @@ export default function MainTabNavigator() {
           title: "Sync",
           tabBarIcon: ({ color, size }) => (
             <View>
-              <Feather name="rotate-ccw" size={size} color={color} />
+              <RefreshIcon size={size} color={color} />
               <PendingBadge count={pendingActions.length} />
             </View>
           ),
@@ -90,7 +90,7 @@ export default function MainTabNavigator() {
         options={{
           title: "Account",
           tabBarIcon: ({ color, size }) => (
-            <Feather name="settings" size={size} color={color} />
+            <UserIcon size={size} color={color} />
           ),
         }}
       />
