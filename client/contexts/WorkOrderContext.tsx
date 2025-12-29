@@ -313,6 +313,7 @@ interface WorkOrderContextType {
   refreshWorkOrders: (forceFullSync?: boolean, preserveLocal?: boolean) => Promise<void>;
   claimWorkOrder: (workOrderId: number) => Promise<void>;
   fetchSingleWorkOrder: (workOrderId: number) => Promise<WorkOrder | null>;
+  searchWorkOrdersByMeterIdOnServer: (meterId: string) => Promise<WorkOrder[]>;
   clearAllData: () => Promise<void>;
 }
 
@@ -632,6 +633,40 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     }
   }, [serverUrl, projectId]);
 
+  const searchWorkOrdersByMeterIdOnServer = useCallback(async (meterId: string): Promise<WorkOrder[]> => {
+    if (!serverUrl || !projectId) return [];
+
+    try {
+      console.log("[searchWorkOrdersByMeterIdOnServer] Searching for meter ID:", meterId);
+      const response = await fetch(
+        `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(meterId)}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log("[searchWorkOrdersByMeterIdOnServer] No work orders found for meter ID:", meterId);
+          return [];
+        }
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to search work orders");
+      }
+
+      const data = await response.json();
+      const serverWorkOrders: ServerWorkOrder[] = data.workOrders || data || [];
+      const mappedWorkOrders = serverWorkOrders.map(mapServerWorkOrder);
+      
+      console.log("[searchWorkOrdersByMeterIdOnServer] Found", mappedWorkOrders.length, "work orders");
+      return mappedWorkOrders;
+    } catch (err) {
+      console.error("[searchWorkOrdersByMeterIdOnServer] Failed to search:", err);
+      throw err;
+    }
+  }, [serverUrl, projectId]);
+
   const clearAllData = useCallback(async () => {
     console.log("[clearAllData] Clearing all work order data");
     await AsyncStorage.multiRemove([
@@ -772,6 +807,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         refreshWorkOrders,
         claimWorkOrder,
         fetchSingleWorkOrder,
+        searchWorkOrdersByMeterIdOnServer,
         clearAllData,
       }}
     >
