@@ -494,22 +494,49 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
           const pendingNotOnServer = prev.filter(wo => wo.syncPending && !serverWorkOrderIds.has(wo.id));
           const pendingIds = new Set(pendingNotOnServer.map(wo => wo.id));
           
+          // When preserveLocal=true (pull-down refresh):
+          // - Keep Completed/Trouble work orders that the user processed (have completedAt)
+          // - Remove Open work orders that weren't claimed/processed by user
+          // When preserveLocal=false (Sync button):
+          // - Remove all work orders not on server (except syncPending)
           const localOnlyWorkOrders = preserveLocal 
-            ? prev.filter(wo => !wo.syncPending && !serverWorkOrderIds.has(wo.id) && !pendingIds.has(wo.id))
+            ? prev.filter(wo => {
+                if (wo.syncPending) return false; // Already handled in pendingNotOnServer
+                if (serverWorkOrderIds.has(wo.id)) return false; // On server, handled in mergedServerWorkOrders
+                if (pendingIds.has(wo.id)) return false; // Already handled in pendingNotOnServer
+                
+                // Keep user-processed Completed/Trouble work orders
+                const status = wo.status?.toLowerCase();
+                const isCompletedOrTrouble = status === "completed" || status === "trouble";
+                const wasProcessedByUser = !!wo.completedAt;
+                
+                return isCompletedOrTrouble && wasProcessedByUser;
+              })
             : [];
           
-          const removedWorkOrders = preserveLocal 
-            ? []
-            : prev.filter(wo => !wo.syncPending && !serverWorkOrderIds.has(wo.id));
+          const removedWorkOrders = prev.filter(wo => {
+            if (wo.syncPending) return false; // Never remove pending
+            if (serverWorkOrderIds.has(wo.id)) return false; // Still on server
+            if (pendingIds.has(wo.id)) return false; // Pending
+            
+            if (preserveLocal) {
+              // Only remove Open work orders not processed by user
+              const status = wo.status?.toLowerCase();
+              const isCompletedOrTrouble = status === "completed" || status === "trouble";
+              const wasProcessedByUser = !!wo.completedAt;
+              return !(isCompletedOrTrouble && wasProcessedByUser);
+            }
+            return true; // Remove all when preserveLocal=false
+          });
           
           if (pendingNotOnServer.length > 0) {
             console.log("[refreshWorkOrders] Preserving", pendingNotOnServer.length, "pending work orders not on server");
           }
           if (localOnlyWorkOrders.length > 0) {
-            console.log("[refreshWorkOrders] Preserving", localOnlyWorkOrders.length, "local work orders (preserveLocal=true)");
+            console.log("[refreshWorkOrders] Preserving", localOnlyWorkOrders.length, "user-processed work orders not on server");
           }
           if (removedWorkOrders.length > 0) {
-            console.log("[refreshWorkOrders] Removing", removedWorkOrders.length, "work orders no longer on server");
+            console.log("[refreshWorkOrders] Removing", removedWorkOrders.length, "work orders no longer on server (unclaimed Open orders)");
           }
           
           const finalWorkOrders = [...mergedServerWorkOrders, ...pendingNotOnServer, ...localOnlyWorkOrders];
