@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface PendingAction {
   id: string;
-  type: "update" | "complete" | "workflow" | "claim";
+  type: "update" | "complete" | "workflow" | "claim" | "offlineWorkOrder";
   workOrderId: string;
   workOrderTitle: string;
   data: any;
@@ -207,6 +207,92 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             console.log(`[syncPendingActions] Successfully synced WO ${action.workOrderId}`);
             successfulActionIds.push(action.id);
+          } else if (action.type === "offlineWorkOrder") {
+            const offlineData = action.data;
+            console.log(`[syncPendingActions] Syncing offline work order for old meter: ${offlineData.oldMeterId}`);
+            
+            const searchResponse = await fetch(
+              `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(offlineData.oldMeterId)}`,
+              {
+                method: "GET",
+                credentials: "include",
+              }
+            );
+            
+            if (!searchResponse.ok) {
+              if (searchResponse.status === 404) {
+                console.log(`[syncPendingActions] No server work order found for meter ${offlineData.oldMeterId}, keeping in queue for retry`);
+                continue;
+              }
+              const errorText = await searchResponse.text();
+              throw new Error(errorText || `Failed to search for work order with meter ID ${offlineData.oldMeterId}`);
+            }
+            
+            const searchData = await searchResponse.json();
+            const serverWorkOrders = searchData.workOrders || searchData || [];
+            
+            const eligibleWorkOrder = serverWorkOrders.find((wo: any) => {
+              const status = (wo.status || "").toLowerCase();
+              return status !== "completed" && status !== "closed";
+            });
+            
+            if (!eligibleWorkOrder) {
+              console.log(`[syncPendingActions] No eligible work order found for meter ${offlineData.oldMeterId}, keeping in queue for retry`);
+              continue;
+            }
+            
+            const serverWorkOrderId = eligibleWorkOrder.id;
+            console.log(`[syncPendingActions] Found matching server work order ${serverWorkOrderId}, claiming...`);
+            
+            const claimResponse = await fetch(
+              `${serverUrl}/api/projects/${projectId}/work-orders/${serverWorkOrderId}/claim`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+              }
+            );
+            
+            if (!claimResponse.ok) {
+              const errorText = await claimResponse.text();
+              console.warn(`[syncPendingActions] Failed to claim WO ${serverWorkOrderId}:`, errorText);
+            } else {
+              console.log(`[syncPendingActions] Claimed work order ${serverWorkOrderId}`);
+            }
+            
+            const completePayload = {
+              projectId: Number(projectId),
+              oldMeterReading: offlineData.oldMeterReading,
+              newMeterId: offlineData.newMeterId,
+              newMeterReading: offlineData.newMeterReading,
+              gpsCoordinates: offlineData.newGps || null,
+              signatureData: offlineData.signatureData || null,
+              signatureName: offlineData.signatureName,
+              completedAt: offlineData.completedAt,
+              notes: offlineData.notes || null,
+              beforePhotos: offlineData.beforePhotos || [],
+              afterPhotos: offlineData.afterPhotos || [],
+            };
+            
+            const completeResponse = await fetch(
+              `${serverUrl}/api/mobile/workorders/${serverWorkOrderId}/complete`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(completePayload),
+              }
+            );
+            
+            if (!completeResponse.ok) {
+              const errorText = await completeResponse.text();
+              console.error(`[syncPendingActions] Failed to complete WO ${serverWorkOrderId}:`, completeResponse.status, errorText?.substring(0, 200));
+              throw new Error(errorText || `Failed to complete work order ${serverWorkOrderId}`);
+            }
+            
+            console.log(`[syncPendingActions] Successfully synced offline work order for meter ${offlineData.oldMeterId} to server WO ${serverWorkOrderId}`);
+            successfulActionIds.push(action.id);
+            
           } else if (action.type === "claim") {
             const claimEndpoint = `${serverUrl}/api/projects/${projectId}/work-orders/${action.workOrderId}/claim`;
             console.log(`[syncPendingActions] Syncing claim for WO ${action.workOrderId}`);

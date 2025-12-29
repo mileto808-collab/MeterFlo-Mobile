@@ -296,6 +296,28 @@ function mapServerReferenceData(serverRef: ServerReferenceData): ReferenceData {
   };
 }
 
+export interface OfflineWorkOrderData {
+  id: string;
+  projectId: number;
+  oldMeterId: string;
+  oldMeterReading: number | null;
+  oldGps: string;
+  newMeterId: string;
+  newMeterReading: number;
+  newGps: string;
+  signatureData: string | null;
+  signatureName: string;
+  completedAt: string;
+  completedBy: string | null;
+  completedByUsername: string | null;
+  notes: string | null;
+  beforePhotos: { base64: string; filename: string }[];
+  afterPhotos: { base64: string; filename: string }[];
+  status: string;
+  isOfflineCreated: boolean;
+  syncPending: boolean;
+}
+
 interface WorkOrderContextType {
   workOrders: WorkOrder[];
   referenceData: ReferenceData | null;
@@ -315,6 +337,7 @@ interface WorkOrderContextType {
   fetchSingleWorkOrder: (workOrderId: number) => Promise<WorkOrder | null>;
   searchWorkOrdersByMeterIdOnServer: (meterId: string) => Promise<WorkOrder[]>;
   clearAllData: () => Promise<void>;
+  addOfflineWorkOrder: (data: OfflineWorkOrderData) => Promise<void>;
 }
 
 const WorkOrderContext = createContext<WorkOrderContextType | undefined>(undefined);
@@ -708,6 +731,41 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     console.log("[clearAllData] Done clearing data");
   }, []);
 
+  const addOfflineWorkOrder = useCallback(async (data: OfflineWorkOrderData) => {
+    console.log("[addOfflineWorkOrder] Creating new offline work order:", data.id);
+    
+    const newWorkOrder: WorkOrder = {
+      id: Date.now(),
+      customerWoId: `OFFLINE-${data.oldMeterId}`,
+      status: data.status,
+      oldMeterId: data.oldMeterId,
+      newMeterId: data.newMeterId,
+      oldMeterReading: data.oldMeterReading != null ? String(data.oldMeterReading) : undefined,
+      newMeterReading: data.newMeterReading != null ? String(data.newMeterReading) : undefined,
+      oldGps: data.oldGps,
+      newGps: data.newGps,
+      serviceAddress: "Offline Work Order",
+      signatureData: data.signatureData || undefined,
+      signatureName: data.signatureName,
+      notes: data.notes || undefined,
+      completedAt: data.completedAt,
+      completedBy: data.completedBy || undefined,
+      completedByUsername: data.completedByUsername || undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      syncPending: true,
+      localUpdatedAt: new Date().toISOString(),
+    };
+    
+    setWorkOrdersState(prev => {
+      const updated = [newWorkOrder, ...prev];
+      AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
+      return updated;
+    });
+    
+    console.log("[addOfflineWorkOrder] Work order added successfully");
+  }, []);
+
   const setWorkOrders = useCallback((orders: WorkOrder[]) => {
     setWorkOrdersState(orders);
     AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(orders));
@@ -836,6 +894,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         fetchSingleWorkOrder,
         searchWorkOrdersByMeterIdOnServer,
         clearAllData,
+        addOfflineWorkOrder,
       }}
     >
       {children}

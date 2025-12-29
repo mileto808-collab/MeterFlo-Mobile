@@ -222,6 +222,20 @@ export default function WorkOrdersScreen() {
         onScanAgain={handleScanAgain}
         onClose={handleCloseScanConfirm}
       />
+
+      <Pressable
+        onPress={() => navigation.navigate("NewWorkOrderWizard")}
+        style={({ pressed }) => [
+          styles.fab,
+          { 
+            backgroundColor: theme.primary, 
+            opacity: pressed ? 0.8 : 1,
+            bottom: tabBarHeight + Spacing.lg,
+          },
+        ]}
+      >
+        <Feather name="plus" size={28} color="#FFFFFF" />
+      </Pressable>
     </View>
   );
 }
@@ -284,5 +298,14 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     textAlign: "center",
     paddingHorizontal: Spacing.xl,
+  },
+  fab: {
+    position: "absolute",
+    right: Spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
