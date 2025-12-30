@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
-import { Feather } from "@expo/vector-icons";
+import { Icon } from "@/components/Icons";
 import * as Haptics from "expo-haptics";
 
 import { useTheme } from "@/hooks/useTheme";
@@ -235,7 +235,7 @@ export default function TapToCaptureScanScreen() {
               { backgroundColor: theme.backgroundSecondary, opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Feather name="x" size={24} color={theme.text} />
+            <Icon name="x" size={24} color={theme.text} />
           </Pressable>
           <ThemedText type="h4">Scan Result</ThemedText>
           <View style={{ width: 44 }} />
@@ -258,7 +258,7 @@ export default function TapToCaptureScanScreen() {
             ) : (
               <>
                 <View style={styles.iconContainer}>
-                  <Feather 
+                  <Icon 
                     name={matchedWorkOrder ? "check-circle" : unavailableWorkOrders.length > 0 ? "lock" : "alert-circle"} 
                     size={56} 
                     color={matchedWorkOrder ? theme.success : unavailableWorkOrders.length > 0 ? theme.textSecondary : theme.warning} 
@@ -283,7 +283,7 @@ export default function TapToCaptureScanScreen() {
                 
                 {matchSource === "server" && matchedWorkOrder ? (
                   <View style={[styles.serverBadge, { backgroundColor: theme.primary + "20" }]}>
-                    <Feather name="cloud" size={14} color={theme.primary} />
+                    <Icon name="cloud" size={14} color={theme.primary} />
                     <ThemedText type="small" style={{ color: theme.primary, marginLeft: Spacing.xs }}>
                       From Server - Requires Claim
                     </ThemedText>
@@ -303,7 +303,7 @@ export default function TapToCaptureScanScreen() {
                     }
                   ]}
                 >
-                  <Feather name="chevron-left" size={20} color={theme.text} />
+                  <Icon name="chevron-left" size={20} color={theme.text} />
                 </Pressable>
                 <ThemedText type="body" style={{ fontWeight: "500" }}>
                   {selectedWorkOrderIndex + 1} of {matchedWorkOrders.length}
@@ -319,7 +319,7 @@ export default function TapToCaptureScanScreen() {
                     }
                   ]}
                 >
-                  <Feather name="chevron-right" size={20} color={theme.text} />
+                  <Icon name="chevron-right" size={20} color={theme.text} />
                 </Pressable>
               </View>
             ) : null}
@@ -431,7 +431,7 @@ export default function TapToCaptureScanScreen() {
                       </>
                     ) : (
                       <>
-                        <Feather name="download" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                        <Icon name="download" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
                         <ThemedText style={{ color: "#FFFFFF", fontWeight: "600" }}>Claim & Start</ThemedText>
                       </>
                     )}
@@ -441,7 +441,7 @@ export default function TapToCaptureScanScreen() {
                     onPress={handleProceedToWizard}
                     style={{ backgroundColor: theme.primary }}
                   >
-                    <Feather name="arrow-right" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                    <Icon name="arrow-right" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
                     <ThemedText style={{ color: "#FFFFFF", fontWeight: "600" }}>Start Wizard</ThemedText>
                   </Button>
                 )}
@@ -461,7 +461,7 @@ export default function TapToCaptureScanScreen() {
                     disabled={isClaimingWorkOrder}
                     style={{ backgroundColor: theme.backgroundSecondary, flex: matchSource === "local" ? 1 : undefined }}
                   >
-                    <Feather name="refresh-cw" size={18} color={theme.text} style={{ marginRight: Spacing.sm }} />
+                    <Icon name="refresh-cw" size={18} color={theme.text} style={{ marginRight: Spacing.sm }} />
                     <ThemedText>Scan Again</ThemedText>
                   </Button>
                 </View>
@@ -472,7 +472,7 @@ export default function TapToCaptureScanScreen() {
                   onPress={handleScanAgain}
                   style={{ backgroundColor: theme.primary }}
                 >
-                  <Feather name="refresh-cw" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                  <Icon name="refresh-cw" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
                   <ThemedText style={{ color: "#FFFFFF" }}>Try Again</ThemedText>
                 </Button>
                 
@@ -506,7 +506,7 @@ export default function TapToCaptureScanScreen() {
     return (
       <View style={[styles.container, styles.centered, { backgroundColor: theme.backgroundRoot }]}>
         <View style={[styles.permissionCard, { backgroundColor: theme.backgroundSecondary }]}>
-          <Feather name="camera-off" size={48} color={theme.textSecondary} />
+          <Icon name="camera-off" size={48} color={theme.textSecondary} />
           <ThemedText type="h4" style={styles.permissionTitle}>
             Camera Permission Required
           </ThemedText>
@@ -523,7 +523,7 @@ export default function TapToCaptureScanScreen() {
                 onPress={openSettings}
                 style={{ backgroundColor: theme.primary, marginTop: Spacing.md }}
               >
-                <Feather name="settings" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                <Icon name="settings" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
                 Open Settings
               </Button>
             ) : null
@@ -532,7 +532,7 @@ export default function TapToCaptureScanScreen() {
               onPress={requestCameraPermission}
               style={{ backgroundColor: theme.primary, marginTop: Spacing.md }}
             >
-              <Feather name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+              <Icon name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
               Grant Permission
             </Button>
           )}
@@ -581,7 +581,7 @@ export default function TapToCaptureScanScreen() {
             { backgroundColor: "rgba(0, 0, 0, 0.5)", opacity: pressed ? 0.7 : 1 },
           ]}
         >
-          <Feather name="x" size={24} color="#FFFFFF" />
+          <Icon name="x" size={24} color="#FFFFFF" />
         </Pressable>
         <ThemedText type="h4" style={styles.scannerTitle}>
           {isQRMode ? "Scan QR Code" : "Scan Barcode"}
@@ -593,7 +593,7 @@ export default function TapToCaptureScanScreen() {
         {detectedValue ? (
           <View style={styles.captureSection}>
             <View style={[styles.detectedBox, { backgroundColor: "rgba(0, 0, 0, 0.8)" }]}>
-              <Feather name="check-circle" size={20} color={theme.success} />
+              <Icon name="check-circle" size={20} color={theme.success} />
               <ThemedText type="body" style={styles.detectedText}>
                 {detectedValue}
               </ThemedText>
@@ -608,7 +608,7 @@ export default function TapToCaptureScanScreen() {
                 onPress={handleClear}
                 style={[styles.actionButton, { backgroundColor: "rgba(255, 255, 255, 0.2)" }]}
               >
-                <Feather name="refresh-cw" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                <Icon name="refresh-cw" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
                 <ThemedText style={{ color: "#FFFFFF" }}>Scan Again</ThemedText>
               </Button>
               
@@ -616,7 +616,7 @@ export default function TapToCaptureScanScreen() {
                 onPress={handleCapture}
                 style={[styles.actionButton, { backgroundColor: theme.success }]}
               >
-                <Feather name="check" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                <Icon name="check" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
                 <ThemedText style={{ color: "#FFFFFF", fontWeight: "600" }}>Capture</ThemedText>
               </Button>
             </View>

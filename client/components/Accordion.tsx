@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { View, Pressable, StyleSheet, LayoutAnimation, Platform, UIManager } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import Animated, { 
   useAnimatedStyle, 
   withTiming, 
@@ -10,6 +9,7 @@ import Animated, {
 
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
+import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -18,7 +18,7 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 
 interface AccordionProps {
   title: string;
-  icon?: keyof typeof Feather.glyphMap;
+  icon?: string;
   children: React.ReactNode;
   defaultExpanded?: boolean;
   headerColor?: string;
@@ -58,7 +58,7 @@ export function Accordion({
       >
         <View style={styles.headerLeft}>
           {icon ? (
-            <Feather 
+            <Icon 
               name={icon} 
               size={18} 
               color={headerColor || theme.primary} 
@@ -69,7 +69,7 @@ export function Accordion({
           </ThemedText>
         </View>
         <Animated.View style={chevronStyle}>
-          <Feather name="chevron-down" size={20} color={theme.textSecondary} />
+          <Icon name="chevron-down" size={20} color={theme.textSecondary} />
         </Animated.View>
       </Pressable>
       {expanded ? (

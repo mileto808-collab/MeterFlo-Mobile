@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { View, StyleSheet, TextInput, Modal, Pressable, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
+import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 interface HIDScannerModalProps {
@@ -97,12 +97,12 @@ export function HIDScannerModal({ visible, onClose, onScan }: HIDScannerModalPro
               onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Feather name="x" size={24} color={theme.textSecondary} />
+              <Icon name="x" size={24} color={theme.textSecondary} />
             </Pressable>
           </View>
 
           <View style={[styles.scannerIcon, { backgroundColor: theme.primary + "20" }]}>
-            <Feather name="bluetooth" size={48} color={theme.primary} />
+            <Icon name="bluetooth" size={48} color={theme.primary} />
           </View>
 
           <ThemedText type="body" style={[styles.instructions, { color: theme.textSecondary }]}>
@@ -125,7 +125,7 @@ export function HIDScannerModal({ visible, onClose, onScan }: HIDScannerModalPro
               onSubmitEditing={() => handleSubmit()}
             />
             {value.length > 0 ? (
-              <Feather name="check-circle" size={20} color={theme.success} />
+              <Icon name="check-circle" size={20} color={theme.success} />
             ) : null}
           </View>
 

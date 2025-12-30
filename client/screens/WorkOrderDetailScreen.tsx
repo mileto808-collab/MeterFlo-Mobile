@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useHeaderHeight } from "@react-navigation/elements";
-import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders } from "@/contexts/WorkOrderContext";
@@ -14,6 +13,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/Button";
 import { Accordion } from "@/components/Accordion";
+import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 type RouteProps = RouteProp<RootStackParamList, "WorkOrderDetail">;
@@ -25,7 +25,7 @@ function InfoRow({
   value, 
   onPress,
 }: { 
-  icon: keyof typeof Feather.glyphMap; 
+  icon: string; 
   label: string; 
   value?: string | null;
   onPress?: () => void;
@@ -35,7 +35,7 @@ function InfoRow({
 
   const content = (
     <View style={styles.infoRow}>
-      <Feather name={icon} size={16} color={theme.textSecondary} style={styles.infoIcon} />
+      <Icon name={icon} size={16} color={theme.textSecondary} />
       <View style={styles.infoContent}>
         <ThemedText type="caption" style={{ color: theme.textSecondary }}>{label}</ThemedText>
         <ThemedText type="body" style={onPress ? { color: theme.primary } : undefined}>{value}</ThemedText>
@@ -232,10 +232,10 @@ export default function WorkOrderDetailScreen() {
                       { backgroundColor: theme.warning, opacity: pressed && !pendingAction ? 0.7 : 1 }
                     ]}
                   >
-                    <Feather name="upload-cloud" size={12} color="#FFFFFF" />
+                    <Icon name="upload-cloud" size={12} color="#FFFFFF" />
                     <ThemedText style={styles.syncBadgeText}>{getPendingChangeLabel()}</ThemedText>
                     {!pendingAction ? (
-                      <Feather name="x" size={10} color="#FFFFFF" style={{ marginLeft: 2 }} />
+                      <Icon name="x" size={10} color="#FFFFFF" />
                     ) : null}
                   </Pressable>
                 ) : null}
@@ -248,7 +248,7 @@ export default function WorkOrderDetailScreen() {
               onPress={handleOpenMaps}
               style={({ pressed }) => [styles.quickInfoItem, { opacity: pressed ? 0.6 : 1 }]}
             >
-              <Feather name="map-pin" size={14} color={theme.primary} style={styles.quickInfoIcon} />
+              <Icon name="map-pin" size={14} color={theme.primary} />
               <ThemedText type="small" style={{ color: theme.primary, flex: 1 }}>
                 {fullAddress || "No address"}
               </ThemedText>
@@ -256,7 +256,7 @@ export default function WorkOrderDetailScreen() {
 
             {workOrder.customerName ? (
               <View style={styles.quickInfoItem}>
-                <Feather name="user" size={14} color={theme.textSecondary} style={styles.quickInfoIcon} />
+                <Icon name="user" size={14} color={theme.textSecondary} />
                 <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
                   {workOrder.customerName}
                 </ThemedText>
@@ -265,7 +265,7 @@ export default function WorkOrderDetailScreen() {
 
             {workOrder.scheduledDate ? (
               <View style={styles.quickInfoItem}>
-                <Feather name="calendar" size={14} color={theme.textSecondary} style={styles.quickInfoIcon} />
+                <Icon name="calendar" size={14} color={theme.textSecondary} />
                 <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
                   {formatDate(workOrder.scheduledDate)}
                 </ThemedText>
@@ -274,7 +274,7 @@ export default function WorkOrderDetailScreen() {
 
             {workOrder.assignedUserDisplayName || workOrder.assignedUserUsername ? (
               <View style={styles.quickInfoItem}>
-                <Feather name="user-check" size={14} color={theme.textSecondary} style={styles.quickInfoIcon} />
+                <Icon name="user-check" size={14} color={theme.textSecondary} />
                 <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
                   {workOrder.assignedUserDisplayName || workOrder.assignedUserUsername}
                 </ThemedText>
@@ -284,7 +284,7 @@ export default function WorkOrderDetailScreen() {
 
           {attachmentCount > 0 ? (
             <View style={styles.attachmentInfo}>
-              <Feather name="paperclip" size={14} color={theme.textSecondary} />
+              <Icon name="paperclip" size={14} color={theme.textSecondary} />
               <ThemedText type="small" style={{ color: theme.textSecondary }}>
                 {attachmentCount} attachment{attachmentCount !== 1 ? "s" : ""}
               </ThemedText>
@@ -353,7 +353,7 @@ export default function WorkOrderDetailScreen() {
               ) : null}
               {workOrder.signatureData ? (
                 <View style={[styles.signatureIndicator, { backgroundColor: theme.success + "20" }]}>
-                  <Feather name="check-circle" size={16} color={theme.success} />
+                  <Icon name="check-circle" size={16} color={theme.success} />
                   <ThemedText type="small" style={{ color: theme.success }}>Signature captured</ThemedText>
                 </View>
               ) : null}
@@ -390,7 +390,7 @@ export default function WorkOrderDetailScreen() {
           {workOrder.troubleCode ? (
             <View style={[styles.troubleSection, { backgroundColor: theme.error + "10" }]}>
               <View style={styles.troubleHeader}>
-                <Feather name="alert-triangle" size={16} color={theme.error} />
+                <Icon name="alert-triangle" size={16} color={theme.error} />
                 <ThemedText type="body" style={{ color: theme.error, fontWeight: "600" }}>
                   Trouble Code
                 </ThemedText>
@@ -445,7 +445,7 @@ export default function WorkOrderDetailScreen() {
                       { backgroundColor: theme.backgroundSecondary, opacity: pressed ? 0.7 : 1 },
                     ]}
                   >
-                    <Feather 
+                    <Icon 
                       name={isImage ? "image" : "file"} 
                       size={18} 
                       color={theme.primary} 
@@ -455,7 +455,7 @@ export default function WorkOrderDetailScreen() {
                         {filename}
                       </ThemedText>
                     </View>
-                    <Feather name="external-link" size={16} color={theme.textSecondary} />
+                    <Icon name="external-link" size={16} color={theme.textSecondary} />
                   </Pressable>
                 );
               })}
@@ -513,7 +513,7 @@ export default function WorkOrderDetailScreen() {
           style={[styles.processButton, { backgroundColor: isCancelled ? theme.backgroundSecondary : theme.primary }]}
           disabled={isCancelled}
         >
-          <Feather 
+          <Icon 
             name={isCompleted ? "edit-2" : isCancelled ? "x-circle" : "play-circle"} 
             size={18} 
             color={isCancelled ? theme.textSecondary : "#FFFFFF"} 

@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useHeaderHeight } from "@react-navigation/elements";
-import { Feather } from "@expo/vector-icons";
+import { Icon } from "@/components/Icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders, SortConfig, SortCriterion } from "@/contexts/WorkOrderContext";
@@ -110,7 +110,7 @@ export default function SortScreen() {
                         {index + 1}
                       </ThemedText>
                     </View>
-                    <Feather
+                    <Icon
                       name={getFieldIcon(criterion.field) as any}
                       size={18}
                       color={theme.text}
@@ -123,7 +123,7 @@ export default function SortScreen() {
                       style={[styles.actionButton, { backgroundColor: theme.backgroundRoot }]}
                       hitSlop={4}
                     >
-                      <Feather
+                      <Icon
                         name={criterion.direction === "asc" ? "arrow-up" : "arrow-down"}
                         size={16}
                         color={theme.primary}
@@ -135,7 +135,7 @@ export default function SortScreen() {
                         style={[styles.actionButton, { backgroundColor: theme.backgroundRoot }]}
                         hitSlop={4}
                       >
-                        <Feather name="chevron-up" size={16} color={theme.textSecondary} />
+                        <Icon name="chevron-up" size={16} color={theme.textSecondary} />
                       </Pressable>
                     ) : null}
                     {index < localSort.length - 1 ? (
@@ -144,7 +144,7 @@ export default function SortScreen() {
                         style={[styles.actionButton, { backgroundColor: theme.backgroundRoot }]}
                         hitSlop={4}
                       >
-                        <Feather name="chevron-down" size={16} color={theme.textSecondary} />
+                        <Icon name="chevron-down" size={16} color={theme.textSecondary} />
                       </Pressable>
                     ) : null}
                     <Pressable
@@ -152,7 +152,7 @@ export default function SortScreen() {
                       style={[styles.actionButton, { backgroundColor: theme.backgroundRoot }]}
                       hitSlop={4}
                     >
-                      <Feather name="x" size={16} color={theme.error} />
+                      <Icon name="x" size={16} color={theme.error} />
                     </Pressable>
                   </View>
                 </View>
@@ -180,14 +180,14 @@ export default function SortScreen() {
                   ]}
                 >
                   <View style={styles.optionContent}>
-                    <Feather
+                    <Icon
                       name={field.icon}
                       size={20}
                       color={theme.textSecondary}
                     />
                     <ThemedText type="body">{field.label}</ThemedText>
                   </View>
-                  <Feather name="plus" size={20} color={theme.primary} />
+                  <Icon name="plus" size={20} color={theme.primary} />
                 </Pressable>
               ))}
             </View>
@@ -196,7 +196,7 @@ export default function SortScreen() {
 
         {localSort.length === 0 ? (
           <View style={[styles.emptyState, { backgroundColor: theme.backgroundDefault }]}>
-            <Feather name="sliders" size={48} color={theme.textSecondary} />
+            <Icon name="sliders" size={48} color={theme.textSecondary} />
             <ThemedText type="body" style={{ color: theme.textSecondary, textAlign: "center" }}>
               No sort criteria selected. Tap an option above to add sorting.
             </ThemedText>

@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet, ViewStyle, StyleProp } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/ThemedText";
+import { Icon } from "@/components/Icons";
 import { Spacing } from "@/constants/theme";
 
 interface OfflineBannerProps {
@@ -11,7 +11,7 @@ interface OfflineBannerProps {
 export function OfflineBanner({ style }: OfflineBannerProps) {
   return (
     <View style={[styles.banner, style]}>
-      <Feather name="wifi-off" size={16} color="#FFFFFF" />
+      <Icon name="wifi-off" size={16} color="#FFFFFF" />
       <ThemedText style={styles.text}>
         Offline Mode - Changes will sync when connected
       </ThemedText>

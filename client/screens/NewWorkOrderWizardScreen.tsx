@@ -3,7 +3,7 @@ import { View, StyleSheet, Alert, Platform, ActivityIndicator, Pressable, Image,
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Feather } from "@expo/vector-icons";
+import { Icon } from "@/components/Icons";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -492,7 +492,7 @@ export default function NewWorkOrderWizardScreen() {
         >
           <Image source={{ uri: photo.uri }} style={styles.photoThumbnail} />
           <View style={styles.photoOverlay}>
-            <Feather name="maximize-2" size={16} color="#FFFFFF" />
+            <Icon name="maximize-2" size={16} color="#FFFFFF" />
           </View>
         </Pressable>
       ))}
@@ -524,7 +524,7 @@ export default function NewWorkOrderWizardScreen() {
           />
         ) : (
           <View style={styles.cameraPlaceholder}>
-            <Feather name="camera-off" size={48} color={theme.textSecondary} />
+            <Icon name="camera-off" size={48} color={theme.textSecondary} />
             <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.md, textAlign: "center" }}>
               {permissionDenied 
                 ? "Camera access denied. Please enable in Settings."
@@ -565,7 +565,7 @@ export default function NewWorkOrderWizardScreen() {
         {detectedBarcode ? (
           <View style={styles.detectedBarcodeSection}>
             <View style={[styles.detectedBarcodeBox, { backgroundColor: theme.backgroundSecondary }]}>
-              <Feather name="check-circle" size={20} color={theme.success} />
+              <Icon name="check-circle" size={20} color={theme.success} />
               <ThemedText type="body" style={{ fontWeight: "600", fontSize: 18, marginLeft: Spacing.sm }}>
                 {detectedBarcode}
               </ThemedText>
@@ -578,14 +578,14 @@ export default function NewWorkOrderWizardScreen() {
                 onPress={handleClearBarcode}
                 style={{ backgroundColor: theme.backgroundSecondary, flex: 1 }}
               >
-                <Feather name="refresh-cw" size={18} color={theme.text} style={{ marginRight: Spacing.sm }} />
+                <Icon name="refresh-cw" size={18} color={theme.text} style={{ marginRight: Spacing.sm }} />
                 <ThemedText>Scan Again</ThemedText>
               </Button>
               <Button
                 onPress={handleCaptureBarcode}
                 style={{ backgroundColor: theme.success, flex: 1 }}
               >
-                <Feather name="check" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                <Icon name="check" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
                 <ThemedText style={{ color: "#FFFFFF", fontWeight: "600" }}>Capture</ThemedText>
               </Button>
             </View>
@@ -624,7 +624,7 @@ export default function NewWorkOrderWizardScreen() {
     return (
       <View>
         <View style={styles.iconHeader}>
-          <Feather name="hash" size={48} color={theme.primary} />
+          <Icon name="hash" size={48} color={theme.primary} />
         </View>
         <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
           Scan or enter the {target === "old" ? "old" : "new"} meter ID
@@ -638,7 +638,7 @@ export default function NewWorkOrderWizardScreen() {
             style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
             onPress={() => { setScannerTarget(target); setScannerType("barcode"); setDetectedBarcode(null); setShowScanner(true); }}
           >
-            <Feather name="maximize" size={32} color={theme.primary} />
+            <Icon name="maximize" size={32} color={theme.primary} />
             <ThemedText type="body" style={{ marginTop: Spacing.sm, fontWeight: "500" }}>Scan Barcode</ThemedText>
           </Pressable>
           
@@ -646,7 +646,7 @@ export default function NewWorkOrderWizardScreen() {
             style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
             onPress={() => { setScannerTarget(target); setScannerType("qr"); setDetectedBarcode(null); setShowScanner(true); }}
           >
-            <Feather name="grid" size={32} color={theme.primary} />
+            <Icon name="grid" size={32} color={theme.primary} />
             <ThemedText type="body" style={{ marginTop: Spacing.sm, fontWeight: "500" }}>Scan QR Code</ThemedText>
           </Pressable>
         </View>
@@ -682,7 +682,7 @@ export default function NewWorkOrderWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="activity" size={48} color={theme.primary} />
+              <Icon name="activity" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               Enter the final reading from the old meter
@@ -701,7 +701,7 @@ export default function NewWorkOrderWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="map-pin" size={48} color={theme.primary} />
+              <Icon name="map-pin" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               Capture GPS coordinates of the meter location
@@ -716,7 +716,7 @@ export default function NewWorkOrderWizardScreen() {
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <>
-                  <Feather name="navigation" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                  <Icon name="navigation" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
                   Get Current Location
                 </>
               )}
@@ -724,7 +724,7 @@ export default function NewWorkOrderWizardScreen() {
             
             {formData.oldGps ? (
               <View style={[styles.gpsResult, { backgroundColor: theme.backgroundSecondary }]}>
-                <Feather name="check-circle" size={20} color={theme.success} />
+                <Icon name="check-circle" size={20} color={theme.success} />
                 <ThemedText type="body" style={{ marginLeft: Spacing.sm }}>{formData.oldGps}</ThemedText>
               </View>
             ) : null}
@@ -744,7 +744,7 @@ export default function NewWorkOrderWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="camera" size={48} color={theme.primary} />
+              <Icon name="camera" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               Take photos of the old meter before removal (minimum 1 required)
@@ -754,7 +754,7 @@ export default function NewWorkOrderWizardScreen() {
               onPress={() => takePhoto("before")}
               style={{ backgroundColor: theme.primary, marginBottom: Spacing.md }}
             >
-              <Feather name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+              <Icon name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
               Take Before Photo
             </Button>
             
@@ -770,7 +770,7 @@ export default function NewWorkOrderWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="tool" size={48} color={theme.primary} />
+              <Icon name="tool" size={48} color={theme.primary} />
             </View>
             <ThemedText type="h4" style={{ marginBottom: Spacing.lg, textAlign: "center" }}>
               Safely remove the old meter and install the new meter
@@ -778,19 +778,19 @@ export default function NewWorkOrderWizardScreen() {
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.summaryRow}>
-                <Feather name="check-circle" size={24} color={theme.success} />
+                <Icon name="check-circle" size={24} color={theme.success} />
                 <ThemedText type="body" style={{ fontWeight: "500" }}>Old Meter: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldMeterId}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Feather name="check-circle" size={24} color={theme.success} />
+                <Icon name="check-circle" size={24} color={theme.success} />
                 <ThemedText type="body" style={{ fontWeight: "500" }}>Old Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldMeterReading}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Feather name="check-circle" size={24} color={theme.success} />
+                <Icon name="check-circle" size={24} color={theme.success} />
                 <ThemedText type="body" style={{ fontWeight: "500" }} numberOfLines={1}>GPS: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldGps}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Feather name="check-circle" size={24} color={theme.success} />
+                <Icon name="check-circle" size={24} color={theme.success} />
                 <ThemedText type="body" style={{ fontWeight: "500" }}>{formData.beforePhotos.length} Before Photo(s) Captured</ThemedText>
               </View>
             </View>
@@ -808,7 +808,7 @@ export default function NewWorkOrderWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="activity" size={48} color={theme.primary} />
+              <Icon name="activity" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               Enter the initial reading from the new meter (usually 0)
@@ -827,7 +827,7 @@ export default function NewWorkOrderWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="camera" size={48} color={theme.primary} />
+              <Icon name="camera" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               Take photos of the new meter after installation (minimum 1 required)
@@ -837,7 +837,7 @@ export default function NewWorkOrderWizardScreen() {
               onPress={() => takePhoto("after")}
               style={{ backgroundColor: theme.primary, marginBottom: Spacing.md }}
             >
-              <Feather name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+              <Icon name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
               Take After Photo
             </Button>
             
@@ -853,7 +853,7 @@ export default function NewWorkOrderWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="edit-3" size={48} color={theme.primary} />
+              <Icon name="edit-3" size={48} color={theme.primary} />
             </View>
             
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
@@ -882,7 +882,7 @@ export default function NewWorkOrderWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="file-text" size={48} color={theme.primary} />
+              <Icon name="file-text" size={48} color={theme.primary} />
             </View>
             
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
@@ -902,53 +902,53 @@ export default function NewWorkOrderWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Feather name="check-circle" size={48} color={theme.success} />
+              <Icon name="check-circle" size={48} color={theme.success} />
             </View>
             <ThemedText type="h3" style={{ marginBottom: Spacing.lg, textAlign: "center" }}>Review & Submit</ThemedText>
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.summaryRow}>
-                <Feather name="hash" size={20} color={theme.primary} />
+                <Icon name="hash" size={20} color={theme.primary} />
                 <ThemedText type="body">Old Meter: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldMeterId}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Feather name="activity" size={20} color={theme.primary} />
+                <Icon name="activity" size={20} color={theme.primary} />
                 <ThemedText type="body">Old Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldMeterReading}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Feather name="map-pin" size={20} color={theme.primary} />
+                <Icon name="map-pin" size={20} color={theme.primary} />
                 <ThemedText type="body" numberOfLines={1}>GPS Location: {formData.oldGps}</ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Feather name="camera" size={20} color={theme.primary} />
+                <Icon name="camera" size={20} color={theme.primary} />
                 <ThemedText type="body">{formData.beforePhotos.length} Before Photo(s)</ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Feather name="hash" size={20} color={theme.primary} />
+                <Icon name="hash" size={20} color={theme.primary} />
                 <ThemedText type="body">New Meter: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newMeterId}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Feather name="activity" size={20} color={theme.primary} />
+                <Icon name="activity" size={20} color={theme.primary} />
                 <ThemedText type="body">New Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newMeterReading}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Feather name="camera" size={20} color={theme.primary} />
+                <Icon name="camera" size={20} color={theme.primary} />
                 <ThemedText type="body">{formData.afterPhotos.length} After Photo(s)</ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Feather name="user" size={20} color={theme.primary} />
+                <Icon name="user" size={20} color={theme.primary} />
                 <ThemedText type="body">Signed By: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.signatureName}</ThemedText></ThemedText>
               </View>
               {formData.notes ? (
                 <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                  <Feather name="file-text" size={20} color={theme.primary} />
+                  <Icon name="file-text" size={20} color={theme.primary} />
                   <ThemedText type="body" numberOfLines={2}>Notes: {formData.notes}</ThemedText>
                 </View>
               ) : null}
             </View>
             
             <View style={[styles.offlineNotice, { backgroundColor: theme.warning + "20", marginTop: Spacing.lg }]}>
-              <Feather name="wifi-off" size={20} color={theme.warning} />
+              <Icon name="wifi-off" size={20} color={theme.warning} />
               <ThemedText type="body" style={{ marginLeft: Spacing.sm, flex: 1, color: theme.warning }}>
                 This work order will be saved locally and synced when you're back online.
               </ThemedText>

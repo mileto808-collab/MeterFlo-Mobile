@@ -1,8 +1,8 @@
 import React from "react";
 import { View, Pressable, StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
+import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 interface CheckboxProps {
@@ -30,7 +30,7 @@ export function Checkbox({ checked, onToggle, label }: CheckboxProps) {
         },
       ]}>
         {checked ? (
-          <Feather name="check" size={16} color="#FFFFFF" />
+          <Icon name="check" size={16} color="#FFFFFF" />
         ) : null}
       </View>
       {label ? (

@@ -1,8 +1,8 @@
 import React, { useRef } from "react";
 import { View, TextInput, StyleSheet, Pressable, TextInput as RNTextInput } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
+import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 interface SearchBarProps {
@@ -22,7 +22,7 @@ export function SearchBar({ value, onChangeText, placeholder = "Search...", onSe
         onPress={onSearchPress}
         style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}
       >
-        <Feather name="search" size={18} color={theme.textSecondary} />
+        <Icon name="search" size={18} color={theme.textSecondary} />
         {value.length > 0 ? (
           <>
             <ThemedText style={[styles.valueText, { color: theme.text }]} numberOfLines={1}>
@@ -32,7 +32,7 @@ export function SearchBar({ value, onChangeText, placeholder = "Search...", onSe
               onPress={() => onChangeText("")}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Feather name="x" size={18} color={theme.textSecondary} />
+              <Icon name="x" size={18} color={theme.textSecondary} />
             </Pressable>
           </>
         ) : (
@@ -46,7 +46,7 @@ export function SearchBar({ value, onChangeText, placeholder = "Search...", onSe
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundSecondary }]}>
-      <Feather name="search" size={18} color={theme.textSecondary} />
+      <Icon name="search" size={18} color={theme.textSecondary} />
       <TextInput
         ref={inputRef}
         value={value}
@@ -63,7 +63,7 @@ export function SearchBar({ value, onChangeText, placeholder = "Search...", onSe
           onPress={() => onChangeText("")}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Feather name="x" size={18} color={theme.textSecondary} />
+          <Icon name="x" size={18} color={theme.textSecondary} />
         </Pressable>
       ) : null}
     </View>

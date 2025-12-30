@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { View, StyleSheet, TextInput, Modal, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
+import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 interface ManualSearchModalProps {
@@ -63,12 +63,12 @@ export function ManualSearchModal({ visible, value, onClose, onChangeText }: Man
               onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Feather name="x" size={24} color={theme.textSecondary} />
+              <Icon name="x" size={24} color={theme.textSecondary} />
             </Pressable>
           </View>
 
           <View style={[styles.inputContainer, { backgroundColor: theme.backgroundSecondary }]}>
-            <Feather name="search" size={20} color={theme.textSecondary} />
+            <Icon name="search" size={20} color={theme.textSecondary} />
             <TextInput
               ref={inputRef}
               value={localValue}
@@ -87,7 +87,7 @@ export function ManualSearchModal({ visible, value, onClose, onChangeText }: Man
                 onPress={() => setLocalValue("")}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Feather name="x" size={18} color={theme.textSecondary} />
+                <Icon name="x" size={18} color={theme.textSecondary} />
               </Pressable>
             ) : null}
           </View>

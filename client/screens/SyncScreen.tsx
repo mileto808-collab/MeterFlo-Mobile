@@ -3,7 +3,7 @@ import { View, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, Plat
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { Feather } from "@expo/vector-icons";
+import { Icon } from "@/components/Icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useOffline, SyncHistoryEntry } from "@/contexts/OfflineContext";
@@ -136,7 +136,7 @@ export default function SyncScreen() {
     >
       <View style={[styles.statusCard, { backgroundColor: isOnline ? theme.success + "15" : theme.warning + "15" }]}>
         <View style={[styles.statusIcon, { backgroundColor: isOnline ? theme.success : theme.warning }]}>
-          <Feather name={isOnline ? "wifi" : "wifi-off"} size={24} color="#FFFFFF" />
+          <Icon name={isOnline ? "wifi" : "wifi-off"} size={24} color="#FFFFFF" />
         </View>
         <View style={styles.statusContent}>
           <ThemedText type="h4">{isOnline ? "Connected" : "Offline"}</ThemedText>
@@ -193,7 +193,7 @@ export default function SyncScreen() {
           </View>
         ) : (
           <View style={styles.emptyState}>
-            <Feather name="check-circle" size={32} color={theme.success} />
+            <Icon name="check-circle" size={32} color={theme.success} />
             <ThemedText type="body" style={{ color: theme.textSecondary }}>
               All changes are synced
             </ThemedText>
@@ -225,7 +225,7 @@ export default function SyncScreen() {
               { opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Feather name="trash-2" size={16} color={theme.error} />
+            <Icon name="trash-2" size={16} color={theme.error} />
             <ThemedText type="small" style={{ color: theme.error }}>
               Clear All Pending
             </ThemedText>
@@ -257,7 +257,7 @@ export default function SyncScreen() {
           {isClearing ? (
             <ActivityIndicator size="small" color={theme.error} />
           ) : (
-            <Feather name="refresh-cw" size={18} color={theme.error} />
+            <Icon name="refresh-cw" size={18} color={theme.error} />
           )}
           <ThemedText type="body" style={{ color: theme.error }}>
             {isClearing ? "Clearing..." : "Clear All Data & Refresh"}
@@ -283,7 +283,7 @@ export default function SyncScreen() {
               <View key={entry.id} style={[styles.historyItem, { borderColor: theme.border }]}>
                 <View style={styles.historyItemHeader}>
                   <View style={styles.historyItemStatus}>
-                    <Feather 
+                    <Icon 
                       name={getStatusIcon(entry.status)} 
                       size={16} 
                       color={getStatusColor(entry.status)} 
@@ -299,7 +299,7 @@ export default function SyncScreen() {
                 
                 <View style={styles.historyItemDetails}>
                   <View style={styles.historyDetailRow}>
-                    <Feather name="file-text" size={12} color={theme.textSecondary} />
+                    <Icon name="file-text" size={12} color={theme.textSecondary} />
                     <ThemedText type="small" style={{ color: theme.textSecondary }}>
                       {entry.workOrderTitles.length} work order{entry.workOrderTitles.length !== 1 ? "s" : ""}
                     </ThemedText>
@@ -307,7 +307,7 @@ export default function SyncScreen() {
                   
                   {entry.photoCount > 0 ? (
                     <View style={styles.historyDetailRow}>
-                      <Feather name="camera" size={12} color={theme.textSecondary} />
+                      <Icon name="camera" size={12} color={theme.textSecondary} />
                       <ThemedText type="small" style={{ color: theme.textSecondary }}>
                         {entry.photoCount} photo{entry.photoCount !== 1 ? "s" : ""}
                       </ThemedText>
@@ -343,7 +343,7 @@ export default function SyncScreen() {
           </View>
         ) : (
           <View style={styles.emptyState}>
-            <Feather name="clock" size={32} color={theme.textSecondary} />
+            <Icon name="clock" size={32} color={theme.textSecondary} />
             <ThemedText type="body" style={{ color: theme.textSecondary }}>
               No upload history yet
             </ThemedText>

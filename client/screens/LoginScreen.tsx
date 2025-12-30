@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Image, Pressable, ActivityIndicator, Alert, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { ThemedText } from "@/components/ThemedText";
 import { TextInput } from "@/components/TextInput";
 import { Button } from "@/components/Button";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 export default function LoginScreen() {
@@ -108,7 +108,7 @@ export default function LoginScreen() {
               style={styles.eyeButton}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Feather
+              <Icon
                 name={showPassword ? "eye-off" : "eye"}
                 size={20}
                 color={theme.textSecondary}
@@ -119,7 +119,7 @@ export default function LoginScreen() {
 
         {error ? (
           <View style={[styles.errorContainer, { backgroundColor: theme.error + "15" }]}>
-            <Feather name="alert-circle" size={16} color={theme.error} />
+            <Icon name="alert-circle" size={16} color={theme.error} />
             <ThemedText type="small" style={[styles.errorText, { color: theme.error }]}>
               {error}
             </ThemedText>

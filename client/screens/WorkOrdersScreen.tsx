@@ -5,7 +5,6 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders, WorkOrder } from "@/contexts/WorkOrderContext";
@@ -19,6 +18,7 @@ import { SearchOptionsModal, SearchOption } from "@/components/SearchOptionsModa
 import { HIDScannerModal } from "@/components/HIDScannerModal";
 import { ManualSearchModal } from "@/components/ManualSearchModal";
 import { ScanConfirmModal } from "@/components/ScanConfirmModal";
+import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 interface ScanResult {
@@ -116,7 +116,7 @@ export default function WorkOrdersScreen() {
 
   const ListEmptyComponent = useMemo(() => (
     <View style={styles.emptyContainer}>
-      <Feather name="inbox" size={48} color={theme.textSecondary} />
+      <Icon name="inbox" size={48} color={theme.textSecondary} />
       <ThemedText type="body" style={[styles.emptyText, { color: theme.textSecondary }]}>
         {error ? "Failed to load work orders" : "No work orders found"}
       </ThemedText>
@@ -149,7 +149,7 @@ export default function WorkOrdersScreen() {
               { backgroundColor: theme.backgroundSecondary, opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Feather name="filter" size={20} color={theme.text} />
+            <Icon name="filter" size={20} color={theme.text} />
             {activeFilterCount > 0 ? (
               <View style={[styles.filterBadge, { backgroundColor: theme.primary }]}>
                 <ThemedText style={styles.filterBadgeText}>{activeFilterCount}</ThemedText>
@@ -163,7 +163,9 @@ export default function WorkOrdersScreen() {
               { backgroundColor: theme.backgroundSecondary, opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Feather name="bar-chart-2" size={20} color={theme.text} style={{ transform: [{ rotate: "-90deg" }] }} />
+            <View style={{ transform: [{ rotate: "-90deg" }] }}>
+              <Icon name="bar-chart-2" size={20} color={theme.text} />
+            </View>
           </Pressable>
         </View>
       </View>
@@ -235,7 +237,7 @@ export default function WorkOrdersScreen() {
             },
           ]}
         >
-          <Feather name="plus" size={28} color="#FFFFFF" />
+          <Icon name="plus" size={28} color="#FFFFFF" />
         </Pressable>
       ) : null}
     </View>

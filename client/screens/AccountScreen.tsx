@@ -3,7 +3,6 @@ import { View, ScrollView, StyleSheet, Pressable, Alert, Platform } from "react-
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { Feather } from "@expo/vector-icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +10,7 @@ import { useOffline } from "@/contexts/OfflineContext";
 import { useWorkOrders } from "@/contexts/WorkOrderContext";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
+import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 export default function AccountScreen() {
@@ -66,7 +66,7 @@ export default function AccountScreen() {
     >
       <View style={[styles.profileCard, { backgroundColor: theme.backgroundDefault }]}>
         <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
-          <Feather name="user" size={32} color="#FFFFFF" />
+          <Icon name="user" size={32} color="#FFFFFF" />
         </View>
         <View style={styles.profileInfo}>
           <ThemedText type="h3">{user?.displayName || user?.username || "User"}</ThemedText>
@@ -87,7 +87,7 @@ export default function AccountScreen() {
           
           <View style={styles.infoRow}>
             <View style={styles.infoLabel}>
-              <Feather name="folder" size={16} color={theme.textSecondary} />
+              <Icon name="folder" size={16} color={theme.textSecondary} />
               <ThemedText type="small" style={{ color: theme.textSecondary }}>Project</ThemedText>
             </View>
             <ThemedText type="body" numberOfLines={1} style={styles.infoValue}>
@@ -98,7 +98,7 @@ export default function AccountScreen() {
           {currentProject.description ? (
             <View style={styles.infoRow}>
               <View style={styles.infoLabel}>
-                <Feather name="file-text" size={16} color={theme.textSecondary} />
+                <Icon name="file-text" size={16} color={theme.textSecondary} />
                 <ThemedText type="small" style={{ color: theme.textSecondary }}>Description</ThemedText>
               </View>
               <ThemedText type="body" numberOfLines={2} style={styles.infoValue}>
@@ -114,7 +114,7 @@ export default function AccountScreen() {
         
         <View style={styles.infoRow}>
           <View style={styles.infoLabel}>
-            <Feather name="globe" size={16} color={theme.textSecondary} />
+            <Icon name="globe" size={16} color={theme.textSecondary} />
             <ThemedText type="small" style={{ color: theme.textSecondary }}>Server URL</ThemedText>
           </View>
           <ThemedText type="body" numberOfLines={1} style={styles.infoValue}>
@@ -124,7 +124,7 @@ export default function AccountScreen() {
 
         <View style={styles.infoRow}>
           <View style={styles.infoLabel}>
-            <Feather name={isOnline ? "wifi" : "wifi-off"} size={16} color={isOnline ? theme.success : theme.warning} />
+            <Icon name={isOnline ? "wifi" : "wifi-off"} size={16} color={isOnline ? theme.success : theme.warning} />
             <ThemedText type="small" style={{ color: theme.textSecondary }}>Status</ThemedText>
           </View>
           <View style={[
@@ -139,7 +139,7 @@ export default function AccountScreen() {
 
         <View style={styles.infoRow}>
           <View style={styles.infoLabel}>
-            <Feather name="refresh-cw" size={16} color={theme.textSecondary} />
+            <Icon name="refresh-cw" size={16} color={theme.textSecondary} />
             <ThemedText type="small" style={{ color: theme.textSecondary }}>Last Sync</ThemedText>
           </View>
           <ThemedText type="body">{formatTime(lastSyncTime)}</ThemedText>
@@ -151,7 +151,7 @@ export default function AccountScreen() {
         
         <View style={styles.infoRow}>
           <View style={styles.infoLabel}>
-            <Feather name="info" size={16} color={theme.textSecondary} />
+            <Icon name="info" size={16} color={theme.textSecondary} />
             <ThemedText type="small" style={{ color: theme.textSecondary }}>Version</ThemedText>
           </View>
           <ThemedText type="body">1.0.0</ThemedText>
@@ -159,7 +159,7 @@ export default function AccountScreen() {
 
         <View style={styles.infoRow}>
           <View style={styles.infoLabel}>
-            <Feather name="smartphone" size={16} color={theme.textSecondary} />
+            <Icon name="smartphone" size={16} color={theme.textSecondary} />
             <ThemedText type="small" style={{ color: theme.textSecondary }}>App</ThemedText>
           </View>
           <ThemedText type="body">MeterFlo Mobile</ThemedText>

@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useHeaderHeight } from "@react-navigation/elements";
-import { Feather } from "@expo/vector-icons";
+import { Icon } from "@/components/Icons";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders, FilterConfig } from "@/contexts/WorkOrderContext";
@@ -93,7 +93,7 @@ export default function FilterScreen() {
                     {option.value}
                   </ThemedText>
                   {isSelected ? (
-                    <Feather name="check" size={14} color="#FFFFFF" />
+                    <Icon name="check" size={14} color="#FFFFFF" />
                   ) : null}
                 </Pressable>
               );
@@ -103,7 +103,7 @@ export default function FilterScreen() {
 
         {activeCount > 0 ? (
           <View style={styles.activeFiltersInfo}>
-            <Feather name="filter" size={16} color={theme.primary} />
+            <Icon name="filter" size={16} color={theme.primary} />
             <ThemedText type="small" style={{ color: theme.primary }}>
               {activeCount} filter{activeCount !== 1 ? "s" : ""} active
             </ThemedText>

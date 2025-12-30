@@ -1,9 +1,9 @@
 import React from "react";
 import { View, StyleSheet, Pressable, Modal } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
+import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 export type SearchOption = "barcode" | "qrcode" | "hid" | "manual";
@@ -15,7 +15,7 @@ interface SearchOptionsModalProps {
 }
 
 interface OptionButtonProps {
-  icon: keyof typeof Feather.glyphMap;
+  icon: string;
   title: string;
   description: string;
   onPress: () => void;
@@ -33,7 +33,7 @@ function OptionButton({ icon, title, description, onPress }: OptionButtonProps) 
       ]}
     >
       <View style={[styles.iconContainer, { backgroundColor: theme.primary + "20" }]}>
-        <Feather name={icon} size={24} color={theme.primary} />
+        <Icon name={icon} size={24} color={theme.primary} />
       </View>
       <View style={styles.optionText}>
         <ThemedText type="body" style={{ fontWeight: "600" }}>{title}</ThemedText>
@@ -41,7 +41,7 @@ function OptionButton({ icon, title, description, onPress }: OptionButtonProps) 
           {description}
         </ThemedText>
       </View>
-      <Feather name="chevron-right" size={20} color={theme.textSecondary} />
+      <Icon name="chevron-right" size={20} color={theme.textSecondary} />
     </Pressable>
   );
 }

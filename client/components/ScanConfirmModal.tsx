@@ -1,10 +1,10 @@
 import React from "react";
 import { View, StyleSheet, Modal, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
+import { Icon } from "@/components/Icons";
 import { WorkOrder } from "@/contexts/WorkOrderContext";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
@@ -46,7 +46,7 @@ export function ScanConfirmModal({
             }
           ]}
         >
-          <Feather 
+          <Icon 
             name={workOrder ? "check-circle" : "alert-circle"} 
             size={56} 
             color={workOrder ? theme.success : theme.warning} 
@@ -96,7 +96,7 @@ export function ScanConfirmModal({
                 onPress={onConfirm}
                 style={{ backgroundColor: theme.primary, flex: 1 }}
               >
-                <Feather name="arrow-right" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                <Icon name="arrow-right" size={18} color="#FFFFFF" />
                 Start Wizard
               </Button>
             ) : null}
@@ -104,7 +104,7 @@ export function ScanConfirmModal({
               onPress={onScanAgain}
               style={{ backgroundColor: theme.backgroundSecondary, flex: workOrder ? 0 : 1, minWidth: 120 }}
             >
-              <Feather name="refresh-cw" size={18} color={theme.text} style={{ marginRight: Spacing.sm }} />
+              <Icon name="refresh-cw" size={18} color={theme.text} />
               <ThemedText>Scan Again</ThemedText>
             </Button>
           </View>

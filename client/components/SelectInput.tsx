@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { View, Pressable, StyleSheet, Modal, FlatList } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
+import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 interface SelectInputProps {
@@ -42,7 +42,7 @@ export function SelectInput({ value, options, onSelect, placeholder = "Select...
         >
           {value || placeholder}
         </ThemedText>
-        <Feather name="chevron-down" size={20} color={theme.textSecondary} />
+        <Icon name="chevron-down" size={20} color={theme.textSecondary} />
       </Pressable>
 
       <Modal
@@ -65,7 +65,7 @@ export function SelectInput({ value, options, onSelect, placeholder = "Select...
             <View style={[styles.header, { borderBottomColor: theme.border }]}>
               <ThemedText type="h4">Select Option</ThemedText>
               <Pressable onPress={() => setIsOpen(false)}>
-                <Feather name="x" size={24} color={theme.text} />
+                <Icon name="x" size={24} color={theme.text} />
               </Pressable>
             </View>
             <FlatList
@@ -89,7 +89,7 @@ export function SelectInput({ value, options, onSelect, placeholder = "Select...
                     {item}
                   </ThemedText>
                   {item === value ? (
-                    <Feather name="check" size={20} color={theme.primary} />
+                    <Icon name="check" size={20} color={theme.primary} />
                   ) : null}
                 </Pressable>
               )}

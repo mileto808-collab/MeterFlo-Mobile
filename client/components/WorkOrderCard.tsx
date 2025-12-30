@@ -1,11 +1,11 @@
 import React from "react";
 import { View, StyleSheet, Pressable } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, WithSpringConfig } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
 import { WorkOrder, useWorkOrders } from "@/contexts/WorkOrderContext";
 import { ThemedText } from "@/components/ThemedText";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 interface WorkOrderCardProps {
@@ -68,7 +68,7 @@ export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
         </View>
         {workOrder.syncPending ? (
           <View style={[styles.syncPending, { backgroundColor: theme.syncPending }]}>
-            <Feather name="upload-cloud" size={14} color="#FFFFFF" />
+            <Icon name="upload-cloud" size={14} color="#FFFFFF" />
           </View>
         ) : null}
       </View>
@@ -90,13 +90,13 @@ export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
 
       <View style={styles.footer}>
         <View style={styles.footerItem}>
-          <Feather name="user" size={14} color={theme.textSecondary} />
+          <Icon name="user" size={14} color={theme.textSecondary} />
           <ThemedText type="small" style={{ color: theme.textSecondary }} numberOfLines={1}>
             {displayAssignee}
           </ThemedText>
         </View>
         <View style={styles.footerItem}>
-          <Feather name="calendar" size={14} color={theme.textSecondary} />
+          <Icon name="calendar" size={14} color={theme.textSecondary} />
           <ThemedText type="small" style={{ color: theme.textSecondary }}>
             {formatDate(workOrder.scheduledDate)}
           </ThemedText>
