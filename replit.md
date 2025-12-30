@@ -48,6 +48,14 @@ Preferred communication style: Simple, everyday language.
 4. Session maintained via secure token storage
 5. Supports "Remember Me" for persistent sessions
 
+### Offline Login
+- **Credential Caching**: On successful online login, credentials are securely stored in SecureStore (device-level encryption via Keychain/Keystore)
+- **Offline Verification**: When server is unreachable, app validates credentials locally using stored password hash with salt
+- **Offline Session Mode**: App enters "offline session" mode with banner indicator on Account screen
+- **Silent Re-authentication**: When connectivity returns, AutoSyncManager triggers session revalidation via `revalidateSession()`, which performs a real login API call to establish a valid server cookie
+- **Credential Preservation**: Credentials persist through logout to enable offline re-login
+- **Sync Safety**: AutoSyncManager skips sync operations if session revalidation fails, preventing 401 errors
+
 ### Offline-First Design
 - Network status monitored via NetInfo
 - Work orders cached locally for offline access
