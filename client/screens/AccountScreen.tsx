@@ -18,7 +18,7 @@ export default function AccountScreen() {
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
-  const { user, serverUrl, projectId, projects, logout } = useAuth();
+  const { user, serverUrl, projectId, projects, logout, isOfflineSession } = useAuth();
   const { isOnline } = useOffline();
   const { lastSyncTime } = useWorkOrders();
 
@@ -80,6 +80,20 @@ export default function AccountScreen() {
           </View>
         </View>
       </View>
+
+      {isOfflineSession ? (
+        <View style={[styles.offlineSessionBanner, { backgroundColor: theme.warning + "20" }]}>
+          <Icon name="wifi-off" size={20} color={theme.warning} />
+          <View style={styles.offlineSessionText}>
+            <ThemedText type="body" style={{ color: theme.warning, fontWeight: "600" }}>
+              Offline Session
+            </ThemedText>
+            <ThemedText type="small" style={{ color: theme.textSecondary }}>
+              You logged in using saved credentials. Changes will sync when you reconnect.
+            </ThemedText>
+          </View>
+        </View>
+      ) : null}
 
       {currentProject ? (
         <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
@@ -243,4 +257,15 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
   },
   logoutButton: {},
+  offlineSessionBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.md,
+  },
+  offlineSessionText: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
 });

@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export function AutoSyncManager() {
   const { isOnline, pendingActions, isSyncing, syncPendingActions } = useOffline();
   const { updateWorkOrder, transformOfflineToServerWorkOrder } = useWorkOrders();
-  const { serverUrl, projectId } = useAuth();
+  const { serverUrl, projectId, isOfflineSession, revalidateSession } = useAuth();
   const wasOfflineRef = useRef(false);
   const autoSyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -16,8 +16,8 @@ export function AutoSyncManager() {
       return;
     }
 
-    if (wasOfflineRef.current && isOnline && pendingActions.length > 0 && !isSyncing && serverUrl && projectId) {
-      console.log("[AutoSyncManager] Connectivity restored, triggering auto-sync");
+    if (wasOfflineRef.current && isOnline) {
+      console.log("[AutoSyncManager] Connectivity restored");
       
       if (autoSyncTimeoutRef.current) {
         clearTimeout(autoSyncTimeoutRef.current);
@@ -25,6 +25,22 @@ export function AutoSyncManager() {
       
       autoSyncTimeoutRef.current = setTimeout(async () => {
         wasOfflineRef.current = false;
+        
+        if (isOfflineSession) {
+          console.log("[AutoSyncManager] Revalidating offline session");
+          const revalidated = await revalidateSession();
+          if (!revalidated) {
+            console.log("[AutoSyncManager] Session revalidation failed, skipping sync");
+            wasOfflineRef.current = true;
+            return;
+          }
+        }
+        
+        if (pendingActions.length === 0 || isSyncing || !serverUrl || !projectId) {
+          return;
+        }
+        
+        console.log("[AutoSyncManager] Triggering auto-sync");
         
         try {
           const { syncedWorkOrderIds, syncedOfflineWorkOrders } = await syncPendingActions();
@@ -61,7 +77,7 @@ export function AutoSyncManager() {
         clearTimeout(autoSyncTimeoutRef.current);
       }
     };
-  }, [isOnline, pendingActions.length, isSyncing, serverUrl, projectId, syncPendingActions, updateWorkOrder, transformOfflineToServerWorkOrder]);
+  }, [isOnline, pendingActions.length, isSyncing, serverUrl, projectId, isOfflineSession, syncPendingActions, updateWorkOrder, transformOfflineToServerWorkOrder, revalidateSession]);
 
   return null;
 }

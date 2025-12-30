@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import * as SecureStore from "expo-secure-store";
+import * as Crypto from "expo-crypto";
 import { Platform } from "react-native";
+import NetInfo from "@react-native-community/netinfo";
 
 export interface User {
   id: string;
@@ -23,6 +25,7 @@ interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
   needsProjectSelection: boolean;
+  isOfflineSession: boolean;
 }
 
 interface AuthContextType extends AuthState {
@@ -31,6 +34,7 @@ interface AuthContextType extends AuthState {
   selectProject: (projectId: number) => Promise<void>;
   updateServerUrl: (url: string) => Promise<void>;
   getApiUrl: (path: string) => string;
+  revalidateSession: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,7 +44,19 @@ const STORAGE_KEYS = {
   SERVER_URL: "meterflo_server_url",
   PROJECT_ID: "meterflo_project_id",
   PROJECTS: "meterflo_projects",
+  CREDENTIALS: "meterflo_credentials",
 };
+
+interface StoredCredentials {
+  serverUrl: string;
+  username: string;
+  passwordHash: string;
+  salt: string;
+  password: string;
+  user: User;
+  projects: Project[];
+  lastProjectId: number | null;
+}
 
 async function secureGet(key: string): Promise<string | null> {
   if (Platform.OS === "web") {
@@ -65,6 +81,62 @@ async function secureDelete(key: string): Promise<void> {
   await SecureStore.deleteItemAsync(key);
 }
 
+async function generateSalt(): Promise<string> {
+  const randomBytes = await Crypto.getRandomBytesAsync(16);
+  return Array.from(new Uint8Array(randomBytes)).map((b: number) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashPassword(password: string, salt: string): Promise<string> {
+  const combined = salt + password;
+  const hash = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    combined
+  );
+  return hash;
+}
+
+async function getStoredCredentials(): Promise<StoredCredentials | null> {
+  try {
+    const stored = await secureGet(STORAGE_KEYS.CREDENTIALS);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.warn("Failed to get stored credentials:", e);
+  }
+  return null;
+}
+
+async function storeCredentials(creds: StoredCredentials): Promise<void> {
+  await secureSet(STORAGE_KEYS.CREDENTIALS, JSON.stringify(creds));
+}
+
+async function isNetworkAvailable(): Promise<boolean> {
+  try {
+    const netState = await NetInfo.fetch();
+    return netState.isConnected === true && netState.isInternetReachable !== false;
+  } catch {
+    return false;
+  }
+}
+
+async function isServerReachable(serverUrl: string, timeoutMs: number = 5000): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
+    const response = await fetch(`${serverUrl}/api/health`, {
+      method: "GET",
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    return response.ok || response.status === 404;
+  } catch {
+    return false;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -74,6 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading: true,
     isAuthenticated: false,
     needsProjectSelection: false,
+    isOfflineSession: false,
   });
 
   useEffect(() => {
@@ -98,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isLoading: false,
           isAuthenticated: true,
           needsProjectSelection: false,
+          isOfflineSession: false,
         });
       } else if (storedUser && storedServerUrl && storedProjects) {
         setState({
@@ -108,6 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isLoading: false,
           isAuthenticated: false,
           needsProjectSelection: true,
+          isOfflineSession: false,
         });
       } else {
         setState(prev => ({
@@ -122,11 +197,107 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const attemptOfflineLogin = async (
+    serverUrl: string,
+    username: string,
+    password: string
+  ): Promise<{ success: boolean; user?: User; projects?: Project[]; projectId?: number | null }> => {
+    const storedCreds = await getStoredCredentials();
+    
+    if (!storedCreds) {
+      return { success: false };
+    }
+
+    const normalizedUrl = serverUrl.endsWith("/") ? serverUrl.slice(0, -1) : serverUrl;
+    
+    if (storedCreds.serverUrl !== normalizedUrl) {
+      return { success: false };
+    }
+
+    if (storedCreds.username.toLowerCase() !== username.toLowerCase()) {
+      return { success: false };
+    }
+
+    const passwordHash = await hashPassword(password, storedCreds.salt);
+    
+    if (passwordHash !== storedCreds.passwordHash) {
+      return { success: false };
+    }
+
+    return {
+      success: true,
+      user: storedCreds.user,
+      projects: storedCreds.projects,
+      projectId: storedCreds.lastProjectId,
+    };
+  };
+
   const login = useCallback(async (serverUrl: string, username: string, password: string) => {
     setState(prev => ({ ...prev, isLoading: true }));
 
+    const normalizedUrl = serverUrl.endsWith("/") ? serverUrl.slice(0, -1) : serverUrl;
+
     try {
-      const normalizedUrl = serverUrl.endsWith("/") ? serverUrl.slice(0, -1) : serverUrl;
+      const networkAvailable = await isNetworkAvailable();
+      const serverReachable = networkAvailable ? await isServerReachable(normalizedUrl) : false;
+
+      if (!networkAvailable || !serverReachable) {
+        const offlineResult = await attemptOfflineLogin(normalizedUrl, username, password);
+        
+        if (!offlineResult.success) {
+          throw new Error(
+            networkAvailable
+              ? "Server is unreachable and no saved credentials found for this account."
+              : "You are offline and no saved credentials found for this account."
+          );
+        }
+
+        const { user, projects, projectId } = offlineResult;
+
+        await Promise.all([
+          secureSet(STORAGE_KEYS.USER, JSON.stringify(user)),
+          secureSet(STORAGE_KEYS.SERVER_URL, normalizedUrl),
+          secureSet(STORAGE_KEYS.PROJECTS, JSON.stringify(projects)),
+        ]);
+
+        if (projectId) {
+          await secureSet(STORAGE_KEYS.PROJECT_ID, String(projectId));
+          setState({
+            user: user!,
+            serverUrl: normalizedUrl,
+            projectId,
+            projects: projects!,
+            isLoading: false,
+            isAuthenticated: true,
+            needsProjectSelection: false,
+            isOfflineSession: true,
+          });
+        } else if (projects && projects.length === 1) {
+          await secureSet(STORAGE_KEYS.PROJECT_ID, String(projects[0].id));
+          setState({
+            user: user!,
+            serverUrl: normalizedUrl,
+            projectId: projects[0].id,
+            projects: projects!,
+            isLoading: false,
+            isAuthenticated: true,
+            needsProjectSelection: false,
+            isOfflineSession: true,
+          });
+        } else {
+          setState({
+            user: user!,
+            serverUrl: normalizedUrl,
+            projectId: null,
+            projects: projects!,
+            isLoading: false,
+            isAuthenticated: false,
+            needsProjectSelection: true,
+            isOfflineSession: true,
+          });
+        }
+        return;
+      }
       
       const loginResponse = await fetch(`${normalizedUrl}/api/auth/local/login`, {
         method: "POST",
@@ -161,6 +332,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const projectsData = await projectsResponse.json();
       const projects: Project[] = Array.isArray(projectsData) ? projectsData : projectsData.projects || [];
 
+      const salt = await generateSalt();
+      const passwordHash = await hashPassword(password, salt);
+      
+      await storeCredentials({
+        serverUrl: normalizedUrl,
+        username: user.username,
+        passwordHash,
+        salt,
+        password,
+        user,
+        projects,
+        lastProjectId: null,
+      });
+
       await Promise.all([
         secureSet(STORAGE_KEYS.USER, JSON.stringify(user)),
         secureSet(STORAGE_KEYS.SERVER_URL, normalizedUrl),
@@ -169,6 +354,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (projects.length === 1) {
         await secureSet(STORAGE_KEYS.PROJECT_ID, String(projects[0].id));
+        
+        const storedCreds = await getStoredCredentials();
+        if (storedCreds) {
+          await storeCredentials({ ...storedCreds, lastProjectId: projects[0].id });
+        }
+        
         setState({
           user,
           serverUrl: normalizedUrl,
@@ -177,6 +368,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isLoading: false,
           isAuthenticated: true,
           needsProjectSelection: false,
+          isOfflineSession: false,
         });
       } else {
         setState({
@@ -187,6 +379,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isLoading: false,
           isAuthenticated: false,
           needsProjectSelection: true,
+          isOfflineSession: false,
         });
       }
     } catch (error) {
@@ -197,6 +390,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const selectProject = useCallback(async (projectId: number) => {
     await secureSet(STORAGE_KEYS.PROJECT_ID, String(projectId));
+    
+    const storedCreds = await getStoredCredentials();
+    if (storedCreds) {
+      await storeCredentials({ ...storedCreds, lastProjectId: projectId });
+    }
+    
     setState(prev => ({
       ...prev,
       projectId,
@@ -231,8 +430,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       projects: [],
       isAuthenticated: false,
       needsProjectSelection: false,
+      isOfflineSession: false,
     }));
   }, []);
+
+  const revalidateSession = useCallback(async (): Promise<boolean> => {
+    if (!state.isOfflineSession || !state.user || !state.serverUrl) {
+      return true;
+    }
+
+    try {
+      const networkAvailable = await isNetworkAvailable();
+      if (!networkAvailable) {
+        console.log("[Auth] Network not available for revalidation");
+        return false;
+      }
+
+      const serverReachable = await isServerReachable(state.serverUrl);
+      if (!serverReachable) {
+        console.log("[Auth] Server not reachable for revalidation");
+        return false;
+      }
+
+      const storedCreds = await getStoredCredentials();
+      if (!storedCreds || !storedCreds.password) {
+        console.log("[Auth] No stored credentials for revalidation");
+        return false;
+      }
+
+      console.log("[Auth] Attempting silent re-authentication...");
+      
+      const loginResponse = await fetch(`${state.serverUrl}/api/auth/local/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ 
+          username: storedCreds.username, 
+          password: storedCreds.password 
+        }),
+      });
+
+      if (!loginResponse.ok) {
+        console.warn("[Auth] Silent re-authentication failed, user may need to login again");
+        return false;
+      }
+
+      console.log("[Auth] Silent re-authentication successful");
+      setState(prev => ({ ...prev, isOfflineSession: false }));
+      return true;
+    } catch (error) {
+      console.warn("[Auth] Failed to revalidate session:", error);
+      return false;
+    }
+  }, [state.isOfflineSession, state.user, state.serverUrl]);
 
   const updateServerUrl = useCallback(async (url: string) => {
     const normalizedUrl = url.endsWith("/") ? url.slice(0, -1) : url;
@@ -248,7 +498,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [state.serverUrl, state.projectId]);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, selectProject, updateServerUrl, getApiUrl }}>
+    <AuthContext.Provider value={{ ...state, login, logout, selectProject, updateServerUrl, getApiUrl, revalidateSession }}>
       {children}
     </AuthContext.Provider>
   );
