@@ -540,6 +540,9 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
             troubleNote: serverWo.troubleNote,
             notes: serverWo.notes,
             status: localWo.status || serverWo.status,
+            beforePhotos: localWo.beforePhotos || serverWo.beforePhotos,
+            afterPhotos: localWo.afterPhotos || serverWo.afterPhotos,
+            troublePhotos: localWo.troublePhotos || serverWo.troublePhotos,
           };
         }
         
