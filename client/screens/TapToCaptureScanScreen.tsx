@@ -281,13 +281,22 @@ export default function TapToCaptureScanScreen() {
                         : "No Match Found"}
                 </ThemedText>
                 
-                {matchSource === "server" && matchedWorkOrder ? (
-                  <View style={[styles.serverBadge, { backgroundColor: theme.primary + "20" }]}>
-                    <Icon name="cloud" size={14} color={theme.primary} />
-                    <ThemedText type="small" style={{ color: theme.primary, marginLeft: Spacing.xs }}>
-                      From Server - Requires Claim
-                    </ThemedText>
-                  </View>
+                {matchedWorkOrder ? (
+                  matchSource === "server" ? (
+                    <View style={[styles.serverBadge, { backgroundColor: theme.primary + "20" }]}>
+                      <Icon name="cloud" size={14} color={theme.primary} />
+                      <ThemedText type="small" style={{ color: theme.primary, marginLeft: Spacing.xs }}>
+                        Matched from server - Requires Claim
+                      </ThemedText>
+                    </View>
+                  ) : (
+                    <View style={[styles.serverBadge, { backgroundColor: theme.success + "20" }]}>
+                      <Icon name="database" size={14} color={theme.success} />
+                      <ThemedText type="small" style={{ color: theme.success, marginLeft: Spacing.xs }}>
+                        Matched from cached work orders
+                      </ThemedText>
+                    </View>
+                  )
                 ) : null}
             
             {hasMultipleMatches ? (
@@ -406,8 +415,8 @@ export default function TapToCaptureScanScreen() {
             ) : (
               <ThemedText type="body" style={[styles.noMatchText, { color: theme.textSecondary }]}>
                 {isOnline 
-                  ? "No work order found with this meter ID on the server."
-                  : "No work order found locally. Go online to search the server."}
+                  ? "No work order found in cached work orders or on the server."
+                  : "No work order found in cached data. Go online to search the server."}
               </ThemedText>
             )}
               </>

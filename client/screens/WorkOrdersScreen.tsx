@@ -17,13 +17,16 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { SearchOptionsModal, SearchOption } from "@/components/SearchOptionsModal";
 import { HIDScannerModal } from "@/components/HIDScannerModal";
 import { ManualSearchModal } from "@/components/ManualSearchModal";
-import { ScanConfirmModal } from "@/components/ScanConfirmModal";
+import { ScanConfirmModal, MatchSource } from "@/components/ScanConfirmModal";
 import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 interface ScanResult {
   meterId: string;
   workOrder: WorkOrder | undefined;
+  matchSource: MatchSource;
+  isSearching: boolean;
+  searchError: string | null;
 }
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -34,7 +37,7 @@ export default function WorkOrdersScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { filters, setFilters, getFilteredWorkOrders, workOrders, isLoading, refreshWorkOrders, error } = useWorkOrders();
+  const { filters, setFilters, getFilteredWorkOrders, workOrders, isLoading, refreshWorkOrders, error, searchWorkOrdersByMeterIdOnServer } = useWorkOrders();
   const { isOnline } = useOffline();
 
   const [showSearchOptions, setShowSearchOptions] = useState(false);
@@ -52,13 +55,67 @@ export default function WorkOrdersScreen() {
     });
   }, [workOrders]);
 
-  const handleScanResult = useCallback((scannedValue: string) => {
-    const workOrder = findWorkOrderByMeterId(scannedValue);
+  const handleScanResult = useCallback(async (scannedValue: string) => {
+    const normalizedValue = scannedValue.trim();
+    
+    // First, show the modal in searching state
     setScanConfirmResult({
-      meterId: scannedValue,
-      workOrder,
+      meterId: normalizedValue,
+      workOrder: undefined,
+      matchSource: "none",
+      isSearching: true,
+      searchError: null,
     });
-  }, [findWorkOrderByMeterId]);
+    
+    // Search locally first
+    const localWorkOrder = findWorkOrderByMeterId(normalizedValue);
+    if (localWorkOrder) {
+      setScanConfirmResult({
+        meterId: normalizedValue,
+        workOrder: localWorkOrder,
+        matchSource: "local",
+        isSearching: false,
+        searchError: null,
+      });
+      return;
+    }
+    
+    // No local match - search server if online
+    if (isOnline) {
+      try {
+        const serverResults = await searchWorkOrdersByMeterIdOnServer(normalizedValue);
+        const eligibleWorkOrder = serverResults.find(wo => {
+          const status = wo.status?.toLowerCase();
+          return status !== "completed" && status !== "closed";
+        });
+        
+        setScanConfirmResult({
+          meterId: normalizedValue,
+          workOrder: eligibleWorkOrder,
+          matchSource: eligibleWorkOrder ? "server" : "none",
+          isSearching: false,
+          searchError: null,
+        });
+      } catch (err) {
+        setScanConfirmResult({
+          meterId: normalizedValue,
+          workOrder: undefined,
+          matchSource: "none",
+          isSearching: false,
+          searchError: err instanceof Error ? err.message : "Server search failed",
+        });
+      }
+    } else {
+      // Offline and no local match
+      setScanConfirmResult({
+        meterId: normalizedValue,
+        workOrder: undefined,
+        matchSource: "none",
+        isSearching: false,
+        searchError: null,
+      });
+    }
+  }, [findWorkOrderByMeterId, isOnline, searchWorkOrdersByMeterIdOnServer]);
 
   const handleConfirmScan = useCallback(() => {
     if (scanConfirmResult?.workOrder) {
@@ -114,21 +171,33 @@ export default function WorkOrdersScreen() {
 
   const keyExtractor = useCallback((item: WorkOrder) => String(item.id), []);
 
-  const ListEmptyComponent = useMemo(() => (
-    <View style={styles.emptyContainer}>
-      <Icon name="inbox" size={48} color={theme.textSecondary} />
-      <ThemedText type="body" style={[styles.emptyText, { color: theme.textSecondary }]}>
-        {error ? "Failed to load work orders" : "No work orders found"}
-      </ThemedText>
-      <ThemedText type="small" style={[styles.emptySubtext, { color: theme.textSecondary }]}>
-        {error 
-          ? error 
-          : filters.searchQuery || activeFilterCount > 0
-            ? "Try adjusting your search or filters"
-            : "Pull down to refresh"}
-      </ThemedText>
-    </View>
-  ), [theme, filters.searchQuery, activeFilterCount, error]);
+  const ListEmptyComponent = useMemo(() => {
+    const hasSearchOrFilters = filters.searchQuery || activeFilterCount > 0;
+    
+    const getSubtext = () => {
+      if (error) return error;
+      if (hasSearchOrFilters) {
+        if (isOnline) {
+          return "No matches in cached work orders. Use scan to search the server.";
+        } else {
+          return "No matches in cached work orders. Go online to search the server.";
+        }
+      }
+      return "Pull down to refresh";
+    };
+    
+    return (
+      <View style={styles.emptyContainer}>
+        <Icon name="inbox" size={48} color={theme.textSecondary} />
+        <ThemedText type="body" style={[styles.emptyText, { color: theme.textSecondary }]}>
+          {error ? "Failed to load work orders" : "No work orders found"}
+        </ThemedText>
+        <ThemedText type="small" style={[styles.emptySubtext, { color: theme.textSecondary }]}>
+          {getSubtext()}
+        </ThemedText>
+      </View>
+    );
+  }, [theme, filters.searchQuery, activeFilterCount, error, isOnline]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
@@ -220,6 +289,10 @@ export default function WorkOrdersScreen() {
         visible={scanConfirmResult !== null}
         meterId={scanConfirmResult?.meterId || ""}
         workOrder={scanConfirmResult?.workOrder}
+        matchSource={scanConfirmResult?.matchSource || "none"}
+        isSearching={scanConfirmResult?.isSearching || false}
+        searchError={scanConfirmResult?.searchError || null}
+        isOffline={!isOnline}
         onConfirm={handleConfirmScan}
         onScanAgain={handleScanAgain}
         onClose={handleCloseScanConfirm}
