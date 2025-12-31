@@ -70,7 +70,7 @@ export default function WorkOrderDetailScreen() {
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { workOrders, referenceData, updateWorkOrder, getStatusColor } = useWorkOrders();
+  const { workOrders, referenceData, updateWorkOrder, getStatusColor, getServiceTypeColor } = useWorkOrders();
   const { pendingActions } = useOffline();
 
   const workOrder = useMemo(() => {
@@ -218,8 +218,8 @@ export default function WorkOrderDetailScreen() {
               <View style={styles.badgeRow}>
                 <StatusBadge status={workOrder.status} color={getStatusColor(workOrder.status)} />
                 {workOrder.serviceType ? (
-                  <View style={[styles.serviceTypeBadge, { backgroundColor: (workOrder.serviceTypeColor || theme.primary) + "20" }]}>
-                    <ThemedText type="caption" style={{ color: workOrder.serviceTypeColor || theme.primary, fontWeight: "600" }}>
+                  <View style={[styles.serviceTypeBadge, { backgroundColor: (getServiceTypeColor(workOrder.serviceType) || theme.primary) + "20" }]}>
+                    <ThemedText type="caption" style={{ color: getServiceTypeColor(workOrder.serviceType) || theme.primary, fontWeight: "600" }}>
                       {workOrder.serviceType}
                     </ThemedText>
                   </View>

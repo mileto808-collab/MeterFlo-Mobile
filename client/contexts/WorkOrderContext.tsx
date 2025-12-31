@@ -110,7 +110,7 @@ interface ServerReferenceData {
   workOrderStatuses?: string[] | { code: string; label: string; color?: string }[];
   troubleCodes?: { code: string; label?: string; description?: string }[];
   meterTypes?: string[] | { id: string; name: string }[];
-  serviceTypes?: string[];
+  serviceTypes?: string[] | { name: string; color?: string }[];
   assignees?: {
     users?: { id: string; username: string; displayName?: string; display_name?: string }[];
     groups?: { name: string; description?: string }[];
@@ -123,11 +123,16 @@ export interface StatusInfo {
   color: string;
 }
 
+export interface ServiceTypeInfo {
+  name: string;
+  color?: string;
+}
+
 export interface ReferenceData {
   statuses: StatusInfo[];
   troubleCodes: { code: string; label: string; description: string }[];
   meterTypes: string[];
-  serviceTypes: string[];
+  serviceTypes: ServiceTypeInfo[];
   assignees: {
     users: { id: string; username: string; displayName: string }[];
     groups: { name: string; description: string }[];
@@ -209,6 +214,9 @@ function normalizeStoredReferenceData(ref: any): ReferenceData {
   if (ref.workOrderStatuses !== undefined) {
     return mapServerReferenceData(ref as ServerReferenceData);
   }
+  
+  let result = ref;
+  
   if (ref.statuses && Array.isArray(ref.statuses)) {
     const normalizedStatuses: StatusInfo[] = ref.statuses.map((s: any) => {
       if (typeof s === "string") {
@@ -223,9 +231,23 @@ function normalizeStoredReferenceData(ref: any): ReferenceData {
       }
       return { code: "Unknown", label: "Unknown", color: "#6B7280" };
     });
-    return { ...ref, statuses: normalizedStatuses };
+    result = { ...result, statuses: normalizedStatuses };
   }
-  return ref as ReferenceData;
+  
+  if (ref.serviceTypes && Array.isArray(ref.serviceTypes)) {
+    const normalizedServiceTypes: ServiceTypeInfo[] = ref.serviceTypes.map((st: any) => {
+      if (typeof st === "string") {
+        return { name: st };
+      }
+      if (st && typeof st === "object") {
+        return { name: st.name || "Unknown", color: st.color };
+      }
+      return { name: "Unknown" };
+    });
+    result = { ...result, serviceTypes: normalizedServiceTypes };
+  }
+  
+  return result as ReferenceData;
 }
 
 function getDefaultStatusColor(status: string): string {
@@ -290,11 +312,18 @@ function mapServerReferenceData(serverRef: ServerReferenceData): ReferenceData {
     description: tc.description || "",
   }));
 
+  const serviceTypes: ServiceTypeInfo[] = (serverRef.serviceTypes || []).map(st => {
+    if (typeof st === "string") {
+      return { name: st };
+    }
+    return { name: st.name, color: st.color };
+  });
+
   return {
     statuses,
     troubleCodes,
     meterTypes,
-    serviceTypes: serverRef.serviceTypes || [],
+    serviceTypes,
     assignees: { users, groups },
   };
 }
@@ -335,6 +364,7 @@ interface WorkOrderContextType {
   setSort: (sort: SortConfig) => void;
   getFilteredWorkOrders: () => WorkOrder[];
   getStatusColor: (status: string) => string;
+  getServiceTypeColor: (serviceType: string) => string | undefined;
   refreshWorkOrders: (forceFullSync?: boolean, preserveLocal?: boolean) => Promise<void>;
   claimWorkOrder: (workOrderId: number) => Promise<void>;
   fetchSingleWorkOrder: (workOrderId: number) => Promise<WorkOrder | null>;
@@ -873,6 +903,18 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     return getDefaultStatusColor(status);
   }, [referenceData]);
 
+  const getServiceTypeColor = useCallback((serviceType: string): string | undefined => {
+    if (referenceData?.serviceTypes) {
+      const serviceTypeInfo = referenceData.serviceTypes.find(
+        st => st.name.toLowerCase() === serviceType.toLowerCase()
+      );
+      if (serviceTypeInfo?.color) {
+        return serviceTypeInfo.color;
+      }
+    }
+    return undefined;
+  }, [referenceData]);
+
   const getFilteredWorkOrders = useCallback(() => {
     let filtered = [...workOrders];
 
@@ -949,6 +991,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         setSort,
         getFilteredWorkOrders,
         getStatusColor,
+        getServiceTypeColor,
         refreshWorkOrders,
         claimWorkOrder,
         fetchSingleWorkOrder,
