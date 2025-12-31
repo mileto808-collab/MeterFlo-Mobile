@@ -357,7 +357,7 @@ export default function WorkOrderDetailScreen() {
           ) : null}
         </View>
 
-        <Accordion title="Customer & Site" icon="home" defaultExpanded>
+        <Accordion title="Customer & Site" icon="home">
           <InfoRow icon="hash" label="Customer ID" value={workOrder.customerId} />
           <InfoRow icon="user" label="Customer Name" value={workOrder.customerName} />
           <InfoRow 
@@ -379,7 +379,7 @@ export default function WorkOrderDetailScreen() {
           </View>
         </Accordion>
 
-        <Accordion title="Meter Details" icon="cpu" defaultExpanded>
+        <Accordion title="Meter Details" icon="cpu">
           <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
             <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
               Old Meter
@@ -474,7 +474,7 @@ export default function WorkOrderDetailScreen() {
         ) : null}
 
         {photoCount > 0 ? (
-          <Accordion title={`Photos (${photoCount})`} icon="camera" defaultExpanded={true}>
+          <Accordion title={`Photos (${photoCount})`} icon="camera" >
             {renderPhotoGrid(
               allPhotos.filter(p => p.type === "before"),
               "Before Photos"
