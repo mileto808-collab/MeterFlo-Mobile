@@ -88,6 +88,21 @@ export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
         </ThemedText>
       </View>
 
+      {(workOrder.route || workOrder.zone) ? (
+        <View style={styles.idRow}>
+          {workOrder.route ? (
+            <ThemedText type="body" style={{ color: theme.textSecondary }}>
+              Route: {workOrder.route}
+            </ThemedText>
+          ) : null}
+          {workOrder.zone ? (
+            <ThemedText type="body" style={{ color: theme.textSecondary }}>
+              Zone: {workOrder.zone}
+            </ThemedText>
+          ) : null}
+        </View>
+      ) : null}
+
       <View style={styles.footer}>
         <View style={styles.footerItem}>
           <Icon name="user" size={14} color={theme.textSecondary} />
