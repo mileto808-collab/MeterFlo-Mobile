@@ -41,6 +41,9 @@ export interface WorkOrder {
   signatureData?: string;
   signatureName?: string;
   attachments?: (string | { url?: string; filename?: string; name?: string; id?: string })[];
+  beforePhotos?: { base64: string; filename: string }[];
+  afterPhotos?: { base64: string; filename: string }[];
+  troublePhotos?: { base64: string; filename: string }[];
   completedAt?: string;
   completedBy?: string;
   completedByUsername?: string;

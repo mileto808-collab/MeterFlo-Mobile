@@ -652,6 +652,13 @@ export default function WorkflowWizardScreen() {
           console.warn("[WorkflowWizard] Failed to record sync history:", historyError);
         }
         
+        const onlineFormatPhotos = (photos: string[], prefix: string) => {
+          return photos.map((b64, idx) => ({
+            base64: b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`,
+            filename: `${prefix}_${idx + 1}.jpg`,
+          }));
+        };
+        
         updateWorkOrder(workOrder.id, {
           status: result.workOrder?.status || (canChange ? "Completed" : "Trouble"),
           oldMeterReading: formData.oldMeterReading,
@@ -664,9 +671,12 @@ export default function WorkflowWizardScreen() {
             newMeterReading: formData.newMeterReading,
             newGps: formData.gpsCoordinates,
             notes: formData.notes,
+            beforePhotos: onlineFormatPhotos(beforePhotosBase64, 'before'),
+            afterPhotos: onlineFormatPhotos(afterPhotosBase64, 'after'),
           } : {
             troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
             notes: formData.troubleNote,
+            troublePhotos: onlineFormatPhotos(troublePhotosBase64, 'trouble'),
           }),
         });
       } else {
@@ -720,9 +730,12 @@ export default function WorkflowWizardScreen() {
             newMeterReading: formData.newMeterReading,
             newGps: formData.gpsCoordinates,
             notes: formData.notes,
+            beforePhotos: formatPhotosForOffline(beforePhotosBase64, 'before'),
+            afterPhotos: formatPhotosForOffline(afterPhotosBase64, 'after'),
           } : {
             troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
             notes: formData.troubleNote,
+            troublePhotos: formatPhotosForOffline(troublePhotosBase64, 'trouble'),
           }),
         });
       }

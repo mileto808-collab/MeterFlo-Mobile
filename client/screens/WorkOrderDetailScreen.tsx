@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { View, ScrollView, StyleSheet, Pressable, Alert, Platform, Linking } from "react-native";
+import React, { useMemo, useState } from "react";
+import { View, ScrollView, StyleSheet, Pressable, Alert, Platform, Linking, Modal, Image, Dimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -64,6 +64,14 @@ function GridItem({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
+const { width: screenWidth } = Dimensions.get("window");
+
+interface PhotoItem {
+  base64: string;
+  filename: string;
+  type: "before" | "after" | "trouble";
+}
+
 export default function WorkOrderDetailScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
@@ -72,6 +80,8 @@ export default function WorkOrderDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { workOrders, referenceData, updateWorkOrder, getStatusColor, getServiceTypeColor } = useWorkOrders();
   const { pendingActions } = useOffline();
+  
+  const [selectedPhoto, setSelectedPhoto] = useState<PhotoItem | null>(null);
 
   const workOrder = useMemo(() => {
     return workOrders.find(wo => wo.id === route.params.workOrder.id) || route.params.workOrder;
@@ -195,6 +205,61 @@ export default function WorkOrderDetailScreen() {
   ].filter(Boolean).join(", ");
 
   const attachmentCount = workOrder.attachments?.length || 0;
+  
+  const allPhotos = useMemo(() => {
+    const photos: PhotoItem[] = [];
+    if (workOrder.beforePhotos) {
+      workOrder.beforePhotos.forEach(p => {
+        photos.push({ ...p, type: "before" });
+      });
+    }
+    if (workOrder.afterPhotos) {
+      workOrder.afterPhotos.forEach(p => {
+        photos.push({ ...p, type: "after" });
+      });
+    }
+    if (workOrder.troublePhotos) {
+      workOrder.troublePhotos.forEach(p => {
+        photos.push({ ...p, type: "trouble" });
+      });
+    }
+    return photos;
+  }, [workOrder.beforePhotos, workOrder.afterPhotos, workOrder.troublePhotos]);
+  
+  const photoCount = allPhotos.length;
+
+  const renderPhotoGrid = (photos: PhotoItem[], title: string) => {
+    if (photos.length === 0) return null;
+    
+    return (
+      <View style={styles.photoSection}>
+        <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.sm }}>
+          {title} ({photos.length})
+        </ThemedText>
+        <View style={styles.photoGrid}>
+          {photos.map((photo, index) => (
+            <Pressable
+              key={`${photo.type}-${index}`}
+              onPress={() => setSelectedPhoto(photo)}
+              style={({ pressed }) => [
+                styles.photoThumbnail,
+                { backgroundColor: theme.backgroundSecondary, opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Image
+                source={{ uri: photo.base64 }}
+                style={styles.thumbnailImage}
+                resizeMode="cover"
+              />
+              <View style={[styles.photoLabel, { backgroundColor: theme.backgroundDefault + "CC" }]}>
+                <ThemedText type="caption" numberOfLines={1}>{photo.filename}</ThemedText>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
@@ -408,6 +473,23 @@ export default function WorkOrderDetailScreen() {
           </Accordion>
         ) : null}
 
+        {photoCount > 0 ? (
+          <Accordion title={`Photos (${photoCount})`} icon="camera" defaultExpanded={true}>
+            {renderPhotoGrid(
+              allPhotos.filter(p => p.type === "before"),
+              "Before Photos"
+            )}
+            {renderPhotoGrid(
+              allPhotos.filter(p => p.type === "after"),
+              "After Photos"
+            )}
+            {renderPhotoGrid(
+              allPhotos.filter(p => p.type === "trouble"),
+              "Trouble Photos"
+            )}
+          </Accordion>
+        ) : null}
+
         {attachmentCount > 0 ? (
           <Accordion title={`Attachments (${attachmentCount})`} icon="paperclip">
             <View style={styles.attachmentList}>
@@ -529,6 +611,42 @@ export default function WorkOrderDetailScreen() {
           </ThemedText>
         </Button>
       </View>
+
+      <Modal
+        visible={selectedPhoto !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedPhoto(null)}
+      >
+        <Pressable 
+          style={styles.modalOverlay} 
+          onPress={() => setSelectedPhoto(null)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: theme.backgroundDefault }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+              <ThemedText type="body" style={{ fontWeight: "600", flex: 1 }} numberOfLines={1}>
+                {selectedPhoto?.filename || "Photo"}
+              </ThemedText>
+              <Pressable 
+                onPress={() => setSelectedPhoto(null)}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  { backgroundColor: theme.backgroundSecondary, opacity: pressed ? 0.7 : 1 },
+                ]}
+              >
+                <Icon name="x" size={20} color={theme.text} />
+              </Pressable>
+            </View>
+            {selectedPhoto ? (
+              <Image
+                source={{ uri: selectedPhoto.base64 }}
+                style={styles.fullImage}
+                resizeMode="contain"
+              />
+            ) : null}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -694,5 +812,60 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
+  },
+  photoSection: {
+    marginBottom: Spacing.md,
+  },
+  photoGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.sm,
+  },
+  photoThumbnail: {
+    width: (screenWidth - Spacing.lg * 2 - Spacing.sm * 2 - Spacing.md * 2) / 3,
+    aspectRatio: 1,
+    borderRadius: BorderRadius.sm,
+    overflow: "hidden",
+  },
+  thumbnailImage: {
+    width: "100%",
+    height: "100%",
+  },
+  photoLabel: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 2,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "95%",
+    maxHeight: "90%",
+    borderRadius: BorderRadius.md,
+    overflow: "hidden",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  fullImage: {
+    width: "100%",
+    height: screenWidth,
   },
 });
