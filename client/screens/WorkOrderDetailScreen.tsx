@@ -218,8 +218,8 @@ export default function WorkOrderDetailScreen() {
               <View style={styles.badgeRow}>
                 <StatusBadge status={workOrder.status} color={getStatusColor(workOrder.status)} />
                 {workOrder.serviceType ? (
-                  <View style={[styles.serviceTypeBadge, { backgroundColor: theme.primary + "20" }]}>
-                    <ThemedText type="caption" style={{ color: theme.primary, fontWeight: "600" }}>
+                  <View style={[styles.serviceTypeBadge, { backgroundColor: (workOrder.serviceTypeColor || theme.primary) + "20" }]}>
+                    <ThemedText type="caption" style={{ color: workOrder.serviceTypeColor || theme.primary, fontWeight: "600" }}>
                       {workOrder.serviceType}
                     </ThemedText>
                   </View>

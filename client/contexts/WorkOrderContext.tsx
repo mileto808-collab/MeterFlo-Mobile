@@ -24,6 +24,7 @@ export interface WorkOrder {
   customerEmail?: string;
   meterType?: string;
   serviceType?: string;
+  serviceTypeColor?: string;
   scheduledDate?: string;
   scheduledBy?: string;
   scheduledByUsername?: string;
@@ -68,6 +69,7 @@ interface ServerWorkOrder {
   route?: string;
   zone?: string;
   service_type?: string;
+  service_type_color?: string;
   old_meter_id?: string;
   new_meter_id?: string;
   old_meter_type?: string;
@@ -168,6 +170,7 @@ function mapServerWorkOrder(serverWo: ServerWorkOrder): WorkOrder {
     customerEmail: serverWo.email || undefined,
     meterType: serverWo.old_meter_type || undefined,
     serviceType: serverWo.service_type || undefined,
+    serviceTypeColor: serverWo.service_type_color || undefined,
     scheduledDate: serverWo.scheduled_at || undefined,
     scheduledBy: serverWo.scheduled_by || undefined,
     scheduledByUsername: serverWo.scheduled_by_username || undefined,
