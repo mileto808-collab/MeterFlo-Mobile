@@ -904,9 +904,9 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   }, [referenceData]);
 
   const getServiceTypeColor = useCallback((serviceType: string): string | undefined => {
-    if (referenceData?.serviceTypes) {
+    if (referenceData?.serviceTypes && serviceType) {
       const serviceTypeInfo = referenceData.serviceTypes.find(
-        st => st.name.toLowerCase() === serviceType.toLowerCase()
+        st => st.name && st.name.toLowerCase() === serviceType.toLowerCase()
       );
       if (serviceTypeInfo?.color) {
         return serviceTypeInfo.color;
