@@ -93,6 +93,17 @@ Preferred communication style: Simple, everyday language.
 - **Photo Count Tracking**: Pending actions include photoCount for accurate history when syncing queued actions
 - **Error Handling**: History recording wrapped in try/catch to prevent AsyncStorage failures from breaking app flow
 
+### Unified Meter ID Search
+- **All scan methods use unified flow**: Camera barcode, camera QR, HID scanner, and manual search all use consistent search logic
+- **Search order**: Locally cached work orders are searched first, then server is queried if online
+- **Unified messaging**: 
+  - Found locally: "Matched from cached work orders" (green badge)
+  - Found on server: "Matched from server" (blue badge with "Requires Claim")
+  - Not found (online): "No work order found in cached work orders or on the server."
+  - Not found (offline): "No work order found in cached data. Go online to search the server."
+- **Loading state**: Modal shows spinner while searching server
+- **Empty list state**: "No matches in cached work orders. Use scan to search the server."
+
 ### Key Design Patterns
 - **Path Aliases**: `@/` maps to `client/`, `@shared/` maps to `shared/`
 - **Component Structure**: Themed components (ThemedText, ThemedView) for consistent styling
