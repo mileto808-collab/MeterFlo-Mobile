@@ -618,10 +618,11 @@ export default function WorkflowWizardScreen() {
         
         console.log(`[WorkflowWizard] Submitting to endpoint: ${endpoint}`);
         
+        const woIdForFilename = workOrder.customerWoId || String(workOrder.id);
         const formatPhotosForServer = (photos: string[], prefix: string) => {
           return photos.map((b64, idx) => ({
             base64: b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`,
-            filename: `${prefix}_${idx + 1}.jpg`,
+            filename: `${woIdForFilename}-${prefix}-${idx + 1}.jpg`,
           }));
         };
         
@@ -683,7 +684,7 @@ export default function WorkflowWizardScreen() {
         const onlineFormatPhotos = (photos: string[], prefix: string) => {
           return photos.map((b64, idx) => ({
             base64: b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`,
-            filename: `${prefix}_${idx + 1}.jpg`,
+            filename: `${woIdForFilename}-${prefix}-${idx + 1}.jpg`,
           }));
         };
         
@@ -710,10 +711,11 @@ export default function WorkflowWizardScreen() {
       } else {
         const offlinePhotoCount = troublePhotosBase64.length + beforePhotosBase64.length + afterPhotosBase64.length;
         
+        const offlineWoIdForFilename = workOrder.customerWoId || String(workOrder.id);
         const formatPhotosForOffline = (photos: string[], prefix: string) => {
           return photos.map((b64, idx) => ({
             base64: b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`,
-            filename: `${prefix}_${idx + 1}.jpg`,
+            filename: `${offlineWoIdForFilename}-${prefix}-${idx + 1}.jpg`,
           }));
         };
         
