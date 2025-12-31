@@ -110,7 +110,8 @@ interface ServerReferenceData {
   workOrderStatuses?: string[] | { code: string; label: string; color?: string }[];
   troubleCodes?: { code: string; label?: string; description?: string }[];
   meterTypes?: string[] | { id: string; name: string }[];
-  serviceTypes?: string[] | { name: string; color?: string }[];
+  serviceTypes?: string[] | { name?: string; label?: string; color?: string; badge_color?: string }[];
+  service_types?: string[] | { name?: string; label?: string; color?: string; badge_color?: string }[];
   assignees?: {
     users?: { id: string; username: string; displayName?: string; display_name?: string }[];
     groups?: { name: string; description?: string }[];
@@ -234,13 +235,16 @@ function normalizeStoredReferenceData(ref: any): ReferenceData {
     result = { ...result, statuses: normalizedStatuses };
   }
   
-  if (ref.serviceTypes && Array.isArray(ref.serviceTypes)) {
-    const normalizedServiceTypes: ServiceTypeInfo[] = ref.serviceTypes.map((st: any) => {
+  const rawServiceTypes = ref.serviceTypes || ref.service_types;
+  if (rawServiceTypes && Array.isArray(rawServiceTypes)) {
+    const normalizedServiceTypes: ServiceTypeInfo[] = rawServiceTypes.map((st: any) => {
       if (typeof st === "string") {
         return { name: st };
       }
       if (st && typeof st === "object") {
-        return { name: st.name || "Unknown", color: st.color };
+        const name = st.name || st.label || "Unknown";
+        const color = st.color || st.badge_color;
+        return { name, color };
       }
       return { name: "Unknown" };
     });
@@ -312,11 +316,14 @@ function mapServerReferenceData(serverRef: ServerReferenceData): ReferenceData {
     description: tc.description || "",
   }));
 
-  const serviceTypes: ServiceTypeInfo[] = (serverRef.serviceTypes || []).map(st => {
+  const rawServiceTypes = serverRef.serviceTypes || serverRef.service_types || [];
+  const serviceTypes: ServiceTypeInfo[] = rawServiceTypes.map(st => {
     if (typeof st === "string") {
       return { name: st };
     }
-    return { name: st.name, color: st.color };
+    const name = st.name || st.label || "Unknown";
+    const color = st.color || st.badge_color;
+    return { name, color };
   });
 
   return {
