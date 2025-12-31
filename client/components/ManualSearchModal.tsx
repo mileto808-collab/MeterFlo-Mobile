@@ -11,9 +11,10 @@ interface ManualSearchModalProps {
   value: string;
   onClose: () => void;
   onChangeText: (text: string) => void;
+  onFindWorkOrder?: (meterId: string) => void;
 }
 
-export function ManualSearchModal({ visible, value, onClose, onChangeText }: ManualSearchModalProps) {
+export function ManualSearchModal({ visible, value, onClose, onChangeText, onFindWorkOrder }: ManualSearchModalProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
@@ -37,6 +38,13 @@ export function ManualSearchModal({ visible, value, onClose, onChangeText }: Man
     setLocalValue("");
     onChangeText("");
     onClose();
+  };
+
+  const handleFindWorkOrder = () => {
+    if (localValue.trim() && onFindWorkOrder) {
+      onClose();
+      onFindWorkOrder(localValue.trim());
+    }
   };
 
   return (
@@ -92,6 +100,21 @@ export function ManualSearchModal({ visible, value, onClose, onChangeText }: Man
             ) : null}
           </View>
 
+          {onFindWorkOrder && localValue.trim().length > 0 ? (
+            <Pressable
+              onPress={handleFindWorkOrder}
+              style={({ pressed }) => [
+                styles.findButton,
+                { backgroundColor: theme.success, opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Icon name="search" size={18} color="#FFFFFF" />
+              <ThemedText style={{ color: "#FFFFFF", marginLeft: Spacing.sm, fontWeight: "600" }}>
+                Find Work Order by Meter ID
+              </ThemedText>
+            </Pressable>
+          ) : null}
+
           <View style={styles.buttons}>
             <Pressable
               onPress={handleClear}
@@ -109,7 +132,7 @@ export function ManualSearchModal({ visible, value, onClose, onChangeText }: Man
                 { backgroundColor: theme.primary, opacity: pressed ? 0.7 : 1 },
               ]}
             >
-              <ThemedText style={{ color: "#FFFFFF" }}>Search</ThemedText>
+              <ThemedText style={{ color: "#FFFFFF" }}>Filter List</ThemedText>
             </Pressable>
           </View>
         </Pressable>
@@ -160,5 +183,13 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: "center",
+  },
+  findButton: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.lg,
   },
 });

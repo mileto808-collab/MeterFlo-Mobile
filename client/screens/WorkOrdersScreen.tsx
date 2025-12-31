@@ -283,6 +283,7 @@ export default function WorkOrdersScreen() {
         value={filters.searchQuery}
         onClose={() => setShowManualSearch(false)}
         onChangeText={handleSearchChange}
+        onFindWorkOrder={handleScanResult}
       />
 
       <ScanConfirmModal
