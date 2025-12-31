@@ -111,6 +111,8 @@ export default function WorkflowWizardScreen() {
   const workOrder = route.params.workOrder;
   
   const isEditingTrouble = workOrder.status?.toLowerCase() === "trouble";
+  const isEditingCompleted = workOrder.status?.toLowerCase() === "completed";
+  const isEditing = isEditingTrouble || isEditingCompleted;
   
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -132,20 +134,32 @@ export default function WorkflowWizardScreen() {
   
   const hasUnsyncedDraft = Boolean(workOrder.syncPending);
   
-  const [formData, setFormData] = useState<MeterChangeoutData>({
-    canChange: null,
-    troubleCode: workOrder.troubleCode || "",
-    troubleNote: hasUnsyncedDraft ? (workOrder.notes || workOrder.troubleNote || "") : "",
-    troublePhotos: [],
-    oldMeterReading: workOrder.oldMeterReading || "",
-    beforePhotos: [],
-    newMeterId: workOrder.newMeterId || "",
-    newMeterReading: workOrder.newMeterReading || "",
-    afterPhotos: [],
-    gpsCoordinates: workOrder.newGps || "",
-    signatureData: workOrder.signatureData || "",
-    signatureName: workOrder.signatureName || "",
-    notes: hasUnsyncedDraft ? (workOrder.notes || "") : "",
+  const convertStoredPhotosToAssets = (photos: Array<{base64: string; filename: string}> | undefined): PhotoAsset[] => {
+    if (!photos || photos.length === 0) return [];
+    return photos.map((p, idx) => ({
+      uri: p.base64,
+      id: p.filename || `existing_${idx}`,
+    }));
+  };
+  
+  const [formData, setFormData] = useState<MeterChangeoutData>(() => {
+    const isEditingStatus = workOrder.status?.toLowerCase() === "trouble" || workOrder.status?.toLowerCase() === "completed";
+    
+    return {
+      canChange: null,
+      troubleCode: workOrder.troubleCode || "",
+      troubleNote: hasUnsyncedDraft ? (workOrder.notes || workOrder.troubleNote || "") : "",
+      troublePhotos: isEditingStatus ? convertStoredPhotosToAssets(workOrder.troublePhotos) : [],
+      oldMeterReading: workOrder.oldMeterReading || "",
+      beforePhotos: isEditingStatus ? convertStoredPhotosToAssets(workOrder.beforePhotos) : [],
+      newMeterId: workOrder.newMeterId || "",
+      newMeterReading: workOrder.newMeterReading || "",
+      afterPhotos: isEditingStatus ? convertStoredPhotosToAssets(workOrder.afterPhotos) : [],
+      gpsCoordinates: workOrder.newGps || "",
+      signatureData: workOrder.signatureData || "",
+      signatureName: workOrder.signatureName || "",
+      notes: hasUnsyncedDraft ? (workOrder.notes || "") : "",
+    };
   });
 
   const getSteps = () => {
@@ -212,6 +226,11 @@ export default function WorkflowWizardScreen() {
 
 
   const claimWorkOrderOnStart = async () => {
+    if (isEditing) {
+      setHasClaimed(true);
+      return;
+    }
+    
     const isAlreadyAssignedToMe = workOrder.assignedUserId === user?.id && !workOrder.assignedGroupId;
     if (isAlreadyAssignedToMe) {
       setHasClaimed(true);
@@ -268,7 +287,16 @@ export default function WorkflowWizardScreen() {
     
     for (const photo of photos) {
       try {
-        if (Platform.OS === "web") {
+        if (photo.uri.startsWith('data:image/')) {
+          const base64Part = photo.uri.split(',')[1];
+          if (base64Part) {
+            base64Photos.push(base64Part);
+            console.log(`[Photo] Using existing base64 photo, size: ${Math.round(base64Part.length / 1024)}KB`);
+          } else {
+            console.error("[Photo] Could not extract base64 from data URI");
+            failedCount++;
+          }
+        } else if (Platform.OS === "web") {
           const response = await fetch(photo.uri);
           const blob = await response.blob();
           const reader = new FileReader();
