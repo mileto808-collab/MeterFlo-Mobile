@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, Platform } from "react-native";
+import { View, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, Platform, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -11,6 +11,7 @@ import { useWorkOrders } from "@/contexts/WorkOrderContext";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
 import { Spacing, BorderRadius } from "@/constants/theme";
+import { createBackupZip, shareBackup, BackupProgress } from "@/lib/backup";
 
 export default function SyncScreen() {
   const insets = useSafeAreaInsets();
@@ -20,6 +21,8 @@ export default function SyncScreen() {
   const { isOnline, pendingActions, syncHistory, isSyncing, syncPendingActions, clearAllPending, clearSyncHistory } = useOffline();
   const { lastSyncTime, isLoading, refreshWorkOrders, clearAllData, workOrders, updateWorkOrder } = useWorkOrders();
   const [isClearing, setIsClearing] = useState(false);
+  const [backupProgress, setBackupProgress] = useState<BackupProgress | null>(null);
+  const [showBackupModal, setShowBackupModal] = useState(false);
 
   const formatTime = (dateString: string | null) => {
     if (!dateString) return "Never";
@@ -84,17 +87,47 @@ export default function SyncScreen() {
   };
 
   const handleClearAllData = async () => {
-    const doClear = async () => {
+    const doBackupAndClear = async () => {
       setIsClearing(true);
+      setShowBackupModal(true);
+      
       try {
+        if (workOrders.length > 0) {
+          setBackupProgress({
+            stage: "preparing",
+            current: 0,
+            total: 1,
+            message: "Preparing backup...",
+          });
+          
+          const backupPath = await createBackupZip(workOrders, setBackupProgress);
+          
+          if (Platform.OS !== "web") {
+            await shareBackup(backupPath);
+          }
+        }
+        
+        setBackupProgress({
+          stage: "complete",
+          current: 1,
+          total: 1,
+          message: "Clearing data...",
+        });
+        
         await clearAllPending();
         await clearAllData();
         await refreshWorkOrders(true);
+        
+        setShowBackupModal(false);
+        setBackupProgress(null);
+        
         if (Platform.OS !== "web") {
-          Alert.alert("Success", "All data cleared and refreshed from server.");
+          Alert.alert("Success", "Backup created and data refreshed from server.");
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to clear data";
+        setShowBackupModal(false);
+        setBackupProgress(null);
+        const message = err instanceof Error ? err.message : "Failed to backup/clear data";
         if (Platform.OS === "web") {
           alert(message);
         } else {
@@ -106,16 +139,16 @@ export default function SyncScreen() {
     };
 
     if (Platform.OS === "web") {
-      if (confirm("Clear all cached data and pending actions? This will fetch fresh data from the server.")) {
-        doClear();
+      if (confirm("This will create a backup of your work orders and photos, then fetch fresh data. Continue?")) {
+        doBackupAndClear();
       }
     } else {
       Alert.alert(
         "Clear All Data",
-        "This will clear all cached work orders and pending actions, then fetch fresh data from the server. Continue?",
+        "This will create a backup of all cached work orders and photos to your device, then fetch fresh data from the server. Continue?",
         [
           { text: "Cancel", style: "cancel" },
-          { text: "Clear & Refresh", style: "destructive", onPress: doClear },
+          { text: "Backup & Refresh", style: "destructive", onPress: doBackupAndClear },
         ]
       );
     }
@@ -350,6 +383,41 @@ export default function SyncScreen() {
           </View>
         )}
       </View>
+
+      <Modal
+        visible={showBackupModal}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.backgroundDefault }]}>
+            <ActivityIndicator size="large" color={theme.primary} />
+            <ThemedText type="h4" style={styles.modalTitle}>
+              Creating Backup
+            </ThemedText>
+            {backupProgress ? (
+              <>
+                <ThemedText type="body" style={{ color: theme.textSecondary, textAlign: "center" }}>
+                  {backupProgress.message}
+                </ThemedText>
+                {backupProgress.total > 1 ? (
+                  <View style={styles.progressContainer}>
+                    <View 
+                      style={[
+                        styles.progressBar, 
+                        { 
+                          backgroundColor: theme.primary,
+                          width: `${(backupProgress.current / backupProgress.total) * 100}%` 
+                        }
+                      ]} 
+                    />
+                  </View>
+                ) : null}
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -478,5 +546,34 @@ const styles = StyleSheet.create({
   },
   workOrderList: {
     gap: Spacing.xs,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Spacing.xl,
+  },
+  modalContent: {
+    width: "100%",
+    maxWidth: 320,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    alignItems: "center",
+    gap: Spacing.lg,
+  },
+  modalTitle: {
+    textAlign: "center",
+  },
+  progressContainer: {
+    width: "100%",
+    height: 6,
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  progressBar: {
+    height: "100%",
+    borderRadius: 3,
   },
 });
