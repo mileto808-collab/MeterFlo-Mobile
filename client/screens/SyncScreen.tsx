@@ -89,10 +89,10 @@ export default function SyncScreen() {
   const handleClearAllData = async () => {
     const doBackupAndClear = async () => {
       setIsClearing(true);
-      setShowBackupModal(true);
       
       try {
         if (workOrders.length > 0) {
+          setShowBackupModal(true);
           setBackupProgress({
             stage: "preparing",
             current: 0,
@@ -102,27 +102,67 @@ export default function SyncScreen() {
           
           const backupPath = await createBackupZip(workOrders, setBackupProgress);
           
+          setShowBackupModal(false);
+          setBackupProgress(null);
+          
           if (Platform.OS !== "web") {
             await shareBackup(backupPath);
+            
+            const shouldProceed = await new Promise<boolean>((resolve) => {
+              Alert.alert(
+                "Backup Complete",
+                "Your backup has been created. Make sure you saved it before continuing. Proceed to clear data and refresh?",
+                [
+                  { 
+                    text: "Cancel", 
+                    style: "cancel",
+                    onPress: () => resolve(false)
+                  },
+                  { 
+                    text: "Clear & Refresh", 
+                    style: "destructive", 
+                    onPress: () => resolve(true)
+                  },
+                ],
+                { cancelable: false }
+              );
+            });
+            
+            if (!shouldProceed) {
+              setIsClearing(false);
+              return;
+            }
           }
         }
+        
+        setShowBackupModal(true);
+        setBackupProgress({
+          stage: "complete",
+          current: 1,
+          total: 1,
+          message: "Clearing cached data...",
+        });
+        
+        await clearAllPending();
+        await clearAllData();
         
         setBackupProgress({
           stage: "complete",
           current: 1,
           total: 1,
-          message: "Clearing data...",
+          message: "Fetching fresh data from server...",
         });
         
-        await clearAllPending();
-        await clearAllData();
         await refreshWorkOrders(true);
         
         setShowBackupModal(false);
         setBackupProgress(null);
         
         if (Platform.OS !== "web") {
-          Alert.alert("Success", "Backup created and data refreshed from server.");
+          Alert.alert("Success", workOrders.length > 0 
+            ? "Backup created and data refreshed from server."
+            : "Data refreshed from server."
+          );
         }
       } catch (err) {
         setShowBackupModal(false);
@@ -138,17 +178,23 @@ export default function SyncScreen() {
       }
     };
 
+    const hasData = workOrders.length > 0;
+    const confirmMessage = hasData
+      ? "This will create a backup of all cached work orders and photos to your device, then fetch fresh data from the server. Continue?"
+      : "This will fetch fresh data from the server. Continue?";
+    const confirmButton = hasData ? "Backup & Refresh" : "Refresh";
+
     if (Platform.OS === "web") {
-      if (confirm("This will create a backup of your work orders and photos, then fetch fresh data. Continue?")) {
+      if (confirm(confirmMessage)) {
         doBackupAndClear();
       }
     } else {
       Alert.alert(
         "Clear All Data",
-        "This will create a backup of all cached work orders and photos to your device, then fetch fresh data from the server. Continue?",
+        confirmMessage,
         [
           { text: "Cancel", style: "cancel" },
-          { text: "Backup & Refresh", style: "destructive", onPress: doBackupAndClear },
+          { text: confirmButton, style: "destructive", onPress: doBackupAndClear },
         ]
       );
     }
@@ -393,7 +439,7 @@ export default function SyncScreen() {
           <View style={[styles.modalContent, { backgroundColor: theme.backgroundDefault }]}>
             <ActivityIndicator size="large" color={theme.primary} />
             <ThemedText type="h4" style={styles.modalTitle}>
-              Creating Backup
+              {backupProgress?.stage === "complete" ? "Please Wait" : "Creating Backup"}
             </ThemedText>
             {backupProgress ? (
               <>
