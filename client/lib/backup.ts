@@ -233,7 +233,45 @@ export async function shareBackup(backupPath: string): Promise<void> {
   if (canShare) {
     await Sharing.shareAsync(backupPath, {
       mimeType: "application/zip",
-      dialogTitle: "Save MeterFlo Backup",
+      dialogTitle: "Share MeterFlo Backup",
     });
+  }
+}
+
+export async function saveBackupToFolder(backupPath: string): Promise<string | null> {
+  if (Platform.OS === "web") {
+    return null;
+  }
+  
+  try {
+    const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+    
+    if (!permissions.granted) {
+      return null;
+    }
+    
+    const directoryUri = permissions.directoryUri;
+    
+    const base64Content = await FileSystem.readAsStringAsync(backupPath, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    
+    const filename = backupPath.split("/").pop() || "MeterFlo_Backup.zip";
+    
+    const newFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+      directoryUri,
+      filename,
+      "application/zip"
+    );
+    
+    await FileSystem.writeAsStringAsync(newFileUri, base64Content, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    
+    const folderName = decodeURIComponent(directoryUri.split("%3A").pop() || "selected folder");
+    return folderName;
+  } catch (error) {
+    console.error("[Backup] Error saving to folder:", error);
+    throw error;
   }
 }
