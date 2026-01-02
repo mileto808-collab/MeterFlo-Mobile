@@ -1,5 +1,6 @@
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
+import { createProxyMiddleware } from "http-proxy-middleware";
 import { registerRoutes } from "./routes";
 import * as fs from "fs";
 import * as path from "path";
@@ -197,7 +198,33 @@ function configureExpoAndLanding(app: express.Application) {
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
+  // Proxy Metro bundler requests to port 8081
+  const metroProxy = createProxyMiddleware({
+    target: "http://127.0.0.1:8081",
+    changeOrigin: true,
+    ws: true,
+    logger: console,
+    on: {
+      error: (err, req, res) => {
+        console.error("Metro proxy error:", err.message);
+        if (res && 'writeHead' in res) {
+          (res as any).writeHead(502, { "Content-Type": "application/json" });
+          (res as any).end(JSON.stringify({ error: "Metro bundler not available" }));
+        }
+      },
+    },
+  });
+
+  // Proxy bundle requests and other Metro-specific paths
+  app.use("/*.bundle", metroProxy);
+  app.use("/symbolicate", metroProxy);
+  app.use("/logs", metroProxy);
+  app.use("/hot", metroProxy);
+  app.use("/status", metroProxy);
+  app.use("/message", metroProxy);
+
   log("Expo routing: Checking expo-platform header on / and /manifest");
+  log("Metro proxy: Forwarding bundle requests to port 8081");
 }
 
 function setupErrorHandler(app: express.Application) {
