@@ -188,6 +188,7 @@ function rewriteUrl(url: string, publicHost: string): string {
 function rewriteManifestUrls(manifest: any, publicHost: string): any {
   const publicBaseUrl = `https://${publicHost}`;
   
+  // Rewrite all URL fields
   if (manifest.launchAsset && manifest.launchAsset.url) {
     manifest.launchAsset.url = rewriteUrl(manifest.launchAsset.url, publicHost);
   }
@@ -200,22 +201,24 @@ function rewriteManifestUrls(manifest: any, publicHost: string): any {
     manifest.assetUrlOverride = rewriteUrl(manifest.assetUrlOverride, publicHost);
   }
   
-  if (manifest.hostUri) {
-    manifest.hostUri = publicHost;
-  }
+  // Always set hostUri to public host (remove port for cleaner URL)
+  manifest.hostUri = publicHost;
   
-  if (manifest.debuggerHost) {
-    manifest.debuggerHost = publicHost;
-  }
+  // Always set debuggerHost to public host
+  manifest.debuggerHost = publicHost;
   
   if (manifest.extra) {
     if (manifest.extra.expoGo) {
       manifest.extra.expoGo.debuggerHost = publicHost;
+      manifest.extra.expoGo.mainModuleName = "client/index";
       if (manifest.extra.expoGo.packagerOpts) {
         manifest.extra.expoGo.packagerOpts.dev = true;
       }
-      if (manifest.extra.expoGo.developer && manifest.extra.expoGo.developer.url) {
-        manifest.extra.expoGo.developer.url = rewriteUrl(manifest.extra.expoGo.developer.url, publicHost);
+      if (manifest.extra.expoGo.developer) {
+        manifest.extra.expoGo.developer.tool = "expo-cli";
+        if (manifest.extra.expoGo.developer.projectRoot) {
+          // Keep project root as is
+        }
       }
     }
     if (manifest.extra.expoClient) {
@@ -238,8 +241,20 @@ function rewriteManifestUrls(manifest: any, publicHost: string): any {
     });
   }
   
-  const manifestStr = JSON.stringify(manifest);
-  if (manifestStr.includes("127.0.0.1") || manifestStr.includes("localhost:8081")) {
+  // Deep replace any remaining localhost references
+  let manifestStr = JSON.stringify(manifest);
+  manifestStr = manifestStr.replace(/127\.0\.0\.1(:\d+)?/g, publicHost);
+  manifestStr = manifestStr.replace(/localhost(:\d+)?/g, publicHost);
+  
+  try {
+    manifest = JSON.parse(manifestStr);
+  } catch (e) {
+    log(`Warning: Failed to parse manifest after string replacement`);
+  }
+  
+  // Final verification
+  const finalStr = JSON.stringify(manifest);
+  if (finalStr.includes("127.0.0.1") || finalStr.includes("localhost")) {
     log(`Warning: Manifest still contains localhost references after rewriting`);
   }
   
@@ -380,7 +395,56 @@ function setupErrorHandler(app: express.Application) {
   });
 }
 
+function startExpoTunnel(): void {
+  if (process.env.SPAWN_EXPO_TUNNEL !== "true") {
+    return;
+  }
+  
+  log("TunnelManager: Starting Expo with --tunnel mode for external device access");
+  
+  const expoProcess = spawn("npx", ["expo", "start", "--tunnel", "--non-interactive"], {
+    cwd: process.cwd(),
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      EXPO_PUBLIC_DOMAIN: `${process.env.REPLIT_DEV_DOMAIN}:5000`,
+    },
+    detached: false,
+  });
+  
+  expoProcess.stdout?.on("data", (data: Buffer) => {
+    const output = data.toString();
+    if (output.includes("exp://") || output.includes("Tunnel")) {
+      log(`TunnelManager: ${output.trim()}`);
+    }
+  });
+  
+  expoProcess.stderr?.on("data", (data: Buffer) => {
+    const output = data.toString();
+    if (!output.includes("deprecated") && !output.includes("warning")) {
+      log(`TunnelManager stderr: ${output.trim()}`);
+    }
+  });
+  
+  expoProcess.on("error", (err) => {
+    log(`TunnelManager: Expo process error: ${err.message}`);
+  });
+  
+  expoProcess.on("exit", (code) => {
+    log(`TunnelManager: Expo process exited with code ${code}`);
+    if (code !== 0 && process.env.SPAWN_EXPO_TUNNEL === "true") {
+      log("TunnelManager: Restarting Expo tunnel in 5 seconds...");
+      setTimeout(() => startExpoTunnel(), 5000);
+    }
+  });
+  
+  log("TunnelManager: Expo tunnel process spawned, claiming port 8081");
+}
+
 (async () => {
+  // Start Expo tunnel FIRST to claim port 8081 before workflow's expo:dev
+  startExpoTunnel();
+  
   setupCors(app);
   setupBodyParsing(app);
   setupRequestLogging(app);
@@ -400,7 +464,6 @@ function setupErrorHandler(app: express.Application) {
     },
     () => {
       log(`express server serving on port ${port}`);
-      
     },
   );
 })();

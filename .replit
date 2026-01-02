@@ -58,4 +58,3 @@ ensurePreviewReachable = "/status"
 [userenv]
 
 [userenv.development]
-SPAWN_EXPO_TUNNEL = "true"
