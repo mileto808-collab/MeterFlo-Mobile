@@ -23,7 +23,7 @@ function setupCors(app: express.Application) {
     }
 
     if (process.env.REPLIT_DOMAINS) {
-      process.env.REPLIT_DOMAINS.split(",").forEach((d) => {
+      process.env.REPLIT_DOMAINS.split(",").forEach((d: string) => {
         origins.add(`https://${d.trim()}`);
       });
     }
@@ -156,6 +156,117 @@ function serveLandingPage({
   res.status(200).send(html);
 }
 
+function getPublicHost(req: Request): string {
+  const forwardedHost = req.header("x-forwarded-host");
+  return forwardedHost || req.get("host") || process.env.REPLIT_DEV_DOMAIN || "localhost:5000";
+}
+
+function rewriteUrl(url: string, publicHost: string): string {
+  if (!url) return url;
+  
+  const localhostPatterns = [
+    /^https?:\/\/127\.0\.0\.1(:\d+)?/,
+    /^https?:\/\/localhost(:\d+)?/,
+    /^wss?:\/\/127\.0\.0\.1(:\d+)?/,
+    /^wss?:\/\/localhost(:\d+)?/,
+  ];
+  
+  for (const pattern of localhostPatterns) {
+    if (pattern.test(url)) {
+      return url
+        .replace(/^http:/, "https:")
+        .replace(/^ws:/, "wss:")
+        .replace(/127\.0\.0\.1(:\d+)?/, publicHost)
+        .replace(/localhost(:\d+)?/, publicHost);
+    }
+  }
+  
+  return url;
+}
+
+function rewriteManifestUrls(manifest: any, publicHost: string): any {
+  const publicBaseUrl = `https://${publicHost}`;
+  
+  if (manifest.launchAsset && manifest.launchAsset.url) {
+    manifest.launchAsset.url = rewriteUrl(manifest.launchAsset.url, publicHost);
+  }
+  
+  if (manifest.bundleUrl) {
+    manifest.bundleUrl = rewriteUrl(manifest.bundleUrl, publicHost);
+  }
+  
+  if (manifest.assetUrlOverride) {
+    manifest.assetUrlOverride = rewriteUrl(manifest.assetUrlOverride, publicHost);
+  }
+  
+  if (manifest.hostUri) {
+    manifest.hostUri = publicHost;
+  }
+  
+  if (manifest.debuggerHost) {
+    manifest.debuggerHost = publicHost;
+  }
+  
+  if (manifest.extra) {
+    if (manifest.extra.expoGo) {
+      manifest.extra.expoGo.debuggerHost = publicHost;
+      if (manifest.extra.expoGo.packagerOpts) {
+        manifest.extra.expoGo.packagerOpts.dev = true;
+      }
+      if (manifest.extra.expoGo.developer && manifest.extra.expoGo.developer.url) {
+        manifest.extra.expoGo.developer.url = rewriteUrl(manifest.extra.expoGo.developer.url, publicHost);
+      }
+    }
+    if (manifest.extra.expoClient) {
+      manifest.extra.expoClient.hostUri = publicHost;
+      if (manifest.extra.expoClient.iconUrl) {
+        manifest.extra.expoClient.iconUrl = rewriteUrl(manifest.extra.expoClient.iconUrl, publicHost);
+        if (!manifest.extra.expoClient.iconUrl.startsWith("https://")) {
+          manifest.extra.expoClient.iconUrl = `${publicBaseUrl}/assets/images/icon.png`;
+        }
+      }
+    }
+  }
+  
+  if (manifest.assets && Array.isArray(manifest.assets)) {
+    manifest.assets = manifest.assets.map((asset: any) => {
+      if (asset.url) {
+        asset.url = rewriteUrl(asset.url, publicHost);
+      }
+      return asset;
+    });
+  }
+  
+  const manifestStr = JSON.stringify(manifest);
+  if (manifestStr.includes("127.0.0.1") || manifestStr.includes("localhost:8081")) {
+    log(`Warning: Manifest still contains localhost references after rewriting`);
+  }
+  
+  return manifest;
+}
+
+async function fetchAndRewriteMetroManifest(platform: string, publicHost: string): Promise<string | null> {
+  try {
+    const response = await fetch(`http://127.0.0.1:8081/`, {
+      headers: {
+        "expo-platform": platform,
+      },
+    });
+    
+    if (!response.ok) {
+      log(`Metro manifest fetch failed: ${response.status}`);
+      return null;
+    }
+    
+    const manifest = await response.json();
+    const rewrittenManifest = rewriteManifestUrls(manifest, publicHost);
+    return JSON.stringify(rewrittenManifest);
+  } catch (error) {
+    log(`Error fetching Metro manifest: ${error}`);
+    return null;
+  }
+}
+
 function configureExpoAndLanding(app: express.Application) {
   const templatePath = path.resolve(
     process.cwd(),
@@ -174,17 +285,17 @@ function configureExpoAndLanding(app: express.Application) {
     ws: true,
     logger: console,
     on: {
-      error: (err, req, res) => {
+      error: (err: Error, req: any, res: any) => {
         console.error("Metro proxy error:", err.message);
         if (res && 'writeHead' in res) {
-          (res as any).writeHead(502, { "Content-Type": "application/json" });
-          (res as any).end(JSON.stringify({ error: "Metro bundler not available" }));
+          res.writeHead(502, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Metro bundler not available" }));
         }
       },
     },
   });
 
-  app.use((req: Request, res: Response, next: NextFunction) => {
+  app.use(async (req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api")) {
       return next();
     }
@@ -197,7 +308,20 @@ function configureExpoAndLanding(app: express.Application) {
     if (platform && (platform === "ios" || platform === "android")) {
       const served = serveExpoManifest(platform, res);
       if (!served) {
-        log(`No static manifest for ${platform}, proxying to Metro`);
+        log(`No static manifest for ${platform}, fetching from Metro and rewriting URLs`);
+        const publicHost = getPublicHost(req);
+        const rewrittenManifest = await fetchAndRewriteMetroManifest(platform, publicHost);
+        
+        if (rewrittenManifest) {
+          res.setHeader("expo-protocol-version", "0");
+          res.setHeader("expo-sfv-version", "0");
+          res.setHeader("cache-control", "private, max-age=0");
+          res.setHeader("content-type", "application/json");
+          res.send(rewrittenManifest);
+          return;
+        }
+        
+        log(`Failed to fetch manifest from Metro, falling back to proxy`);
         if (req.path === "/manifest") {
           req.url = "/";
         }
