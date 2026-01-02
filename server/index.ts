@@ -216,7 +216,12 @@ function configureExpoAndLanding(app: express.Application) {
   });
 
   // Proxy bundle requests and other Metro-specific paths
-  app.use("/*.bundle", metroProxy);
+  app.use((req, res, next) => {
+    if (req.path.endsWith('.bundle') || req.path.endsWith('.map')) {
+      return metroProxy(req, res, next);
+    }
+    next();
+  });
   app.use("/symbolicate", metroProxy);
   app.use("/logs", metroProxy);
   app.use("/hot", metroProxy);
