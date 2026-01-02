@@ -1,7 +1,5 @@
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
-import { createProxyMiddleware } from "http-proxy-middleware";
-import { spawn } from "child_process";
 import { registerRoutes } from "./routes";
 import * as fs from "fs";
 import * as path from "path";
@@ -24,7 +22,7 @@ function setupCors(app: express.Application) {
     }
 
     if (process.env.REPLIT_DOMAINS) {
-      process.env.REPLIT_DOMAINS.split(",").forEach((d: string) => {
+      process.env.REPLIT_DOMAINS.split(",").forEach((d) => {
         origins.add(`https://${d.trim()}`);
       });
     }
@@ -106,7 +104,7 @@ function getAppName(): string {
   }
 }
 
-function serveExpoManifest(platform: string, res: Response): boolean {
+function serveExpoManifest(platform: string, res: Response) {
   const manifestPath = path.resolve(
     process.cwd(),
     "static-build",
@@ -115,7 +113,9 @@ function serveExpoManifest(platform: string, res: Response): boolean {
   );
 
   if (!fs.existsSync(manifestPath)) {
-    return false;
+    return res
+      .status(404)
+      .json({ error: `Manifest not found for platform: ${platform}` });
   }
 
   res.setHeader("expo-protocol-version", "1");
@@ -124,7 +124,6 @@ function serveExpoManifest(platform: string, res: Response): boolean {
 
   const manifest = fs.readFileSync(manifestPath, "utf-8");
   res.send(manifest);
-  return true;
 }
 
 function serveLandingPage({
@@ -157,132 +156,6 @@ function serveLandingPage({
   res.status(200).send(html);
 }
 
-function getPublicHost(req: Request): string {
-  const forwardedHost = req.header("x-forwarded-host");
-  return forwardedHost || req.get("host") || process.env.REPLIT_DEV_DOMAIN || "localhost:5000";
-}
-
-function rewriteUrl(url: string, publicHost: string): string {
-  if (!url) return url;
-  
-  const localhostPatterns = [
-    /^https?:\/\/127\.0\.0\.1(:\d+)?/,
-    /^https?:\/\/localhost(:\d+)?/,
-    /^wss?:\/\/127\.0\.0\.1(:\d+)?/,
-    /^wss?:\/\/localhost(:\d+)?/,
-  ];
-  
-  for (const pattern of localhostPatterns) {
-    if (pattern.test(url)) {
-      return url
-        .replace(/^http:/, "https:")
-        .replace(/^ws:/, "wss:")
-        .replace(/127\.0\.0\.1(:\d+)?/, publicHost)
-        .replace(/localhost(:\d+)?/, publicHost);
-    }
-  }
-  
-  return url;
-}
-
-function rewriteManifestUrls(manifest: any, publicHost: string): any {
-  const publicBaseUrl = `https://${publicHost}`;
-  
-  // Rewrite all URL fields
-  if (manifest.launchAsset && manifest.launchAsset.url) {
-    manifest.launchAsset.url = rewriteUrl(manifest.launchAsset.url, publicHost);
-  }
-  
-  if (manifest.bundleUrl) {
-    manifest.bundleUrl = rewriteUrl(manifest.bundleUrl, publicHost);
-  }
-  
-  if (manifest.assetUrlOverride) {
-    manifest.assetUrlOverride = rewriteUrl(manifest.assetUrlOverride, publicHost);
-  }
-  
-  // Always set hostUri to public host (remove port for cleaner URL)
-  manifest.hostUri = publicHost;
-  
-  // Always set debuggerHost to public host
-  manifest.debuggerHost = publicHost;
-  
-  if (manifest.extra) {
-    if (manifest.extra.expoGo) {
-      manifest.extra.expoGo.debuggerHost = publicHost;
-      manifest.extra.expoGo.mainModuleName = "client/index";
-      if (manifest.extra.expoGo.packagerOpts) {
-        manifest.extra.expoGo.packagerOpts.dev = true;
-      }
-      if (manifest.extra.expoGo.developer) {
-        manifest.extra.expoGo.developer.tool = "expo-cli";
-        if (manifest.extra.expoGo.developer.projectRoot) {
-          // Keep project root as is
-        }
-      }
-    }
-    if (manifest.extra.expoClient) {
-      manifest.extra.expoClient.hostUri = publicHost;
-      if (manifest.extra.expoClient.iconUrl) {
-        manifest.extra.expoClient.iconUrl = rewriteUrl(manifest.extra.expoClient.iconUrl, publicHost);
-        if (!manifest.extra.expoClient.iconUrl.startsWith("https://")) {
-          manifest.extra.expoClient.iconUrl = `${publicBaseUrl}/assets/images/icon.png`;
-        }
-      }
-    }
-  }
-  
-  if (manifest.assets && Array.isArray(manifest.assets)) {
-    manifest.assets = manifest.assets.map((asset: any) => {
-      if (asset.url) {
-        asset.url = rewriteUrl(asset.url, publicHost);
-      }
-      return asset;
-    });
-  }
-  
-  // Deep replace any remaining localhost references
-  let manifestStr = JSON.stringify(manifest);
-  manifestStr = manifestStr.replace(/127\.0\.0\.1(:\d+)?/g, publicHost);
-  manifestStr = manifestStr.replace(/localhost(:\d+)?/g, publicHost);
-  
-  try {
-    manifest = JSON.parse(manifestStr);
-  } catch (e) {
-    log(`Warning: Failed to parse manifest after string replacement`);
-  }
-  
-  // Final verification
-  const finalStr = JSON.stringify(manifest);
-  if (finalStr.includes("127.0.0.1") || finalStr.includes("localhost")) {
-    log(`Warning: Manifest still contains localhost references after rewriting`);
-  }
-  
-  return manifest;
-}
-
-async function fetchAndRewriteMetroManifest(platform: string, publicHost: string): Promise<string | null> {
-  try {
-    const response = await fetch(`http://127.0.0.1:8081/`, {
-      headers: {
-        "expo-platform": platform,
-      },
-    });
-    
-    if (!response.ok) {
-      log(`Metro manifest fetch failed: ${response.status}`);
-      return null;
-    }
-    
-    const manifest = await response.json();
-    const rewrittenManifest = rewriteManifestUrls(manifest, publicHost);
-    return JSON.stringify(rewrittenManifest);
-  } catch (error) {
-    log(`Error fetching Metro manifest: ${error}`);
-    return null;
-  }
-}
-
 function configureExpoAndLanding(app: express.Application) {
   const templatePath = path.resolve(
     process.cwd(),
@@ -295,23 +168,7 @@ function configureExpoAndLanding(app: express.Application) {
 
   log("Serving static Expo files with dynamic manifest routing");
 
-  const metroProxy = createProxyMiddleware({
-    target: "http://127.0.0.1:8081",
-    changeOrigin: true,
-    ws: true,
-    logger: console,
-    on: {
-      error: (err: Error, req: any, res: any) => {
-        console.error("Metro proxy error:", err.message);
-        if (res && 'writeHead' in res) {
-          res.writeHead(502, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Metro bundler not available" }));
-        }
-      },
-    },
-  });
-
-  app.use(async (req: Request, res: Response, next: NextFunction) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api")) {
       return next();
     }
@@ -322,28 +179,7 @@ function configureExpoAndLanding(app: express.Application) {
 
     const platform = req.header("expo-platform");
     if (platform && (platform === "ios" || platform === "android")) {
-      const served = serveExpoManifest(platform, res);
-      if (!served) {
-        log(`No static manifest for ${platform}, fetching from Metro and rewriting URLs`);
-        const publicHost = getPublicHost(req);
-        const rewrittenManifest = await fetchAndRewriteMetroManifest(platform, publicHost);
-        
-        if (rewrittenManifest) {
-          res.setHeader("expo-protocol-version", "0");
-          res.setHeader("expo-sfv-version", "0");
-          res.setHeader("cache-control", "private, max-age=0");
-          res.setHeader("content-type", "application/json");
-          res.send(rewrittenManifest);
-          return;
-        }
-        
-        log(`Failed to fetch manifest from Metro, falling back to proxy`);
-        if (req.path === "/manifest") {
-          req.url = "/";
-        }
-        return metroProxy(req, res, next);
-      }
-      return;
+      return serveExpoManifest(platform, res);
     }
 
     if (req.path === "/") {
@@ -361,21 +197,7 @@ function configureExpoAndLanding(app: express.Application) {
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
-  // Proxy bundle requests and other Metro-specific paths
-  app.use((req, res, next) => {
-    if (req.path.endsWith('.bundle') || req.path.endsWith('.map')) {
-      return metroProxy(req, res, next);
-    }
-    next();
-  });
-  app.use("/symbolicate", metroProxy);
-  app.use("/logs", metroProxy);
-  app.use("/hot", metroProxy);
-  app.use("/status", metroProxy);
-  app.use("/message", metroProxy);
-
   log("Expo routing: Checking expo-platform header on / and /manifest");
-  log("Metro proxy: Forwarding bundle and manifest requests to port 8081");
 }
 
 function setupErrorHandler(app: express.Application) {
@@ -395,56 +217,7 @@ function setupErrorHandler(app: express.Application) {
   });
 }
 
-function startExpoTunnel(): void {
-  if (process.env.SPAWN_EXPO_TUNNEL !== "true") {
-    return;
-  }
-  
-  log("TunnelManager: Starting Expo with --tunnel mode for external device access");
-  
-  const expoProcess = spawn("npx", ["expo", "start", "--tunnel", "--non-interactive"], {
-    cwd: process.cwd(),
-    stdio: ["ignore", "pipe", "pipe"],
-    env: {
-      ...process.env,
-      EXPO_PUBLIC_DOMAIN: `${process.env.REPLIT_DEV_DOMAIN}:5000`,
-    },
-    detached: false,
-  });
-  
-  expoProcess.stdout?.on("data", (data: Buffer) => {
-    const output = data.toString();
-    if (output.includes("exp://") || output.includes("Tunnel")) {
-      log(`TunnelManager: ${output.trim()}`);
-    }
-  });
-  
-  expoProcess.stderr?.on("data", (data: Buffer) => {
-    const output = data.toString();
-    if (!output.includes("deprecated") && !output.includes("warning")) {
-      log(`TunnelManager stderr: ${output.trim()}`);
-    }
-  });
-  
-  expoProcess.on("error", (err) => {
-    log(`TunnelManager: Expo process error: ${err.message}`);
-  });
-  
-  expoProcess.on("exit", (code) => {
-    log(`TunnelManager: Expo process exited with code ${code}`);
-    if (code !== 0 && process.env.SPAWN_EXPO_TUNNEL === "true") {
-      log("TunnelManager: Restarting Expo tunnel in 5 seconds...");
-      setTimeout(() => startExpoTunnel(), 5000);
-    }
-  });
-  
-  log("TunnelManager: Expo tunnel process spawned, claiming port 8081");
-}
-
 (async () => {
-  // Start Expo tunnel FIRST to claim port 8081 before workflow's expo:dev
-  startExpoTunnel();
-  
   setupCors(app);
   setupBodyParsing(app);
   setupRequestLogging(app);
