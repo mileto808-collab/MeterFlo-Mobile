@@ -105,7 +105,7 @@ function getAppName(): string {
   }
 }
 
-function serveExpoManifest(platform: string, res: Response) {
+function serveExpoManifest(platform: string, res: Response): boolean {
   const manifestPath = path.resolve(
     process.cwd(),
     "static-build",
@@ -114,9 +114,7 @@ function serveExpoManifest(platform: string, res: Response) {
   );
 
   if (!fs.existsSync(manifestPath)) {
-    return res
-      .status(404)
-      .json({ error: `Manifest not found for platform: ${platform}` });
+    return false;
   }
 
   res.setHeader("expo-protocol-version", "1");
@@ -125,6 +123,7 @@ function serveExpoManifest(platform: string, res: Response) {
 
   const manifest = fs.readFileSync(manifestPath, "utf-8");
   res.send(manifest);
+  return true;
 }
 
 function serveLandingPage({
@@ -169,6 +168,22 @@ function configureExpoAndLanding(app: express.Application) {
 
   log("Serving static Expo files with dynamic manifest routing");
 
+  const metroProxy = createProxyMiddleware({
+    target: "http://127.0.0.1:8081",
+    changeOrigin: true,
+    ws: true,
+    logger: console,
+    on: {
+      error: (err, req, res) => {
+        console.error("Metro proxy error:", err.message);
+        if (res && 'writeHead' in res) {
+          (res as any).writeHead(502, { "Content-Type": "application/json" });
+          (res as any).end(JSON.stringify({ error: "Metro bundler not available" }));
+        }
+      },
+    },
+  });
+
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api")) {
       return next();
@@ -180,7 +195,15 @@ function configureExpoAndLanding(app: express.Application) {
 
     const platform = req.header("expo-platform");
     if (platform && (platform === "ios" || platform === "android")) {
-      return serveExpoManifest(platform, res);
+      const served = serveExpoManifest(platform, res);
+      if (!served) {
+        log(`No static manifest for ${platform}, proxying to Metro`);
+        if (req.path === "/manifest") {
+          req.url = "/";
+        }
+        return metroProxy(req, res, next);
+      }
+      return;
     }
 
     if (req.path === "/") {
@@ -198,23 +221,6 @@ function configureExpoAndLanding(app: express.Application) {
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
-  // Proxy Metro bundler requests to port 8081
-  const metroProxy = createProxyMiddleware({
-    target: "http://127.0.0.1:8081",
-    changeOrigin: true,
-    ws: true,
-    logger: console,
-    on: {
-      error: (err, req, res) => {
-        console.error("Metro proxy error:", err.message);
-        if (res && 'writeHead' in res) {
-          (res as any).writeHead(502, { "Content-Type": "application/json" });
-          (res as any).end(JSON.stringify({ error: "Metro bundler not available" }));
-        }
-      },
-    },
-  });
-
   // Proxy bundle requests and other Metro-specific paths
   app.use((req, res, next) => {
     if (req.path.endsWith('.bundle') || req.path.endsWith('.map')) {
@@ -229,7 +235,7 @@ function configureExpoAndLanding(app: express.Application) {
   app.use("/message", metroProxy);
 
   log("Expo routing: Checking expo-platform header on / and /manifest");
-  log("Metro proxy: Forwarding bundle requests to port 8081");
+  log("Metro proxy: Forwarding bundle and manifest requests to port 8081");
 }
 
 function setupErrorHandler(app: express.Application) {
