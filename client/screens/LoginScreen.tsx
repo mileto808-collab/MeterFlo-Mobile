@@ -51,11 +51,10 @@ export default function LoginScreen() {
     >
       <View style={styles.logoContainer}>
         <Image
-          source={require("../../assets/images/icon.png")}
+          source={require("../../assets/images/login-logo.png")}
           style={styles.logo}
           resizeMode="contain"
         />
-        <ThemedText type="h2" style={styles.appName}>MeterFlo</ThemedText>
         <ThemedText type="small" style={[styles.tagline, { color: theme.textSecondary }]}>
           Mobile Work Order Management
         </ThemedText>
@@ -160,12 +159,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing["3xl"],
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 200,
+    height: 200,
     marginBottom: Spacing.lg,
-  },
-  appName: {
-    marginBottom: Spacing.xs,
   },
   tagline: {
     textAlign: "center",
