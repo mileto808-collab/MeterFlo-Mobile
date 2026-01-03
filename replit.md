@@ -48,6 +48,12 @@ Preferred communication style: Simple, everyday language.
 4. Session maintained via secure token storage
 5. Supports "Remember Me" for persistent sessions
 
+### CSRF Protection Headers
+All API requests to the MeterFlo server include the following headers for CSRF protection:
+- `X-Requested-With: XMLHttpRequest` - Required by most MeterFlo server installations
+- `Origin: [serverUrl]` - Set to the user-configured server URL; required by Replit-hosted servers
+- These headers are applied in AuthContext, WorkOrderContext, OfflineContext, and WorkflowWizardScreen
+
 ### Offline Login
 - **Credential Caching**: On successful online login, credentials are securely stored in SecureStore (device-level encryption via Keychain/Keystore)
 - **Offline Verification**: When server is unreachable, app validates credentials locally using stored password hash with salt
