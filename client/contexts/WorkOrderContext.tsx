@@ -493,6 +493,9 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
       const response = await fetch(fullUrl, {
         method: "GET",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+        },
         credentials: "include",
       });
 
@@ -671,6 +674,9 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
     const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}/claim`, {
       method: "POST",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+      },
       credentials: "include",
     });
 
@@ -707,6 +713,9 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     try {
       const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}`, {
         method: "GET",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+        },
         credentials: "include",
       });
 
@@ -747,6 +756,9 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(meterId)}`,
         {
           method: "GET",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+          },
           credentials: "include",
         }
       );

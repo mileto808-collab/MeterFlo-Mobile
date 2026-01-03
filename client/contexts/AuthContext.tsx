@@ -127,6 +127,9 @@ async function isServerReachable(serverUrl: string, timeoutMs: number = 5000): P
     
     const response = await fetch(`${serverUrl}/api/health`, {
       method: "GET",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+      },
       signal: controller.signal,
     });
     
@@ -301,7 +304,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const loginResponse = await fetch(`${normalizedUrl}/api/auth/local/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
         credentials: "include",
         body: JSON.stringify({ username, password }),
       });
@@ -322,6 +328,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const projectsResponse = await fetch(`${normalizedUrl}/api/users/${user.id}/projects`, {
         method: "GET",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+        },
         credentials: "include",
       });
 
@@ -410,6 +419,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await fetch(`${storedServerUrl}/api/auth/logout`, {
           method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+          },
           credentials: "include",
         });
       } catch (e) {
@@ -462,7 +474,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const loginResponse = await fetch(`${state.serverUrl}/api/auth/local/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
         credentials: "include",
         body: JSON.stringify({ 
           username: storedCreds.username, 

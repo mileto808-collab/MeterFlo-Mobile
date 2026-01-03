@@ -651,7 +651,10 @@ export default function WorkflowWizardScreen() {
         
         const response = await fetch(endpoint, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
           credentials: "include",
           body: JSON.stringify(mobilePayload),
         });

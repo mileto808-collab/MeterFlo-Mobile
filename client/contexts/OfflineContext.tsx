@@ -213,7 +213,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             const response = await fetch(endpoint, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { 
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+              },
               credentials: "include",
               body: JSON.stringify(payloadWithProjectId),
             });
@@ -235,7 +238,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             const searchByOldMeter = async () => {
               const response = await fetch(
                 `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(offlineData.oldMeterId)}`,
-                { method: "GET", credentials: "include" }
+                { 
+                  method: "GET", 
+                  headers: { "X-Requested-With": "XMLHttpRequest" },
+                  credentials: "include" 
+                }
               );
               if (!response.ok) return [];
               const data = await response.json();
@@ -246,7 +253,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               if (!offlineData.newMeterId) return [];
               const response = await fetch(
                 `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(offlineData.newMeterId)}`,
-                { method: "GET", credentials: "include" }
+                { 
+                  method: "GET", 
+                  headers: { "X-Requested-With": "XMLHttpRequest" },
+                  credentials: "include" 
+                }
               );
               if (!response.ok) return [];
               const data = await response.json();
@@ -281,7 +292,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               `${serverUrl}/api/projects/${projectId}/work-orders/${serverWorkOrderId}/claim`,
               {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                  "Content-Type": "application/json",
+                  "X-Requested-With": "XMLHttpRequest",
+                },
                 credentials: "include",
               }
             );
@@ -312,7 +326,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               `${serverUrl}/api/mobile/workorders/${serverWorkOrderId}/complete`,
               {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                  "Content-Type": "application/json",
+                  "X-Requested-With": "XMLHttpRequest",
+                },
                 credentials: "include",
                 body: JSON.stringify(completePayload),
               }
@@ -353,7 +370,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             const response = await fetch(claimEndpoint, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { 
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+              },
               credentials: "include",
             });
             
@@ -368,7 +388,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
           } else {
             const batchResponse = await fetch(`${serverUrl}/api/projects/${projectId}/mobile/sync/upload`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { 
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+              },
               credentials: "include",
               body: JSON.stringify({
                 workOrders: [{
