@@ -370,6 +370,7 @@ interface WorkOrderContextType {
   error: string | null;
   setWorkOrders: (orders: WorkOrder[]) => void;
   updateWorkOrder: (id: number, updates: Partial<WorkOrder>) => void;
+  deleteLocalWorkOrder: (workOrderId: number | string) => Promise<void>;
   setFilters: (filters: FilterConfig) => void;
   setSort: (sort: SortConfig) => void;
   getFilteredWorkOrders: () => WorkOrder[];
@@ -911,6 +912,31 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const deleteLocalWorkOrder = useCallback(async (workOrderId: number | string) => {
+    const numericId = typeof workOrderId === "string" ? parseInt(workOrderId, 10) : workOrderId;
+    console.log("[deleteLocalWorkOrder] Deleting work order:", numericId);
+    
+    setWorkOrdersState(prev => {
+      const workOrderToDelete = prev.find(wo => wo.id === numericId);
+      if (workOrderToDelete) {
+        const photoCount = 
+          (workOrderToDelete.beforePhotos?.length || 0) + 
+          (workOrderToDelete.afterPhotos?.length || 0) + 
+          (workOrderToDelete.troublePhotos?.length || 0);
+        console.log("[deleteLocalWorkOrder] Removing work order with", photoCount, "photos");
+      }
+      
+      const updated = prev.filter(wo => wo.id !== numericId);
+      if (updated.length !== prev.length) {
+        console.log("[deleteLocalWorkOrder] Work order removed successfully");
+        AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
+      } else {
+        console.log("[deleteLocalWorkOrder] Work order not found in local storage");
+      }
+      return updated;
+    });
+  }, []);
+
   const setFilters = useCallback((newFilters: FilterConfig) => {
     setFiltersState(newFilters);
   }, []);
@@ -1020,6 +1046,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         error,
         setWorkOrders,
         updateWorkOrder,
+        deleteLocalWorkOrder,
         setFilters,
         setSort,
         getFilteredWorkOrders,
