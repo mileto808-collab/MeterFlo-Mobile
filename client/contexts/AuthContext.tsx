@@ -129,6 +129,7 @@ async function isServerReachable(serverUrl: string, timeoutMs: number = 5000): P
       method: "GET",
       headers: {
         "X-Requested-With": "XMLHttpRequest",
+        "Origin": serverUrl,
       },
       signal: controller.signal,
     });
@@ -307,6 +308,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { 
           "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
+          "Origin": normalizedUrl,
         },
         credentials: "include",
         body: JSON.stringify({ username, password }),
@@ -330,6 +332,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: "GET",
         headers: {
           "X-Requested-With": "XMLHttpRequest",
+          "Origin": normalizedUrl,
         },
         credentials: "include",
       });
@@ -421,6 +424,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           method: "POST",
           headers: {
             "X-Requested-With": "XMLHttpRequest",
+            "Origin": storedServerUrl,
           },
           credentials: "include",
         });
@@ -477,6 +481,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { 
           "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
+          "Origin": state.serverUrl,
         },
         credentials: "include",
         body: JSON.stringify({ 

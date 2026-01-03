@@ -495,6 +495,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         method: "GET",
         headers: {
           "X-Requested-With": "XMLHttpRequest",
+          "Origin": serverUrl,
         },
         credentials: "include",
       });
@@ -676,6 +677,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       method: "POST",
       headers: {
         "X-Requested-With": "XMLHttpRequest",
+        "Origin": serverUrl,
       },
       credentials: "include",
     });
@@ -715,6 +717,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         method: "GET",
         headers: {
           "X-Requested-With": "XMLHttpRequest",
+          "Origin": serverUrl,
         },
         credentials: "include",
       });
@@ -758,6 +761,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
           method: "GET",
           headers: {
             "X-Requested-With": "XMLHttpRequest",
+            "Origin": serverUrl,
           },
           credentials: "include",
         }
