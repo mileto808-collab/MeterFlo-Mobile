@@ -655,6 +655,7 @@ export default function WorkflowWizardScreen() {
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest",
             "Origin": serverUrl,
+            "Referer": `${serverUrl}/`,
           },
           credentials: "include",
           body: JSON.stringify(mobilePayload),

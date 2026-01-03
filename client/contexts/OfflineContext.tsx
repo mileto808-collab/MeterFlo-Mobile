@@ -217,6 +217,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
                 "Content-Type": "application/json",
                 "X-Requested-With": "XMLHttpRequest",
                 "Origin": serverUrl,
+                "Referer": `${serverUrl}/`,
               },
               credentials: "include",
               body: JSON.stringify(payloadWithProjectId),
@@ -241,7 +242,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
                 `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(offlineData.oldMeterId)}`,
                 { 
                   method: "GET", 
-                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl },
+                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
                   credentials: "include" 
                 }
               );
@@ -256,7 +257,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
                 `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(offlineData.newMeterId)}`,
                 { 
                   method: "GET", 
-                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl },
+                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
                   credentials: "include" 
                 }
               );
@@ -297,6 +298,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
                   "Content-Type": "application/json",
                   "X-Requested-With": "XMLHttpRequest",
                   "Origin": serverUrl,
+                  "Referer": `${serverUrl}/`,
                 },
                 credentials: "include",
               }
@@ -332,6 +334,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
                   "Content-Type": "application/json",
                   "X-Requested-With": "XMLHttpRequest",
                   "Origin": serverUrl,
+                  "Referer": `${serverUrl}/`,
                 },
                 credentials: "include",
                 body: JSON.stringify(completePayload),
@@ -377,6 +380,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
                 "Content-Type": "application/json",
                 "X-Requested-With": "XMLHttpRequest",
                 "Origin": serverUrl,
+                "Referer": `${serverUrl}/`,
               },
               credentials: "include",
             });
@@ -396,6 +400,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
                 "Content-Type": "application/json",
                 "X-Requested-With": "XMLHttpRequest",
                 "Origin": serverUrl,
+                "Referer": `${serverUrl}/`,
               },
               credentials: "include",
               body: JSON.stringify({

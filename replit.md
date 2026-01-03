@@ -52,6 +52,7 @@ Preferred communication style: Simple, everyday language.
 All API requests to the MeterFlo server include the following headers for CSRF protection:
 - `X-Requested-With: XMLHttpRequest` - Required by most MeterFlo server installations
 - `Origin: [serverUrl]` - Set to the user-configured server URL; required by Replit-hosted servers
+- `Referer: [serverUrl]/` - Added as fallback for servers that check Referer instead of Origin
 - These headers are applied in AuthContext, WorkOrderContext, OfflineContext, and WorkflowWizardScreen
 
 ### Offline Login

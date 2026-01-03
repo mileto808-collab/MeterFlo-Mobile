@@ -130,6 +130,7 @@ async function isServerReachable(serverUrl: string, timeoutMs: number = 5000): P
       headers: {
         "X-Requested-With": "XMLHttpRequest",
         "Origin": serverUrl,
+        "Referer": `${serverUrl}/`,
       },
       signal: controller.signal,
     });
@@ -303,19 +304,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       
+      console.log(`[Auth] Attempting login to: ${normalizedUrl}/api/auth/local/login`);
+      console.log(`[Auth] Headers: Origin=${normalizedUrl}, X-Requested-With=XMLHttpRequest, Referer=${normalizedUrl}/`);
+      
       const loginResponse = await fetch(`${normalizedUrl}/api/auth/local/login`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
           "Origin": normalizedUrl,
+          "Referer": `${normalizedUrl}/`,
         },
         credentials: "include",
         body: JSON.stringify({ username, password }),
       });
 
+      console.log(`[Auth] Login response status: ${loginResponse.status}`);
+      
       if (!loginResponse.ok) {
         const errorText = await loginResponse.text();
+        console.error(`[Auth] Login failed: ${loginResponse.status} - ${errorText?.substring(0, 500)}`);
         throw new Error(errorText || "Login failed");
       }
 
@@ -333,6 +341,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: {
           "X-Requested-With": "XMLHttpRequest",
           "Origin": normalizedUrl,
+          "Referer": `${normalizedUrl}/`,
         },
         credentials: "include",
       });
@@ -425,6 +434,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           headers: {
             "X-Requested-With": "XMLHttpRequest",
             "Origin": storedServerUrl,
+            "Referer": `${storedServerUrl}/`,
           },
           credentials: "include",
         });
@@ -482,6 +492,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
           "Origin": state.serverUrl,
+          "Referer": `${state.serverUrl}/`,
         },
         credentials: "include",
         body: JSON.stringify({ 
