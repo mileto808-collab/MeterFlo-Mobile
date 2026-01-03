@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export function AutoSyncManager() {
   const { isOnline, pendingActions, isSyncing, syncPendingActions } = useOffline();
-  const { updateWorkOrder, transformOfflineToServerWorkOrder } = useWorkOrders();
+  const { updateWorkOrder, transformOfflineToServerWorkOrder, deleteLocalWorkOrder } = useWorkOrders();
   const { serverUrl, projectId, isOfflineSession, revalidateSession } = useAuth();
   const wasOfflineRef = useRef(false);
   const autoSyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -43,7 +43,7 @@ export function AutoSyncManager() {
         console.log("[AutoSyncManager] Triggering auto-sync");
         
         try {
-          const { syncedWorkOrderIds, syncedOfflineWorkOrders } = await syncPendingActions();
+          const { syncedWorkOrderIds, syncedOfflineWorkOrders, conflictedWorkOrderIds } = await syncPendingActions();
           
           if (syncedWorkOrderIds.length > 0) {
             console.log(`[AutoSyncManager] Auto-sync completed, synced ${syncedWorkOrderIds.length} work orders`);
@@ -65,6 +65,13 @@ export function AutoSyncManager() {
               });
             }
           }
+          
+          if (conflictedWorkOrderIds.length > 0) {
+            console.log(`[AutoSyncManager] ${conflictedWorkOrderIds.length} work orders conflicted (claimed by another user), deleting local data`);
+            for (const workOrderId of conflictedWorkOrderIds) {
+              await deleteLocalWorkOrder(workOrderId);
+            }
+          }
         } catch (err) {
           console.error("[AutoSyncManager] Auto-sync failed, will retry on next trigger:", err);
           wasOfflineRef.current = true;
@@ -77,7 +84,7 @@ export function AutoSyncManager() {
         clearTimeout(autoSyncTimeoutRef.current);
       }
     };
-  }, [isOnline, pendingActions.length, isSyncing, serverUrl, projectId, isOfflineSession, syncPendingActions, updateWorkOrder, transformOfflineToServerWorkOrder, revalidateSession]);
+  }, [isOnline, pendingActions.length, isSyncing, serverUrl, projectId, isOfflineSession, syncPendingActions, updateWorkOrder, transformOfflineToServerWorkOrder, deleteLocalWorkOrder, revalidateSession]);
 
   return null;
 }

@@ -80,6 +80,13 @@ All API requests to the MeterFlo server include the following headers for CSRF p
 - **Local data preservation**: During sync, local completion data (customerWoId, oldMeterId, oldGps, oldMeterReading, newMeterId, newMeterReading, newGps, completedAt, completedBy, troubleCode, troubleNote) is preserved and merged with server data to prevent data loss
 - **Edit completed orders**: Completed/trouble work orders can be edited via "Edit Completion" button, which launches the wizard with pre-filled data (skipping the "Can Meter Be Changed?" step)
 
+### Multi-User Conflict Handling
+- **Claim Conflict Detection**: When syncing, the app detects if a work order was already claimed by another user (HTTP 409, or 403/400 with "claimed"/"assigned"/"not available" messages)
+- **Automatic Local Cleanup**: Conflicted work orders and their associated photos (beforePhotos, afterPhotos, troublePhotos) are automatically deleted from local storage
+- **Pending Action Removal**: Conflicted actions are removed from the pending queue so they don't retry
+- **User Notification**: On manual sync, users are notified how many work orders were removed due to conflicts
+- **deleteLocalWorkOrder Function**: WorkOrderContext exposes a function to delete work orders by ID, which also removes embedded photo data
+
 ### Workflow Wizard Features
 - **Trouble Code Display**: Trouble codes display with labels (e.g., "02 - Unsafe") for better readability
 - **Photo Upload**: Photos captured during workflows are converted to base64 and sent to server

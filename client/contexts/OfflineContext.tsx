@@ -39,6 +39,20 @@ interface SyncedOfflineWorkOrder {
 interface SyncResult {
   syncedWorkOrderIds: number[];
   syncedOfflineWorkOrders: SyncedOfflineWorkOrder[];
+  conflictedWorkOrderIds: string[];
+}
+
+function isClaimConflictError(status: number, errorText: string): boolean {
+  const lowerText = errorText.toLowerCase();
+  if (status === 409) return true;
+  if (status === 403 || status === 400) {
+    return lowerText.includes("claimed") ||
+           lowerText.includes("already assigned") ||
+           lowerText.includes("no longer available") ||
+           lowerText.includes("assigned to another") ||
+           lowerText.includes("not available");
+  }
+  return false;
 }
 
 interface OfflineContextType {
@@ -182,7 +196,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
 
   const syncPendingActions = useCallback(async (): Promise<SyncResult> => {
     if (!isOnline || pendingActions.length === 0 || isSyncing || !serverUrl || !projectId) {
-      return { syncedWorkOrderIds: [], syncedOfflineWorkOrders: [] };
+      return { syncedWorkOrderIds: [], syncedOfflineWorkOrders: [], conflictedWorkOrderIds: [] };
     }
 
     setIsSyncing(true);
@@ -192,6 +206,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     
     const successfulActionIds: string[] = [];
     const failedActionIds: string[] = [];
+    const conflictedActionIds: string[] = [];
+    const conflictedWorkOrderIds: string[] = [];
     const offlineToServerIdMap: Map<string, number> = new Map();
     const syncedOfflineWorkOrders: SyncedOfflineWorkOrder[] = [];
     let lastError: string | undefined;
@@ -226,6 +242,16 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             if (!response.ok) {
               const errorText = await response.text();
               console.error(`[syncPendingActions] Failed to sync WO ${action.workOrderId}:`, response.status, errorText?.substring(0, 200));
+              
+              if (isClaimConflictError(response.status, errorText)) {
+                console.log(`[syncPendingActions] Claim conflict on complete for WO ${action.workOrderId} - work order claimed by another user`);
+                conflictedActionIds.push(action.id);
+                if (!conflictedWorkOrderIds.includes(action.workOrderId)) {
+                  conflictedWorkOrderIds.push(action.workOrderId);
+                }
+                continue;
+              }
+              
               throw new Error(errorText || `Failed to sync work order ${action.workOrderId}`);
             }
             
@@ -388,6 +414,16 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             if (!response.ok) {
               const errorText = await response.text();
               console.error(`[syncPendingActions] Failed to claim WO ${action.workOrderId}:`, response.status, errorText?.substring(0, 200));
+              
+              if (isClaimConflictError(response.status, errorText)) {
+                console.log(`[syncPendingActions] Claim conflict detected for WO ${action.workOrderId} - another user has claimed it`);
+                conflictedActionIds.push(action.id);
+                if (!conflictedWorkOrderIds.includes(action.workOrderId)) {
+                  conflictedWorkOrderIds.push(action.workOrderId);
+                }
+                continue;
+              }
+              
               throw new Error(errorText || `Failed to claim work order ${action.workOrderId}`);
             }
             
@@ -428,9 +464,16 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      const remainingActions = pendingActions.filter(a => !successfulActionIds.includes(a.id));
+      const remainingActions = pendingActions.filter(a => 
+        !successfulActionIds.includes(a.id) && !conflictedActionIds.includes(a.id)
+      );
       const successCount = successfulActionIds.length;
       const failedCount = failedActionIds.length;
+      const conflictCount = conflictedActionIds.length;
+      
+      if (conflictCount > 0) {
+        console.log(`[syncPendingActions] ${conflictCount} actions conflicted (claimed by other users), removing from queue`);
+      }
       
       const syncedWorkOrderIds = pendingActions
         .filter(action => successfulActionIds.includes(action.id))
@@ -462,7 +505,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(remainingActions));
       }
       
-      return { syncedWorkOrderIds, syncedOfflineWorkOrders };
+      return { syncedWorkOrderIds, syncedOfflineWorkOrders, conflictedWorkOrderIds };
 
     } catch (error) {
       console.error("Sync failed:", error);
@@ -479,7 +522,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         errorMessage: error instanceof Error ? error.message : "Unknown error",
       });
       
-      return { syncedWorkOrderIds: [], syncedOfflineWorkOrders: [] };
+      return { syncedWorkOrderIds: [], syncedOfflineWorkOrders: [], conflictedWorkOrderIds: [] };
     } finally {
       setIsSyncing(false);
     }

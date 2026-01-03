@@ -19,7 +19,7 @@ export default function SyncScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const { isOnline, pendingActions, syncHistory, isSyncing, syncPendingActions, clearAllPending, clearSyncHistory } = useOffline();
-  const { lastSyncTime, isLoading, refreshWorkOrders, clearAllData, workOrders, updateWorkOrder } = useWorkOrders();
+  const { lastSyncTime, isLoading, refreshWorkOrders, clearAllData, workOrders, updateWorkOrder, deleteLocalWorkOrder } = useWorkOrders();
   const [isClearing, setIsClearing] = useState(false);
   const [backupProgress, setBackupProgress] = useState<BackupProgress | null>(null);
   const [showBackupModal, setShowBackupModal] = useState(false);
@@ -79,9 +79,21 @@ export default function SyncScreen() {
   const handleSync = async () => {
     await refreshWorkOrders(true);
     if (pendingActions.length > 0) {
-      const syncedWorkOrderIds = await syncPendingActions();
+      const { syncedWorkOrderIds, conflictedWorkOrderIds } = await syncPendingActions();
       for (const workOrderId of syncedWorkOrderIds) {
         updateWorkOrder(workOrderId, { syncPending: false });
+      }
+      if (conflictedWorkOrderIds.length > 0) {
+        console.log(`[SyncScreen] ${conflictedWorkOrderIds.length} work orders conflicted, deleting local data`);
+        for (const workOrderId of conflictedWorkOrderIds) {
+          await deleteLocalWorkOrder(workOrderId);
+        }
+        if (Platform.OS !== "web") {
+          Alert.alert(
+            "Work Orders Removed",
+            `${conflictedWorkOrderIds.length} work order${conflictedWorkOrderIds.length !== 1 ? "s were" : " was"} already claimed by another user and removed from your device.`
+          );
+        }
       }
     }
   };
