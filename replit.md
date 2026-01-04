@@ -81,11 +81,17 @@ All API requests to the MeterFlo server include the following headers for CSRF p
 - **Edit completed orders**: Completed/trouble work orders can be edited via "Edit Completion" button, which launches the wizard with pre-filled data (skipping the "Can Meter Be Changed?" step)
 
 ### Multi-User Conflict Handling
-- **Pre-flight Claim Check**: Before syncing each offline completion, the app fetches the current work order state from the server and checks if it's already claimed by another user
-- **Simple Conflict Detection**: If the server work order is assigned to a different username than the current user, the sync is blocked as a conflict (no timestamp comparison needed)
-- **Claim Conflict Detection**: When syncing, the app also detects HTTP-level claim conflicts (HTTP 409, or 403/400 with "claimed"/"assigned"/"not available" messages)
-- **Automatic Local Cleanup**: Conflicted work orders and their associated photos (beforePhotos, afterPhotos, troublePhotos) are automatically deleted from local storage
-- **Pending Action Removal**: Conflicted actions are removed from the pending queue so they don't retry
+- **Unified Conflict Check**: Shared helper `client/lib/conflict-check.ts` provides `checkWorkOrderConflict()` function used by both online and offline paths
+- **Pre-flight Check for Online Submissions**: Before submitting a completion via WorkflowWizardScreen, the app fetches the work order and checks if claimed/completed by another user
+- **Pre-flight Check for Offline Sync**: Before syncing each pending action, OfflineContext uses the same helper to detect conflicts
+- **Conflict Detection Logic**:
+  - If `assigned_to_username` differs from current user → conflict (claimed by another)
+  - If status is "completed" or "closed" AND `completed_by_username` differs from current user → conflict (completed by another)
+  - Status "Open" with leftover completion data is NOT a conflict (admin reset scenario)
+- **Case-insensitive Username Comparison**: All username comparisons are case-insensitive
+- **HTTP Conflict Detection**: Also detects HTTP-level claim conflicts (HTTP 409, or 403/400 with "claimed"/"assigned"/"not available" messages)
+- **Online Conflict Handling**: Alert shown, local work order deleted, user navigated back to work order list
+- **Offline Conflict Handling**: Conflicted actions removed from pending queue, work orders deleted by AutoSyncManager/SyncScreen
 - **User Notification**: On manual sync, users are notified how many work orders were removed due to conflicts
 - **deleteLocalWorkOrder Function**: WorkOrderContext exposes a function to delete work orders by ID, which also removes embedded photo data
 
