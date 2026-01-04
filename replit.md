@@ -81,11 +81,14 @@ All API requests to the MeterFlo server include the following headers for CSRF p
 - **Edit completed orders**: Completed/trouble work orders can be edited via "Edit Completion" button, which launches the wizard with pre-filled data (skipping the "Can Meter Be Changed?" step)
 
 ### Multi-User Conflict Handling
-- **Claim Conflict Detection**: When syncing, the app detects if a work order was already claimed by another user (HTTP 409, or 403/400 with "claimed"/"assigned"/"not available" messages)
+- **Pre-flight Check**: Before syncing each offline completion, the app fetches the current work order state from the server
+- **Timestamp Comparison**: If the server's `completedAt` timestamp is newer than the local `completedAt`, the sync is blocked as a conflict
+- **Claim Conflict Detection**: When syncing, the app also detects if a work order was already claimed by another user (HTTP 409, or 403/400 with "claimed"/"assigned"/"not available" messages)
 - **Automatic Local Cleanup**: Conflicted work orders and their associated photos (beforePhotos, afterPhotos, troublePhotos) are automatically deleted from local storage
 - **Pending Action Removal**: Conflicted actions are removed from the pending queue so they don't retry
 - **User Notification**: On manual sync, users are notified how many work orders were removed due to conflicts
 - **deleteLocalWorkOrder Function**: WorkOrderContext exposes a function to delete work orders by ID, which also removes embedded photo data
+- **Admin Reset Handling**: If an admin resets a completed work order back to Open, the pre-flight check allows syncing since the server status is no longer "Completed"
 
 ### Workflow Wizard Features
 - **Trouble Code Display**: Trouble codes display with labels (e.g., "02 - Unsafe") for better readability

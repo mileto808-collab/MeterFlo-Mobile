@@ -55,6 +55,71 @@ function isClaimConflictError(status: number, errorText: string): boolean {
   return false;
 }
 
+interface PreflightCheckResult {
+  isConflict: boolean;
+  reason?: string;
+}
+
+async function checkWorkOrderConflict(
+  serverUrl: string,
+  projectId: string,
+  workOrderId: string,
+  localCompletedAt: string | undefined
+): Promise<PreflightCheckResult> {
+  try {
+    const response = await fetch(
+      `${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}`,
+      {
+        method: "GET",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "Origin": serverUrl,
+          "Referer": `${serverUrl}/`,
+        },
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      console.log(`[checkWorkOrderConflict] Failed to fetch WO ${workOrderId}: ${response.status}`);
+      return { isConflict: false };
+    }
+
+    const serverWo = await response.json();
+    const serverStatus = (serverWo.status || "").toLowerCase();
+    const serverCompletedAt = serverWo.completedAt || serverWo.completed_at;
+
+    if (serverStatus === "completed" || serverStatus === "closed") {
+      if (serverCompletedAt && localCompletedAt) {
+        const serverTime = new Date(serverCompletedAt).getTime();
+        const localTime = new Date(localCompletedAt).getTime();
+
+        if (serverTime > localTime) {
+          console.log(`[checkWorkOrderConflict] WO ${workOrderId} completed on server at ${serverCompletedAt}, local completion at ${localCompletedAt} is older - CONFLICT`);
+          return { 
+            isConflict: true, 
+            reason: `Work order was completed on server at ${new Date(serverCompletedAt).toLocaleString()}` 
+          };
+        } else {
+          console.log(`[checkWorkOrderConflict] WO ${workOrderId} local completion at ${localCompletedAt} is newer than server ${serverCompletedAt} - allowing sync`);
+          return { isConflict: false };
+        }
+      } else if (serverCompletedAt && !localCompletedAt) {
+        console.log(`[checkWorkOrderConflict] WO ${workOrderId} is completed on server but local has no timestamp - CONFLICT`);
+        return { 
+          isConflict: true, 
+          reason: "Work order was already completed on server" 
+        };
+      }
+    }
+
+    return { isConflict: false };
+  } catch (error) {
+    console.error(`[checkWorkOrderConflict] Error checking WO ${workOrderId}:`, error);
+    return { isConflict: false };
+  }
+}
+
 interface OfflineContextType {
   isOnline: boolean;
   pendingActions: PendingAction[];
@@ -216,6 +281,25 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       for (const action of pendingActions) {
         try {
           if (action.type === "complete" && action.completionMode) {
+            const localCompletedAt = action.data?.completedAt;
+            console.log(`[syncPendingActions] Pre-flight check for WO ${action.workOrderId} (local completedAt: ${localCompletedAt})`);
+            
+            const preflightResult = await checkWorkOrderConflict(
+              serverUrl,
+              String(projectId),
+              action.workOrderId,
+              localCompletedAt
+            );
+            
+            if (preflightResult.isConflict) {
+              console.log(`[syncPendingActions] Pre-flight conflict detected for WO ${action.workOrderId}: ${preflightResult.reason}`);
+              conflictedActionIds.push(action.id);
+              if (!conflictedWorkOrderIds.includes(action.workOrderId)) {
+                conflictedWorkOrderIds.push(action.workOrderId);
+              }
+              continue;
+            }
+            
             const endpoint = action.completionMode === "complete"
               ? `${serverUrl}/api/mobile/workorders/${action.workOrderId}/complete`
               : `${serverUrl}/api/mobile/workorders/${action.workOrderId}/trouble`;
