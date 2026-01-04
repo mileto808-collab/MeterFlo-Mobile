@@ -22,6 +22,7 @@ import { SelectInput } from "@/components/SelectInput";
 import { SignaturePad } from "@/components/SignaturePad";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { Spacing, BorderRadius } from "@/constants/theme";
+import { checkWorkOrderConflict } from "@/lib/conflict-check";
 
 type RouteProps = RouteProp<RootStackParamList, "WorkflowWizard">;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -103,7 +104,7 @@ export default function WorkflowWizardScreen() {
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { updateWorkOrder, referenceData, claimWorkOrder } = useWorkOrders();
+  const { updateWorkOrder, referenceData, claimWorkOrder, deleteLocalWorkOrder } = useWorkOrders();
   const { serverUrl, projectId, user } = useAuth();
   const { isOnline, addPendingAction, addDirectSubmissionHistory } = useOffline();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -585,6 +586,39 @@ export default function WorkflowWizardScreen() {
       }
       
       console.log(`[WorkflowWizard] Submitting with photos - trouble: ${troublePhotosBase64.length}, before: ${beforePhotosBase64.length}, after: ${afterPhotosBase64.length}`);
+
+      if (isOnline && serverUrl && projectId && user?.username) {
+        const conflictResult = await checkWorkOrderConflict(
+          String(workOrder.id),
+          serverUrl,
+          String(projectId),
+          user.username
+        );
+
+        if (conflictResult.hasConflict) {
+          setIsSubmitting(false);
+          
+          await deleteLocalWorkOrder(workOrder.id);
+          
+          const conflictMessage = conflictResult.conflictType === "claimed"
+            ? `This work order was already claimed by ${conflictResult.conflictUser}. Your changes cannot be submitted and the work order has been removed from your device.`
+            : `This work order was already completed by ${conflictResult.conflictUser}. Your changes cannot be submitted and the work order has been removed from your device.`;
+
+          if (Platform.OS === "web") {
+            alert(conflictMessage);
+          } else {
+            Alert.alert(
+              "Work Order Conflict",
+              conflictMessage,
+              [{ text: "OK", onPress: () => navigation.goBack() }]
+            );
+          }
+          if (Platform.OS === "web") {
+            navigation.goBack();
+          }
+          return;
+        }
+      }
 
       const patchPayload = canChange ? {
         status: "Completed",
