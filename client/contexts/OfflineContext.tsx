@@ -55,71 +55,6 @@ function isClaimConflictError(status: number, errorText: string): boolean {
   return false;
 }
 
-interface PreflightCheckResult {
-  isConflict: boolean;
-  reason?: string;
-}
-
-async function checkWorkOrderConflict(
-  serverUrl: string,
-  projectId: string,
-  workOrderId: string,
-  localCompletedAt: string | undefined
-): Promise<PreflightCheckResult> {
-  try {
-    const response = await fetch(
-      `${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}`,
-      {
-        method: "GET",
-        headers: {
-          "X-Requested-With": "XMLHttpRequest",
-          "Origin": serverUrl,
-          "Referer": `${serverUrl}/`,
-        },
-        credentials: "include",
-      }
-    );
-
-    if (!response.ok) {
-      console.log(`[checkWorkOrderConflict] Failed to fetch WO ${workOrderId}: ${response.status}`);
-      return { isConflict: false };
-    }
-
-    const serverWo = await response.json();
-    const serverStatus = (serverWo.status || "").toLowerCase();
-    const serverCompletedAt = serverWo.completedAt || serverWo.completed_at;
-
-    if (serverStatus === "completed" || serverStatus === "closed") {
-      if (serverCompletedAt && localCompletedAt) {
-        const serverTime = new Date(serverCompletedAt).getTime();
-        const localTime = new Date(localCompletedAt).getTime();
-
-        if (serverTime > localTime) {
-          console.log(`[checkWorkOrderConflict] WO ${workOrderId} completed on server at ${serverCompletedAt}, local completion at ${localCompletedAt} is older - CONFLICT`);
-          return { 
-            isConflict: true, 
-            reason: `Work order was completed on server at ${new Date(serverCompletedAt).toLocaleString()}` 
-          };
-        } else {
-          console.log(`[checkWorkOrderConflict] WO ${workOrderId} local completion at ${localCompletedAt} is newer than server ${serverCompletedAt} - allowing sync`);
-          return { isConflict: false };
-        }
-      } else if (serverCompletedAt && !localCompletedAt) {
-        console.log(`[checkWorkOrderConflict] WO ${workOrderId} is completed on server but local has no timestamp - CONFLICT`);
-        return { 
-          isConflict: true, 
-          reason: "Work order was already completed on server" 
-        };
-      }
-    }
-
-    return { isConflict: false };
-  } catch (error) {
-    console.error(`[checkWorkOrderConflict] Error checking WO ${workOrderId}:`, error);
-    return { isConflict: false };
-  }
-}
-
 interface OfflineContextType {
   isOnline: boolean;
   pendingActions: PendingAction[];
@@ -145,7 +80,7 @@ const STORAGE_KEYS = {
 const MAX_SYNC_HISTORY = 20;
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
-  const { serverUrl, projectId } = useAuth();
+  const { serverUrl, projectId, user } = useAuth();
   const [isOnline, setIsOnline] = useState(true);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [syncHistory, setSyncHistory] = useState<SyncHistoryEntry[]>([]);
@@ -281,23 +216,49 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       for (const action of pendingActions) {
         try {
           if (action.type === "complete" && action.completionMode) {
-            const localCompletedAt = action.data?.completedAt;
-            console.log(`[syncPendingActions] Pre-flight check for WO ${action.workOrderId} (local completedAt: ${localCompletedAt})`);
+            // Pre-flight check: fetch work order and check if claimed by another user
+            console.log(`[syncPendingActions] Pre-flight claim check for WO ${action.workOrderId}`);
             
-            const preflightResult = await checkWorkOrderConflict(
-              serverUrl,
-              String(projectId),
-              action.workOrderId,
-              localCompletedAt
-            );
-            
-            if (preflightResult.isConflict) {
-              console.log(`[syncPendingActions] Pre-flight conflict detected for WO ${action.workOrderId}: ${preflightResult.reason}`);
-              conflictedActionIds.push(action.id);
-              if (!conflictedWorkOrderIds.includes(action.workOrderId)) {
-                conflictedWorkOrderIds.push(action.workOrderId);
+            try {
+              const woResponse = await fetch(
+                `${serverUrl}/api/projects/${projectId}/work-orders/${action.workOrderId}`,
+                {
+                  method: "GET",
+                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
+                  credentials: "include",
+                }
+              );
+              
+              if (woResponse.ok) {
+                const woData = await woResponse.json();
+                const serverWo = woData.workOrder || woData;
+                const assignedUsername = serverWo.assigned_to_username || serverWo.assignedToUsername || serverWo.assignedUserUsername;
+                const completedByUsername = serverWo.completed_by_username || serverWo.completedByUsername || serverWo.completedBy;
+                const serverStatus = (serverWo.status || "").toLowerCase();
+                const currentUsername = user?.username?.toLowerCase();
+                
+                // Check if assigned to another user
+                if (assignedUsername && currentUsername && assignedUsername.toLowerCase() !== currentUsername) {
+                  console.log(`[syncPendingActions] WO ${action.workOrderId} is already claimed by ${assignedUsername} (current user: ${currentUsername}) - CONFLICT`);
+                  conflictedActionIds.push(action.id);
+                  if (!conflictedWorkOrderIds.includes(action.workOrderId)) {
+                    conflictedWorkOrderIds.push(action.workOrderId);
+                  }
+                  continue;
+                }
+                
+                // Also check if already completed by another user
+                if ((serverStatus === "completed" || serverStatus === "closed") && completedByUsername && currentUsername && completedByUsername.toLowerCase() !== currentUsername) {
+                  console.log(`[syncPendingActions] WO ${action.workOrderId} was already completed by ${completedByUsername} (current user: ${currentUsername}) - CONFLICT`);
+                  conflictedActionIds.push(action.id);
+                  if (!conflictedWorkOrderIds.includes(action.workOrderId)) {
+                    conflictedWorkOrderIds.push(action.workOrderId);
+                  }
+                  continue;
+                }
               }
-              continue;
+            } catch (checkError) {
+              console.warn(`[syncPendingActions] Could not pre-flight check WO ${action.workOrderId}, proceeding with sync:`, checkError);
             }
             
             const endpoint = action.completionMode === "complete"
@@ -398,6 +359,51 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             }
             
             const serverWorkOrderId = eligibleWorkOrder.id;
+            
+            // Fetch the specific work order to check assignment status (search results may not include this)
+            console.log(`[syncPendingActions] Fetching WO ${serverWorkOrderId} to check claim status...`);
+            try {
+              const woResponse = await fetch(
+                `${serverUrl}/api/projects/${projectId}/work-orders/${serverWorkOrderId}`,
+                {
+                  method: "GET",
+                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
+                  credentials: "include",
+                }
+              );
+              
+              if (woResponse.ok) {
+                const woData = await woResponse.json();
+                const serverWo = woData.workOrder || woData;
+                const assignedUsername = serverWo.assigned_to_username || serverWo.assignedToUsername || serverWo.assignedUserUsername;
+                const completedByUsername = serverWo.completed_by_username || serverWo.completedByUsername || serverWo.completedBy;
+                const serverStatus = (serverWo.status || "").toLowerCase();
+                const currentUsername = user?.username?.toLowerCase();
+                
+                // Check if assigned to another user
+                if (assignedUsername && currentUsername && assignedUsername.toLowerCase() !== currentUsername) {
+                  console.log(`[syncPendingActions] Work order ${serverWorkOrderId} is already claimed by ${assignedUsername} (current user: ${currentUsername}) - CONFLICT`);
+                  conflictedActionIds.push(action.id);
+                  if (!conflictedWorkOrderIds.includes(String(serverWorkOrderId))) {
+                    conflictedWorkOrderIds.push(String(serverWorkOrderId));
+                  }
+                  continue;
+                }
+                
+                // Also check if already completed by another user
+                if ((serverStatus === "completed" || serverStatus === "closed") && completedByUsername && currentUsername && completedByUsername.toLowerCase() !== currentUsername) {
+                  console.log(`[syncPendingActions] Work order ${serverWorkOrderId} was already completed by ${completedByUsername} (current user: ${currentUsername}) - CONFLICT`);
+                  conflictedActionIds.push(action.id);
+                  if (!conflictedWorkOrderIds.includes(String(serverWorkOrderId))) {
+                    conflictedWorkOrderIds.push(String(serverWorkOrderId));
+                  }
+                  continue;
+                }
+              }
+            } catch (checkError) {
+              console.warn(`[syncPendingActions] Could not fetch WO ${serverWorkOrderId} to check claim status, proceeding:`, checkError);
+            }
+            
             console.log(`[syncPendingActions] Found matching server work order ${serverWorkOrderId}, claiming...`);
             
             const claimResponse = await fetch(
@@ -610,7 +616,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsSyncing(false);
     }
-  }, [isOnline, pendingActions, isSyncing, serverUrl, projectId, addSyncHistoryEntry]);
+  }, [isOnline, pendingActions, isSyncing, serverUrl, projectId, user, addSyncHistoryEntry]);
 
   const clearAllPending = useCallback(async () => {
     setPendingActions([]);
