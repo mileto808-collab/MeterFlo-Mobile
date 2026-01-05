@@ -132,8 +132,12 @@ All API requests to the MeterFlo server include the following headers for CSRF p
 - **Completed work order detection**: When a work order is found but already completed/closed:
   - Shows "Already Completed" title with warning (orange) icon
   - Displays message: "This work order has already been completed and cannot be processed again."
-  - Hides "Start Wizard" button to prevent processing
+  - Hides "Start System Changeout" button to prevent processing
   - Navigation guard blocks completed work orders from reaching WorkflowWizard
+- **Context-aware navigation buttons**: ScanConfirmModal uses `isManualSearch` flag to show context-appropriate buttons
+  - Scan-based flows (barcode, QR, HID): Show "Scan Again" and "Edit Search" buttons
+  - Manual search: Show only "Edit Search" button (since scanning doesn't apply)
+  - Consistent "Start System Changeout" button text across all entry points
 - **Loading state**: Modal shows spinner while searching server
 - **Empty list state**: "No matches in cached work orders. Use scan to search the server."
 
