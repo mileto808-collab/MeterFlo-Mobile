@@ -259,9 +259,9 @@ export default function TapToCaptureScanScreen() {
               <>
                 <View style={styles.iconContainer}>
                   <Icon 
-                    name={matchedWorkOrder ? "check-circle" : unavailableWorkOrders.length > 0 ? "lock" : "alert-circle"} 
+                    name={matchedWorkOrder ? "check-circle" : unavailableWorkOrders.length > 0 ? "check-circle" : "alert-circle"} 
                     size={56} 
-                    color={matchedWorkOrder ? theme.success : unavailableWorkOrders.length > 0 ? theme.textSecondary : theme.warning} 
+                    color={matchedWorkOrder ? theme.success : unavailableWorkOrders.length > 0 ? theme.warning : theme.warning} 
                   />
                 </View>
 
@@ -275,9 +275,7 @@ export default function TapToCaptureScanScreen() {
                     : serverSearchError
                       ? "Search Failed"
                       : unavailableWorkOrders.length > 0
-                        ? unavailableWorkOrders.length === 1 
-                          ? "Work Order Already Processed"
-                          : `${unavailableWorkOrders.length} Work Orders Already Processed`
+                        ? "Already Completed"
                         : "No Match Found"}
                 </ThemedText>
                 
@@ -335,7 +333,7 @@ export default function TapToCaptureScanScreen() {
 
             <View style={[styles.scannedValueBox, { backgroundColor: theme.backgroundTertiary }]}>
               <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                Scanned Value
+                Scanned Meter ID
               </ThemedText>
               <ThemedText type="h4" style={{ fontWeight: "600", marginTop: Spacing.xs }}>
                 {detectedValue}
@@ -347,19 +345,25 @@ export default function TapToCaptureScanScreen() {
                 <View style={styles.detailRow}>
                   <ThemedText type="body" style={{ color: theme.textSecondary }}>Work Order:</ThemedText>
                   <ThemedText type="body" style={{ fontWeight: "600" }}>
-                    {matchedWorkOrder.customerWoId}
+                    {matchedWorkOrder.customerWoId || `#${matchedWorkOrder.id}`}
                   </ThemedText>
                 </View>
                 <View style={styles.detailRow}>
                   <ThemedText type="body" style={{ color: theme.textSecondary }}>Address:</ThemedText>
                   <ThemedText type="body" style={{ fontWeight: "500", flex: 1, textAlign: "right" }} numberOfLines={2}>
-                    {matchedWorkOrder.serviceAddress}
+                    {matchedWorkOrder.serviceAddress || "No address"}
                   </ThemedText>
                 </View>
                 <View style={styles.detailRow}>
-                  <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Meter:</ThemedText>
-                  <ThemedText type="body" style={{ fontWeight: "600", color: theme.primary }}>
+                  <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Meter ID:</ThemedText>
+                  <ThemedText type="body" style={{ fontWeight: "600" }}>
                     {matchedWorkOrder.oldMeterId || "N/A"}
+                  </ThemedText>
+                </View>
+                <View style={styles.detailRow}>
+                  <ThemedText type="body" style={{ color: theme.textSecondary }}>New Meter ID:</ThemedText>
+                  <ThemedText type="body" style={{ fontWeight: "600" }}>
+                    {matchedWorkOrder.newMeterId || "N/A"}
                   </ThemedText>
                 </View>
                 <View style={styles.detailRow}>
@@ -384,34 +388,49 @@ export default function TapToCaptureScanScreen() {
                 {serverSearchError}
               </ThemedText>
             ) : unavailableWorkOrders.length > 0 ? (
-              <View style={styles.workOrderDetails}>
-                <ThemedText type="body" style={[styles.noMatchText, { color: theme.textSecondary, marginBottom: Spacing.md }]}>
-                  {unavailableWorkOrders.length === 1 
-                    ? "This meter ID belongs to a work order that has already been completed or closed. You cannot proceed with this work order."
-                    : "This meter ID matches work orders that have already been completed or closed. You cannot proceed with these work orders."}
-                </ThemedText>
-                {unavailableWorkOrders.slice(0, 3).map((wo, index) => (
-                  <View key={wo.id} style={[styles.detailRow, { paddingVertical: Spacing.xs }]}>
-                    <ThemedText type="body" style={{ color: theme.textSecondary }}>
-                      {wo.customerWoId}
-                    </ThemedText>
-                    <ThemedText 
-                      type="body" 
-                      style={{ 
-                        fontWeight: "500",
-                        color: wo.status?.toLowerCase() === "completed" ? theme.success : theme.textSecondary
-                      }}
-                    >
-                      {wo.status}
+              <>
+                <View style={[styles.serverBadge, { backgroundColor: theme.primary + "20" }]}>
+                  <Icon name="cloud" size={14} color={theme.primary} />
+                  <ThemedText type="small" style={{ color: theme.primary, marginLeft: Spacing.xs }}>
+                    Matched from server
+                  </ThemedText>
+                </View>
+                <View style={styles.workOrderDetails}>
+                  <View style={styles.detailRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>Work Order:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {unavailableWorkOrders[0].customerWoId || `#${unavailableWorkOrders[0].id}`}
                     </ThemedText>
                   </View>
-                ))}
-                {unavailableWorkOrders.length > 3 ? (
-                  <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: Spacing.xs }}>
-                    + {unavailableWorkOrders.length - 3} more
-                  </ThemedText>
-                ) : null}
-              </View>
+                  <View style={styles.detailRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>Address:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "500", flex: 1, textAlign: "right" }} numberOfLines={2}>
+                      {unavailableWorkOrders[0].serviceAddress || "No address"}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Meter ID:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {unavailableWorkOrders[0].oldMeterId || "N/A"}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>New Meter ID:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {unavailableWorkOrders[0].newMeterId || "N/A"}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>Status:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "500", color: theme.warning }}>
+                      {unavailableWorkOrders[0].status}
+                    </ThemedText>
+                  </View>
+                </View>
+                <ThemedText type="body" style={[styles.noMatchText, { color: theme.warning }]}>
+                  This work order has already been completed and cannot be processed again.
+                </ThemedText>
+              </>
             ) : (
               <ThemedText type="body" style={[styles.noMatchText, { color: theme.textSecondary }]}>
                 {isOnline 

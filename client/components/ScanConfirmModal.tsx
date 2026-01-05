@@ -148,6 +148,18 @@ export function ScanConfirmModal({
                   </ThemedText>
                 </View>
                 <View style={styles.infoRow}>
+                  <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Meter ID:</ThemedText>
+                  <ThemedText type="body" style={{ fontWeight: "600" }}>
+                    {workOrder.oldMeterId || "N/A"}
+                  </ThemedText>
+                </View>
+                <View style={styles.infoRow}>
+                  <ThemedText type="body" style={{ color: theme.textSecondary }}>New Meter ID:</ThemedText>
+                  <ThemedText type="body" style={{ fontWeight: "600" }}>
+                    {workOrder.newMeterId || "N/A"}
+                  </ThemedText>
+                </View>
+                <View style={styles.infoRow}>
                   <ThemedText type="body" style={{ color: theme.textSecondary }}>Status:</ThemedText>
                   <ThemedText type="body" style={{ fontWeight: "500", color: isAlreadyCompleted ? theme.warning : undefined }}>
                     {workOrder.status}
