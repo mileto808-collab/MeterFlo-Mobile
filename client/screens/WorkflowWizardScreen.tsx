@@ -746,7 +746,7 @@ export default function WorkflowWizardScreen() {
             notes: formData.troubleNote,
             troublePhotos: onlineFormatPhotos(troublePhotosBase64, 'trouble'),
           }),
-        });
+        }, workOrder);
       } else {
         const offlinePhotoCount = troublePhotosBase64.length + beforePhotosBase64.length + afterPhotosBase64.length;
         
@@ -806,7 +806,7 @@ export default function WorkflowWizardScreen() {
             notes: formData.troubleNote,
             troublePhotos: formatPhotosForOffline(troublePhotosBase64, 'trouble'),
           }),
-        });
+        }, workOrder);
       }
 
       // Navigate back to the work orders list

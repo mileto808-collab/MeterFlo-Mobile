@@ -389,7 +389,7 @@ interface WorkOrderContextType {
   lastSyncTime: string | null;
   error: string | null;
   setWorkOrders: (orders: WorkOrder[]) => void;
-  updateWorkOrder: (id: number, updates: Partial<WorkOrder>) => void;
+  updateWorkOrder: (id: number, updates: Partial<WorkOrder>, baseWorkOrder?: WorkOrder) => void;
   deleteLocalWorkOrder: (workOrderId: number | string) => Promise<void>;
   setFilters: (filters: FilterConfig) => void;
   setSort: (sort: SortConfig) => void;
@@ -933,20 +933,48 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(orders));
   }, []);
 
-  const updateWorkOrder = useCallback((id: number, updates: Partial<WorkOrder>) => {
+  const updateWorkOrder = useCallback((id: number, updates: Partial<WorkOrder>, baseWorkOrder?: WorkOrder) => {
     setWorkOrdersState(prev => {
-      const updated = prev.map(wo =>
-        wo.id === id 
-          ? { 
-              ...wo, 
-              ...updates, 
-              localUpdatedAt: new Date().toISOString(), 
-              syncPending: updates.syncPending !== undefined ? updates.syncPending : true 
-            } 
-          : wo
-      );
-      AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
-      return updated;
+      const existingIndex = prev.findIndex(wo => wo.id === id);
+      
+      if (existingIndex >= 0) {
+        // Work order exists - update it
+        const updated = prev.map(wo =>
+          wo.id === id 
+            ? { 
+                ...wo, 
+                ...updates, 
+                localUpdatedAt: new Date().toISOString(), 
+                syncPending: updates.syncPending !== undefined ? updates.syncPending : true 
+              } 
+            : wo
+        );
+        AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
+        return updated;
+      } else if (baseWorkOrder) {
+        // Work order doesn't exist but we have the base - add it with updates applied
+        // Normalize the base work order to ensure consistent field naming
+        console.log("[updateWorkOrder] Work order not found locally, adding with updates:", id);
+        const now = new Date().toISOString();
+        const normalizedBase = normalizeStoredWorkOrder(baseWorkOrder);
+        const newWorkOrder: WorkOrder = {
+          ...normalizedBase,
+          ...updates,
+          // Ensure required fields are set
+          id: id,
+          createdAt: normalizedBase.createdAt || now,
+          updatedAt: normalizedBase.updatedAt || now,
+          localUpdatedAt: now,
+          syncPending: updates.syncPending !== undefined ? updates.syncPending : true,
+        };
+        const updated = [...prev, newWorkOrder];
+        AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
+        return updated;
+      } else {
+        // Work order doesn't exist and no base provided - log warning and return unchanged
+        console.warn("[updateWorkOrder] Work order not found and no base provided:", id);
+        return prev;
+      }
     });
   }, []);
 
