@@ -207,6 +207,11 @@ export default function WorkOrdersScreen() {
     setShowHIDScanner(true);
   }, []);
 
+  const handleEditSearch = useCallback(() => {
+    setScanConfirmResult(null);
+    setShowManualSearch(true);
+  }, []);
+
   const handleCloseScanConfirm = useCallback(() => {
     setScanConfirmResult(null);
   }, []);
@@ -375,6 +380,7 @@ export default function WorkOrdersScreen() {
         isAlreadyCompleted={scanConfirmResult?.isAlreadyCompleted || false}
         onConfirm={handleConfirmScan}
         onScanAgain={handleScanAgain}
+        onEditSearch={handleEditSearch}
         onClose={handleCloseScanConfirm}
       />
 

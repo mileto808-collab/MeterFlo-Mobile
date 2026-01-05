@@ -21,6 +21,7 @@ interface ScanConfirmModalProps {
   isAlreadyCompleted?: boolean;
   onConfirm: () => void;
   onScanAgain: () => void;
+  onEditSearch?: () => void;
   onClose: () => void;
 }
 
@@ -34,7 +35,8 @@ export function ScanConfirmModal({
   isOffline = false,
   isAlreadyCompleted = false,
   onConfirm, 
-  onScanAgain, 
+  onScanAgain,
+  onEditSearch,
   onClose 
 }: ScanConfirmModalProps) {
   const { theme } = useTheme();
@@ -187,24 +189,35 @@ export function ScanConfirmModal({
           )}
 
           {!isSearching ? (
-            <View style={styles.buttonRow}>
-              {workOrder && !isAlreadyCompleted ? (
+            <>
+              <View style={styles.buttonRow}>
+                {workOrder && !isAlreadyCompleted ? (
+                  <Button
+                    onPress={onConfirm}
+                    style={{ backgroundColor: theme.primary, flex: 1 }}
+                  >
+                    <Icon name="arrow-right" size={18} color="#FFFFFF" />
+                    Start Wizard
+                  </Button>
+                ) : null}
                 <Button
-                  onPress={onConfirm}
-                  style={{ backgroundColor: theme.primary, flex: 1 }}
+                  onPress={onScanAgain}
+                  style={{ backgroundColor: theme.backgroundSecondary, flex: (workOrder && !isAlreadyCompleted) ? 0 : 1, minWidth: 120 }}
                 >
-                  <Icon name="arrow-right" size={18} color="#FFFFFF" />
-                  Start Wizard
+                  <Icon name="refresh-cw" size={18} color={theme.text} />
+                  <ThemedText>Scan Again</ThemedText>
+                </Button>
+              </View>
+              {onEditSearch ? (
+                <Button
+                  onPress={onEditSearch}
+                  style={{ backgroundColor: theme.backgroundSecondary, width: "100%" }}
+                >
+                  <Icon name="edit-2" size={18} color={theme.text} />
+                  <ThemedText>Edit Search</ThemedText>
                 </Button>
               ) : null}
-              <Button
-                onPress={onScanAgain}
-                style={{ backgroundColor: theme.backgroundSecondary, flex: (workOrder && !isAlreadyCompleted) ? 0 : 1, minWidth: 120 }}
-              >
-                <Icon name="refresh-cw" size={18} color={theme.text} />
-                <ThemedText>Scan Again</ThemedText>
-              </Button>
-            </View>
+            </>
           ) : null}
           
           <Pressable onPress={onClose} style={styles.cancelLink}>
