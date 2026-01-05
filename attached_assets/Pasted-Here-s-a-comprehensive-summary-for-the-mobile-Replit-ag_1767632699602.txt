@@ -1,0 +1,75 @@
+Here's a comprehensive summary for the mobile Replit agent to update the React Native app:
+
+Mobile App Changes Required: "Meter" → "System" Terminology Update
+1. API Endpoint Changes
+Old Endpoint	New Endpoint
+/api/meter-types	/api/system-types
+POST /meter-changeout	POST /system-changeout
+2. Field Name Changes (API Request/Response)
+Update all data models, sync adapters, and offline storage:
+
+Old Field Name	New Field Name
+old_meter_id	old_system_id
+new_meter_id	new_system_id
+old_meter_reading	old_system_reading
+new_meter_reading	new_system_reading
+old_meter_type	old_system_type
+new_meter_type	new_system_type
+CamelCase versions for JavaScript/TypeScript:
+
+oldMeterId → oldSystemId
+newMeterId → newSystemId
+oldMeterReading → oldSystemReading
+newMeterReading → newSystemReading
+oldMeterType → oldSystemType
+newMeterType → newSystemType
+3. Reference Data Changes
+referenceData.meterTypes → referenceData.systemTypes
+Fetch from /api/system-types?projectId={projectId}
+Response structure unchanged: { id, productId, productLabel, ... }
+4. POST /system-changeout Request Body
+{
+  "workOrderId": 123,
+  "oldSystemId": "ABC123",
+  "oldSystemReading": "12345",
+  "oldSystemType": "PRODUCT_ID",
+  "newSystemId": "XYZ789", 
+  "newSystemReading": "00000",
+  "newSystemType": "PRODUCT_ID",
+  "beforePhoto": "base64...",
+  "afterPhoto": "base64...",
+  "signature": "base64...",
+  "gpsLatitude": 40.7128,
+  "gpsLongitude": -74.0060,
+  "notes": "..."
+}
+5. UI Label & Text Changes
+Update all user-facing strings:
+
+Old Text	New Text
+"Old Meter ID"	"Old System ID"
+"New Meter ID"	"New System ID"
+"Old Meter Reading"	"Old System Reading"
+"New Meter Reading"	"New System Reading"
+"Old Meter Type"	"Old System Type"
+"New Meter Type"	"New System Type"
+"Meter Changeout"	"System Changeout"
+"Meter Changeout Wizard"	"System Changeout Wizard"
+"Enter old meter number"	"Enter old system number"
+"Enter new meter number"	"Enter new system number"
+"Select meter type"	"Select system type"
+6. Wizard/Dialog Components
+Rename MeterChangeoutWizard → SystemChangeoutWizard
+Rename StartMeterChangeoutDialog → StartSystemChangeoutDialog
+Update all step labels, validation messages, and help text
+7. Offline Queue & Local Storage
+Update cached field names in:
+
+Pending changeout queue
+Work order cache
+Sync download/upload payloads
+8. Keep Unchanged
+"MeterFlo" branding stays as-is
+Permission key workOrders.meterChangeout stays unchanged (intentional)
+Import supports both old/new field names for backward compatibility
+The mobile app will get 404 errors on the old endpoints, so these changes are required for the app to function with the updated backend.
