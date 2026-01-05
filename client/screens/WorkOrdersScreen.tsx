@@ -53,10 +53,10 @@ export default function WorkOrdersScreen() {
     if (!normalizedTerm) return [];
     
     return workOrders.filter(wo => {
-      // Exact match on meter IDs
-      const oldMeterId = wo.oldMeterId?.trim().toLowerCase() || "";
-      const newMeterId = wo.newMeterId?.trim().toLowerCase() || "";
-      if (oldMeterId === normalizedTerm || newMeterId === normalizedTerm) {
+      // Exact match on system IDs
+      const oldSystemId = wo.oldSystemId?.trim().toLowerCase() || "";
+      const newSystemId = wo.newSystemId?.trim().toLowerCase() || "";
+      if (oldSystemId === normalizedTerm || newSystemId === normalizedTerm) {
         return true;
       }
       
@@ -285,7 +285,7 @@ export default function WorkOrdersScreen() {
         <SearchBar
           value={filters.searchQuery}
           onChangeText={handleSearchChange}
-          placeholder="Scan Meter ID..."
+          placeholder="Scan System ID..."
           onSearchPress={() => setShowSearchOptions(true)}
         />
         <View style={styles.actionButtons}>

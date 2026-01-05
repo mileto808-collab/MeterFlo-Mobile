@@ -55,7 +55,7 @@ export function AutoSyncManager() {
           if (syncedOfflineWorkOrders.length > 0) {
             console.log("[AutoSyncManager] Transforming synced offline work orders:", syncedOfflineWorkOrders.length);
             for (const syncedWo of syncedOfflineWorkOrders) {
-              await transformOfflineToServerWorkOrder(syncedWo.oldMeterId, {
+              await transformOfflineToServerWorkOrder(syncedWo.oldSystemId, {
                 id: syncedWo.serverWorkOrderId,
                 customerWoId: syncedWo.customerWoId,
                 status: syncedWo.status,

@@ -86,9 +86,9 @@ export default function TapToCaptureScanScreen() {
     
     // First, search locally
     const foundWorkOrders = workOrders.filter(wo => {
-      const oldMeterId = (wo.oldMeterId || "").trim().toUpperCase();
-      const newMeterId = (wo.newMeterId || "").trim().toUpperCase();
-      return oldMeterId === normalizedValue || newMeterId === normalizedValue;
+      const oldSystemId = (wo.oldSystemId || "").trim().toUpperCase();
+      const newSystemId = (wo.newSystemId || "").trim().toUpperCase();
+      return oldSystemId === normalizedValue || newSystemId === normalizedValue;
     });
     
     if (foundWorkOrders.length > 0) {
@@ -252,7 +252,7 @@ export default function TapToCaptureScanScreen() {
                   Searching Server...
                 </ThemedText>
                 <ThemedText type="body" style={[styles.noMatchText, { color: theme.textSecondary }]}>
-                  Looking for work orders with this meter ID on the server.
+                  Looking for work orders with this system ID on the server.
                 </ThemedText>
               </>
             ) : (
@@ -333,7 +333,7 @@ export default function TapToCaptureScanScreen() {
 
             <View style={[styles.scannedValueBox, { backgroundColor: theme.backgroundTertiary }]}>
               <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                Scanned Meter ID
+                Scanned System ID
               </ThemedText>
               <ThemedText type="h4" style={{ fontWeight: "600", marginTop: Spacing.xs }}>
                 {detectedValue}
@@ -355,15 +355,15 @@ export default function TapToCaptureScanScreen() {
                   </ThemedText>
                 </View>
                 <View style={styles.detailRow}>
-                  <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Meter ID:</ThemedText>
+                  <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID:</ThemedText>
                   <ThemedText type="body" style={{ fontWeight: "600" }}>
-                    {matchedWorkOrder.oldMeterId || "N/A"}
+                    {matchedWorkOrder.oldSystemId || "N/A"}
                   </ThemedText>
                 </View>
                 <View style={styles.detailRow}>
-                  <ThemedText type="body" style={{ color: theme.textSecondary }}>New Meter ID:</ThemedText>
+                  <ThemedText type="body" style={{ color: theme.textSecondary }}>New System ID:</ThemedText>
                   <ThemedText type="body" style={{ fontWeight: "600" }}>
-                    {matchedWorkOrder.newMeterId || "N/A"}
+                    {matchedWorkOrder.newSystemId || "N/A"}
                   </ThemedText>
                 </View>
                 <View style={styles.detailRow}>
@@ -409,15 +409,15 @@ export default function TapToCaptureScanScreen() {
                     </ThemedText>
                   </View>
                   <View style={styles.detailRow}>
-                    <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Meter ID:</ThemedText>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID:</ThemedText>
                     <ThemedText type="body" style={{ fontWeight: "600" }}>
-                      {unavailableWorkOrders[0].oldMeterId || "N/A"}
+                      {unavailableWorkOrders[0].oldSystemId || "N/A"}
                     </ThemedText>
                   </View>
                   <View style={styles.detailRow}>
-                    <ThemedText type="body" style={{ color: theme.textSecondary }}>New Meter ID:</ThemedText>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>New System ID:</ThemedText>
                     <ThemedText type="body" style={{ fontWeight: "600" }}>
-                      {unavailableWorkOrders[0].newMeterId || "N/A"}
+                      {unavailableWorkOrders[0].newSystemId || "N/A"}
                     </ThemedText>
                   </View>
                   <View style={styles.detailRow}>

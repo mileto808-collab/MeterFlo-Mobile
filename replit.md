@@ -34,7 +34,7 @@ Preferred communication style: Simple, everyday language.
   - `POST /api/mobile/workorders/{id}/trouble` - Submit a trouble code with photos (mobile-specific)
   - `POST /api/projects/{projectId}/work-orders/{id}/claim` - Claim a work order
   - `GET /api/projects/{projectId}/work-orders/{id}` - Fetch single work order
-  - `GET /api/projects/{projectId}/work-orders/search?meterId=xxx` - Search work orders by meter ID (requires server support)
+  - `GET /api/projects/{projectId}/work-orders/search?systemId=xxx` - Search work orders by system ID (requires server support)
 
 ### Data Storage Solutions
 - **Secure Storage**: Expo SecureStore for authentication tokens and credentials (encrypted on-device)
@@ -77,7 +77,7 @@ All API requests to the MeterFlo server include the following headers for CSRF p
 - **Sync clearing logic**: After successful sync, `syncPending` flag only cleared for work orders where ALL pending actions were synced (prevents premature badge removal if some actions fail)
 - **Offline completion sync**: Offline completions now use individual mobile endpoints (`/api/mobile/workorders/{id}/complete` or `/trouble`) with properly formatted camelCase payloads and photo objects, ensuring offline and online completions use identical API format
 - **Auto-sync on reconnect**: When device connectivity is restored after being offline, pending actions are automatically synced with a 2-second debounce. If sync fails, the system retries on subsequent connectivity changes. After successful sync, the Pending badge is automatically cleared via the AutoSyncManager component
-- **Local data preservation**: During sync, local completion data (customerWoId, oldMeterId, oldGps, oldMeterReading, newMeterId, newMeterReading, newGps, completedAt, completedBy, troubleCode, troubleNote) is preserved and merged with server data to prevent data loss
+- **Local data preservation**: During sync, local completion data (customerWoId, oldSystemId, oldGps, oldSystemReading, newSystemId, newSystemReading, newGps, completedAt, completedBy, troubleCode, troubleNote) is preserved and merged with server data to prevent data loss
 - **Edit completed orders**: Completed/trouble work orders can be edited via "Edit Completion" button, which launches the wizard with pre-filled data (skipping the "Can Meter Be Changed?" step)
 
 ### Multi-User Conflict Handling
@@ -105,8 +105,8 @@ All API requests to the MeterFlo server include the following headers for CSRF p
   - SignaturePad renders SVG paths but captures as PNG for server compatibility
   - Output format: `data:image/png;base64,...`
 - **Mobile API Payload Fields**: Uses camelCase fields for mobile-specific endpoints
-  - Trouble: `{ projectId, troubleCode, notes, oldMeterReading, photos }`
-  - Complete: `{ projectId, oldMeterReading, newMeterId, newMeterReading, gpsCoordinates, signatureData, signatureName, completedAt, beforePhotos, afterPhotos }`
+  - Trouble: `{ projectId, troubleCode, notes, oldSystemReading, photos }`
+  - Complete: `{ projectId, oldSystemReading, newSystemId, newSystemReading, gpsCoordinates, signatureData, signatureName, completedAt, beforePhotos, afterPhotos }`
 
 ### Sync History Tracking
 - **SyncHistoryEntry Interface**: Tracks timestamp, work order IDs/titles, status, counts, photo count, error messages
@@ -117,12 +117,12 @@ All API requests to the MeterFlo server include the following headers for CSRF p
 
 ### Unified Multi-Field Search
 - **All scan methods use unified flow**: Camera barcode, camera QR, HID scanner, and manual search all use consistent search logic
-- **Multi-field matching**: Search checks meter ID (old/new), work order ID, and service address
-  - Meter IDs: Exact match (case-insensitive)
+- **Multi-field matching**: Search checks system ID (old/new), work order ID, and service address
+  - System IDs: Exact match (case-insensitive)
   - Work Order ID: Exact match on `customerWoId` first; falls back to internal `id` when `customerWoId` is empty
   - Address: Partial match (e.g., "4525 Bison" matches "4525 Bison Drive")
 - **Search order**: Locally cached work orders are searched first, then server is queried if online
-- **Server endpoint**: `GET /api/projects/:projectId/work-orders/by-meter/:searchTerm` - supports multi-field search
+- **Server endpoint**: `GET /api/projects/:projectId/work-orders/by-system/:searchTerm` - supports multi-field search
 - **Unified messaging**: 
   - Found locally: "Matched from cached work orders" (green badge)
   - Found on server: "Matched from server" (blue badge with "Requires Claim")
@@ -141,6 +141,15 @@ All API requests to the MeterFlo server include the following headers for CSRF p
 - **Component Structure**: Themed components (ThemedText, ThemedView) for consistent styling
 - **Error Handling**: ErrorBoundary with fallback UI and restart capability
 - **Platform Compatibility**: KeyboardAwareScrollViewCompat for cross-platform keyboard handling
+
+### Terminology Migration (Meter → System)
+- **Server Change**: Backend changed all "meter" field names to "system" (old_meter_id → old_system_id, etc.)
+- **Backward Compatibility**: App accepts both old and new field names from server responses
+- **Field Mapping**: ServerWorkOrder interface includes both (old_meter_id and old_system_id), mapServerWorkOrder prioritizes new names with fallback to old
+- **Local Storage Migration**: 
+  - WorkOrderContext normalizes cached data to new terminology on load
+  - OfflineContext migrates pending actions (complete, offlineWorkOrder) from meter to system fields
+- **API Payloads**: Now send system terminology (newSystemId, oldSystemReading) to server
 
 ## External Dependencies
 

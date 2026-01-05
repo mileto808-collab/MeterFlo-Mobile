@@ -25,12 +25,12 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 type WizardStep = 
-  | "oldMeterId"
+  | "oldSystemId"
   | "oldReading"
   | "oldGps"
   | "beforePhotos"
   | "physicalChange"
-  | "newMeterId"
+  | "newSystemId"
   | "newReading"
   | "afterPhotos"
   | "signature"
@@ -43,12 +43,12 @@ interface PhotoAsset {
 }
 
 interface NewWorkOrderData {
-  oldMeterId: string;
-  oldMeterReading: string;
+  oldSystemId: string;
+  oldSystemReading: string;
   oldGps: string;
   beforePhotos: PhotoAsset[];
-  newMeterId: string;
-  newMeterReading: string;
+  newSystemId: string;
+  newSystemReading: string;
   afterPhotos: PhotoAsset[];
   newGps: string;
   signatureData: string;
@@ -57,12 +57,12 @@ interface NewWorkOrderData {
 }
 
 const STEPS: WizardStep[] = [
-  "oldMeterId",
+  "oldSystemId",
   "oldReading", 
   "oldGps",
   "beforePhotos",
   "physicalChange",
-  "newMeterId",
+  "newSystemId",
   "newReading",
   "afterPhotos",
   "signature",
@@ -71,13 +71,13 @@ const STEPS: WizardStep[] = [
 ];
 
 const STEP_TITLES: Record<WizardStep, string> = {
-  oldMeterId: "Old Meter ID",
-  oldReading: "Old Meter Final Reading",
-  oldGps: "Meter Location GPS",
+  oldSystemId: "Old System ID",
+  oldReading: "Old System Final Reading",
+  oldGps: "System Location GPS",
   beforePhotos: "Before Photos",
   physicalChange: "Perform Physical Changeout",
-  newMeterId: "New Meter ID",
-  newReading: "New Meter Reading",
+  newSystemId: "New System ID",
+  newReading: "New System Reading",
   afterPhotos: "After Photos",
   signature: "Signature",
   notes: "Notes",
@@ -110,12 +110,12 @@ export default function NewWorkOrderWizardScreen() {
   const [viewingPhoto, setViewingPhoto] = useState<{ uri: string; type: "before" | "after"; id: string } | null>(null);
   
   const [formData, setFormData] = useState<NewWorkOrderData>({
-    oldMeterId: "",
-    oldMeterReading: "",
+    oldSystemId: "",
+    oldSystemReading: "",
     oldGps: "",
     beforePhotos: [],
-    newMeterId: "",
-    newMeterReading: "",
+    newSystemId: "",
+    newSystemReading: "",
     afterPhotos: [],
     newGps: "",
     signatureData: "",
@@ -248,9 +248,9 @@ export default function NewWorkOrderWizardScreen() {
   const handleCaptureBarcode = () => {
     if (detectedBarcode) {
       if (scannerTarget === "old") {
-        setFormData(prev => ({ ...prev, oldMeterId: detectedBarcode }));
+        setFormData(prev => ({ ...prev, oldSystemId: detectedBarcode }));
       } else {
-        setFormData(prev => ({ ...prev, newMeterId: detectedBarcode }));
+        setFormData(prev => ({ ...prev, newSystemId: detectedBarcode }));
       }
       setShowScanner(false);
       setDetectedBarcode(null);
@@ -315,20 +315,20 @@ export default function NewWorkOrderWizardScreen() {
 
   const isCurrentStepValid = (): boolean => {
     switch (currentStep) {
-      case "oldMeterId": 
-        return formData.oldMeterId.trim().length > 0;
+      case "oldSystemId": 
+        return formData.oldSystemId.trim().length > 0;
       case "oldReading": 
-        return formData.oldMeterReading.trim().length > 0;
+        return formData.oldSystemReading.trim().length > 0;
       case "oldGps":
         return formData.oldGps.trim().length > 0;
       case "beforePhotos":
         return formData.beforePhotos.length >= 1;
       case "physicalChange":
         return true;
-      case "newMeterId": 
-        return formData.newMeterId.trim().length > 0;
+      case "newSystemId": 
+        return formData.newSystemId.trim().length > 0;
       case "newReading": 
-        return formData.newMeterReading.trim().length > 0;
+        return formData.newSystemReading.trim().length > 0;
       case "afterPhotos":
         return formData.afterPhotos.length >= 1;
       case "signature": 
@@ -428,11 +428,11 @@ export default function NewWorkOrderWizardScreen() {
       const offlineWorkOrderData = {
         id: offlineWorkOrderId,
         projectId: Number(projectId),
-        oldMeterId: formData.oldMeterId,
-        oldMeterReading: parseReading(formData.oldMeterReading),
+        oldSystemId: formData.oldSystemId,
+        oldSystemReading: parseReading(formData.oldSystemReading),
         oldGps: formData.oldGps,
-        newMeterId: formData.newMeterId,
-        newMeterReading: parseReading(formData.newMeterReading) ?? 0,
+        newSystemId: formData.newSystemId,
+        newSystemReading: parseReading(formData.newSystemReading) ?? 0,
         newGps: formData.newGps,
         signatureData: formData.signatureData || null,
         signatureName: formData.signatureName,
@@ -454,7 +454,7 @@ export default function NewWorkOrderWizardScreen() {
       await addPendingAction({
         type: "offlineWorkOrder",
         workOrderId: offlineWorkOrderId,
-        workOrderTitle: `New WO: ${formData.oldMeterId}`,
+        workOrderTitle: `New WO: ${formData.oldSystemId}`,
         data: offlineWorkOrderData,
         photoCount: photoCount,
       });
@@ -571,7 +571,7 @@ export default function NewWorkOrderWizardScreen() {
               </ThemedText>
             </View>
             <ThemedText type="body" style={{ textAlign: "center", marginTop: Spacing.md }}>
-              Is this the correct meter ID?
+              Is this the correct system ID?
             </ThemedText>
             <View style={styles.scannerButtonRow}>
               <Button
@@ -611,13 +611,13 @@ export default function NewWorkOrderWizardScreen() {
     );
   };
 
-  const renderMeterIdInput = (target: "old" | "new") => {
-    const value = target === "old" ? formData.oldMeterId : formData.newMeterId;
+  const renderSystemIdInput = (target: "old" | "new") => {
+    const value = target === "old" ? formData.oldSystemId : formData.newSystemId;
     const setValue = (text: string) => {
       if (target === "old") {
-        setFormData(prev => ({ ...prev, oldMeterId: text }));
+        setFormData(prev => ({ ...prev, oldSystemId: text }));
       } else {
-        setFormData(prev => ({ ...prev, newMeterId: text }));
+        setFormData(prev => ({ ...prev, newSystemId: text }));
       }
     };
     
@@ -627,7 +627,7 @@ export default function NewWorkOrderWizardScreen() {
           <Icon name="hash" size={48} color={theme.primary} />
         </View>
         <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-          Scan or enter the {target === "old" ? "old" : "new"} meter ID
+          Scan or enter the {target === "old" ? "old" : "new"} system ID
         </ThemedText>
         
         <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
@@ -675,8 +675,8 @@ export default function NewWorkOrderWizardScreen() {
     }
     
     switch (currentStep) {
-      case "oldMeterId":
-        return renderMeterIdInput("old");
+      case "oldSystemId":
+        return renderSystemIdInput("old");
 
       case "oldReading":
         return (
@@ -685,11 +685,11 @@ export default function NewWorkOrderWizardScreen() {
               <Icon name="activity" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Enter the final reading from the old meter
+              Enter the final reading from the old system
             </ThemedText>
             <TextInput
-              value={formData.oldMeterReading}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, oldMeterReading: text }))}
+              value={formData.oldSystemReading}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, oldSystemReading: text }))}
               placeholder="Enter reading (e.g., 12345)"
               keyboardType="numeric"
               style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg, minHeight: 60 }}
@@ -704,7 +704,7 @@ export default function NewWorkOrderWizardScreen() {
               <Icon name="map-pin" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Capture GPS coordinates of the meter location
+              Capture GPS coordinates of the system location
             </ThemedText>
             
             <Button
@@ -747,7 +747,7 @@ export default function NewWorkOrderWizardScreen() {
               <Icon name="camera" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Take photos of the old meter before removal (minimum 1 required)
+              Take photos of the old system before removal (minimum 1 required)
             </ThemedText>
             
             <Button
@@ -773,17 +773,17 @@ export default function NewWorkOrderWizardScreen() {
               <Icon name="tool" size={48} color={theme.primary} />
             </View>
             <ThemedText type="h4" style={{ marginBottom: Spacing.lg, textAlign: "center" }}>
-              Safely remove the old meter and install the new meter
+              Safely remove the old system and install the new system
             </ThemedText>
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.summaryRow}>
                 <Icon name="check-circle" size={24} color={theme.success} />
-                <ThemedText type="body" style={{ fontWeight: "500" }}>Old Meter: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldMeterId}</ThemedText></ThemedText>
+                <ThemedText type="body" style={{ fontWeight: "500" }}>Old System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="check-circle" size={24} color={theme.success} />
-                <ThemedText type="body" style={{ fontWeight: "500" }}>Old Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldMeterReading}</ThemedText></ThemedText>
+                <ThemedText type="body" style={{ fontWeight: "500" }}>Old Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="check-circle" size={24} color={theme.success} />
@@ -796,13 +796,13 @@ export default function NewWorkOrderWizardScreen() {
             </View>
             
             <ThemedText type="body" style={{ color: theme.primary, marginTop: Spacing.xl, textAlign: "center", fontWeight: "500" }}>
-              Tap "Next" when the new meter is installed
+              Tap "Next" when the new system is installed
             </ThemedText>
           </View>
         );
 
-      case "newMeterId":
-        return renderMeterIdInput("new");
+      case "newSystemId":
+        return renderSystemIdInput("new");
 
       case "newReading":
         return (
@@ -811,11 +811,11 @@ export default function NewWorkOrderWizardScreen() {
               <Icon name="activity" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Enter the initial reading from the new meter (usually 0)
+              Enter the initial reading from the new system (usually 0)
             </ThemedText>
             <TextInput
-              value={formData.newMeterReading}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, newMeterReading: text }))}
+              value={formData.newSystemReading}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: text }))}
               placeholder="Enter reading (usually 0)"
               keyboardType="numeric"
               style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg, minHeight: 60 }}
@@ -830,7 +830,7 @@ export default function NewWorkOrderWizardScreen() {
               <Icon name="camera" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Take photos of the new meter after installation (minimum 1 required)
+              Take photos of the new system after installation (minimum 1 required)
             </ThemedText>
             
             <Button
@@ -909,11 +909,11 @@ export default function NewWorkOrderWizardScreen() {
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.summaryRow}>
                 <Icon name="hash" size={20} color={theme.primary} />
-                <ThemedText type="body">Old Meter: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldMeterId}</ThemedText></ThemedText>
+                <ThemedText type="body">Old System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="activity" size={20} color={theme.primary} />
-                <ThemedText type="body">Old Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldMeterReading}</ThemedText></ThemedText>
+                <ThemedText type="body">Old Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="map-pin" size={20} color={theme.primary} />
@@ -925,11 +925,11 @@ export default function NewWorkOrderWizardScreen() {
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="hash" size={20} color={theme.primary} />
-                <ThemedText type="body">New Meter: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newMeterId}</ThemedText></ThemedText>
+                <ThemedText type="body">New System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemId}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="activity" size={20} color={theme.primary} />
-                <ThemedText type="body">New Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newMeterReading}</ThemedText></ThemedText>
+                <ThemedText type="body">New Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="camera" size={20} color={theme.primary} />

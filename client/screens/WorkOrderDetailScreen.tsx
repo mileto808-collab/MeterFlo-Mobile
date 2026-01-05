@@ -164,10 +164,10 @@ export default function WorkOrderDetailScreen() {
   };
 
   const handleProcess = () => {
-    if (!workOrder.customerWoId || !workOrder.oldMeterId) {
+    if (!workOrder.customerWoId || !workOrder.oldSystemId) {
       const missing: string[] = [];
       if (!workOrder.customerWoId) missing.push("Customer WO ID");
-      if (!workOrder.oldMeterId) missing.push("Old Meter ID");
+      if (!workOrder.oldSystemId) missing.push("Old System ID");
       
       if (Platform.OS === "web") {
         alert(`Cannot start workflow. Missing required fields: ${missing.join(", ")}`);
@@ -379,32 +379,32 @@ export default function WorkOrderDetailScreen() {
           </View>
         </Accordion>
 
-        <Accordion title="Meter Details" icon="cpu">
+        <Accordion title="System Details" icon="cpu">
           <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
             <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
-              Old Meter
+              Old System
             </ThemedText>
             <View style={styles.gridRow}>
-              <GridItem label="Meter ID" value={workOrder.oldMeterId} />
-              <GridItem label="Reading" value={workOrder.oldMeterReading} />
+              <GridItem label="System ID" value={workOrder.oldSystemId} />
+              <GridItem label="Reading" value={workOrder.oldSystemReading} />
             </View>
             <View style={styles.gridRow}>
-              <GridItem label="Type" value={workOrder.oldMeterType || workOrder.meterType} />
+              <GridItem label="Type" value={workOrder.oldSystemType || workOrder.systemType} />
               <GridItem label="GPS" value={workOrder.oldGps} />
             </View>
           </View>
 
-          {workOrder.newMeterId || workOrder.newMeterReading || workOrder.newMeterType || workOrder.newGps ? (
+          {workOrder.newSystemId || workOrder.newSystemReading || workOrder.newSystemType || workOrder.newGps ? (
             <View style={[styles.meterSection, { borderLeftColor: theme.success }]}>
               <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.success }]}>
-                New Meter
+                New System
               </ThemedText>
               <View style={styles.gridRow}>
-                <GridItem label="Meter ID" value={workOrder.newMeterId} />
-                <GridItem label="Reading" value={workOrder.newMeterReading} />
+                <GridItem label="System ID" value={workOrder.newSystemId} />
+                <GridItem label="Reading" value={workOrder.newSystemReading} />
               </View>
               <View style={styles.gridRow}>
-                <GridItem label="Type" value={workOrder.newMeterType} />
+                <GridItem label="Type" value={workOrder.newSystemType} />
                 <GridItem label="GPS" value={workOrder.newGps} />
               </View>
             </View>

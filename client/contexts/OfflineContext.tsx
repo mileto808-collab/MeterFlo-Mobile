@@ -28,7 +28,7 @@ interface SyncHistoryEntry {
 }
 
 interface SyncedOfflineWorkOrder {
-  oldMeterId: string;
+  oldSystemId: string;
   serverWorkOrderId: number;
   customerWoId?: string;
   status?: string;
@@ -106,10 +106,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         
         let needsMigration = false;
         actions = actions.map(action => {
+          // Migrate legacy "complete" actions
           if (action.type === "complete" && !action.completionMode) {
             needsMigration = true;
             const data = action.data;
-            const isComplete = data.status === "Completed" || data.new_meter_id !== undefined;
+            const isComplete = data.status === "Completed" || data.new_meter_id !== undefined || data.new_system_id !== undefined;
             
             const formatLegacyPhotos = (photos: any[], prefix: string) => {
               if (!photos || !Array.isArray(photos)) return [];
@@ -126,9 +127,9 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             const migratedPayload = isComplete ? {
               projectId: data.projectId || 0,
-              oldMeterReading: data.old_meter_reading ?? data.oldMeterReading,
-              newMeterId: data.new_meter_id ?? data.newMeterId,
-              newMeterReading: data.new_meter_reading ?? data.newMeterReading ?? 0,
+              oldSystemReading: data.old_system_reading ?? data.old_meter_reading ?? data.oldSystemReading ?? data.oldMeterReading,
+              newSystemId: data.new_system_id ?? data.new_meter_id ?? data.newSystemId ?? data.newMeterId,
+              newSystemReading: data.new_system_reading ?? data.new_meter_reading ?? data.newSystemReading ?? data.newMeterReading ?? 0,
               gpsCoordinates: data.new_gps ?? data.gpsCoordinates ?? null,
               signatureData: data.signature_data ?? data.signatureData ?? null,
               signatureName: data.signature_name ?? data.signatureName,
@@ -140,7 +141,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               projectId: data.projectId || 0,
               troubleCode: data.trouble ?? data.troubleCode,
               notes: data.notes ?? null,
-              oldMeterReading: data.old_meter_reading ?? data.oldMeterReading,
+              oldSystemReading: data.old_system_reading ?? data.old_meter_reading ?? data.oldSystemReading ?? data.oldMeterReading,
               photos: formatLegacyPhotos(data.trouble_photos ?? data.photos ?? [], 'trouble'),
             };
             
@@ -151,6 +152,24 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               completionMode: isComplete ? "complete" as const : "trouble" as const,
             };
           }
+          
+          // Migrate legacy "offlineWorkOrder" actions from meter to system terminology
+          if (action.type === "offlineWorkOrder") {
+            const data = action.data;
+            if (data.oldMeterId !== undefined && data.oldSystemId === undefined) {
+              needsMigration = true;
+              const migratedData = {
+                ...data,
+                oldSystemId: data.oldMeterId,
+                newSystemId: data.newMeterId,
+                oldSystemReading: data.oldMeterReading,
+                newSystemReading: data.newMeterReading,
+              };
+              console.log(`[OfflineContext] Migrated offlineWorkOrder action from meter to system terminology`);
+              return { ...action, data: migratedData };
+            }
+          }
+          
           return action;
         });
         
@@ -279,13 +298,22 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             successfulActionIds.push(action.id);
           } else if (action.type === "offlineWorkOrder") {
             const offlineData = action.data;
-            console.log(`[syncPendingActions] Syncing offline work order for old meter: ${offlineData.oldMeterId}, new meter: ${offlineData.newMeterId}`);
+            // Handle legacy data with meter terminology
+            const oldSystemId = offlineData.oldSystemId || offlineData.oldMeterId;
+            const newSystemId = offlineData.newSystemId || offlineData.newMeterId;
+            
+            if (!oldSystemId) {
+              console.warn(`[syncPendingActions] Skipping offlineWorkOrder action - missing oldSystemId`);
+              continue;
+            }
+            
+            console.log(`[syncPendingActions] Syncing offline work order for old system: ${oldSystemId}, new system: ${newSystemId}`);
             
             let eligibleWorkOrder: any = null;
             
-            const searchByOldMeter = async () => {
+            const searchByOldSystem = async () => {
               const response = await fetch(
-                `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(offlineData.oldMeterId)}`,
+                `${serverUrl}/api/projects/${projectId}/work-orders/search?systemId=${encodeURIComponent(oldSystemId)}`,
                 { 
                   method: "GET", 
                   headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
@@ -297,10 +325,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               return data.workOrders || data || [];
             };
             
-            const searchByNewMeter = async () => {
-              if (!offlineData.newMeterId) return [];
+            const searchByNewSystem = async () => {
+              if (!newSystemId) return [];
               const response = await fetch(
-                `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(offlineData.newMeterId)}`,
+                `${serverUrl}/api/projects/${projectId}/work-orders/search?systemId=${encodeURIComponent(newSystemId)}`,
                 { 
                   method: "GET", 
                   headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
@@ -319,17 +347,17 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               });
             };
             
-            const oldMeterResults = await searchByOldMeter();
-            eligibleWorkOrder = findEligible(oldMeterResults);
+            const oldSystemResults = await searchByOldSystem();
+            eligibleWorkOrder = findEligible(oldSystemResults);
             
             if (!eligibleWorkOrder) {
-              console.log(`[syncPendingActions] No match by old meter ID, searching by new meter ID: ${offlineData.newMeterId}`);
-              const newMeterResults = await searchByNewMeter();
-              eligibleWorkOrder = findEligible(newMeterResults);
+              console.log(`[syncPendingActions] No match by old system ID, searching by new system ID: ${newSystemId}`);
+              const newSystemResults = await searchByNewSystem();
+              eligibleWorkOrder = findEligible(newSystemResults);
             }
             
             if (!eligibleWorkOrder) {
-              console.log(`[syncPendingActions] No eligible work order found for old meter ${offlineData.oldMeterId} or new meter ${offlineData.newMeterId}, keeping in queue for retry`);
+              console.log(`[syncPendingActions] No eligible work order found for old system ${oldSystemId} or new system ${newSystemId}, keeping in queue for retry`);
               continue;
             }
             
@@ -377,11 +405,14 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               console.log(`[syncPendingActions] Claimed work order ${serverWorkOrderId}`);
             }
             
+            const oldSystemReading = offlineData.oldSystemReading ?? offlineData.oldMeterReading;
+            const newSystemReading = offlineData.newSystemReading ?? offlineData.newMeterReading;
+            
             const completePayload = {
               projectId: Number(projectId),
-              oldMeterReading: offlineData.oldMeterReading,
-              newMeterId: offlineData.newMeterId,
-              newMeterReading: offlineData.newMeterReading,
+              oldSystemReading: oldSystemReading,
+              newSystemId: newSystemId,
+              newSystemReading: newSystemReading,
               oldGps: offlineData.oldGps || null,
               gpsCoordinates: offlineData.newGps || null,
               signatureData: offlineData.signatureData || null,
@@ -421,13 +452,13 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               console.log(`[syncPendingActions] No JSON response from completion endpoint`);
             }
             
-            console.log(`[syncPendingActions] Successfully synced offline work order for meter ${offlineData.oldMeterId} to server WO ${serverWorkOrderId}`);
+            console.log(`[syncPendingActions] Successfully synced offline work order for system ${offlineData.oldSystemId} to server WO ${serverWorkOrderId}`);
             successfulActionIds.push(action.id);
             offlineToServerIdMap.set(action.id, serverWorkOrderId);
             
             const serverWo = serverResponseData?.workOrder || serverResponseData;
             syncedOfflineWorkOrders.push({
-              oldMeterId: offlineData.oldMeterId,
+              oldSystemId: offlineData.oldSystemId,
               serverWorkOrderId: serverWo?.id || serverWorkOrderId,
               customerWoId: serverWo?.customer_wo_id || serverWo?.customerWoId || eligibleWorkOrder.customer_wo_id || eligibleWorkOrder.customerWoId,
               status: serverWo?.status || "Completed",

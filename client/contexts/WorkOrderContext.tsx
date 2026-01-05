@@ -7,12 +7,12 @@ export interface WorkOrder {
   customerWoId: string;
   customerId?: string;
   status: string;
-  oldMeterId: string;
-  newMeterId?: string;
-  oldMeterReading?: string;
-  newMeterReading?: string;
-  oldMeterType?: string;
-  newMeterType?: string;
+  oldSystemId: string;
+  newSystemId?: string;
+  oldSystemReading?: string;
+  newSystemReading?: string;
+  oldSystemType?: string;
+  newSystemType?: string;
   oldGps?: string;
   newGps?: string;
   serviceAddress: string;
@@ -22,7 +22,7 @@ export interface WorkOrder {
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
-  meterType?: string;
+  systemType?: string;
   serviceType?: string;
   serviceTypeColor?: string;
   scheduledDate?: string;
@@ -73,6 +73,12 @@ interface ServerWorkOrder {
   zone?: string;
   service_type?: string;
   service_type_color?: string;
+  old_system_id?: string;
+  new_system_id?: string;
+  old_system_type?: string;
+  new_system_type?: string;
+  old_system_reading?: number | string;
+  new_system_reading?: number | string;
   old_meter_id?: string;
   new_meter_id?: string;
   old_meter_type?: string;
@@ -112,6 +118,7 @@ interface ServerWorkOrder {
 interface ServerReferenceData {
   workOrderStatuses?: string[] | { code: string; label: string; color?: string }[];
   troubleCodes?: { code: string; label?: string; description?: string }[];
+  systemTypes?: string[] | { id: string; name: string }[];
   meterTypes?: string[] | { id: string; name: string }[];
   serviceTypes?: string[] | { name?: string; label?: string; color?: string; badge_color?: string }[];
   service_types?: string[] | { name?: string; label?: string; color?: string; badge_color?: string }[];
@@ -135,7 +142,7 @@ export interface ServiceTypeInfo {
 export interface ReferenceData {
   statuses: StatusInfo[];
   troubleCodes: { code: string; label: string; description: string }[];
-  meterTypes: string[];
+  systemTypes: string[];
   serviceTypes: ServiceTypeInfo[];
   assignees: {
     users: { id: string; username: string; displayName: string }[];
@@ -162,12 +169,12 @@ function mapServerWorkOrder(serverWo: ServerWorkOrder): WorkOrder {
     customerWoId: serverWo.customer_wo_id || "",
     customerId: serverWo.customer_id || undefined,
     status: serverWo.status || "Unknown",
-    oldMeterId: serverWo.old_meter_id || "",
-    newMeterId: serverWo.new_meter_id || undefined,
-    oldMeterReading: serverWo.old_meter_reading != null ? String(serverWo.old_meter_reading) : undefined,
-    newMeterReading: serverWo.new_meter_reading != null ? String(serverWo.new_meter_reading) : undefined,
-    oldMeterType: serverWo.old_meter_type || undefined,
-    newMeterType: serverWo.new_meter_type || undefined,
+    oldSystemId: serverWo.old_system_id || serverWo.old_meter_id || "",
+    newSystemId: serverWo.new_system_id || serverWo.new_meter_id || undefined,
+    oldSystemReading: (serverWo.old_system_reading ?? serverWo.old_meter_reading) != null ? String(serverWo.old_system_reading ?? serverWo.old_meter_reading) : undefined,
+    newSystemReading: (serverWo.new_system_reading ?? serverWo.new_meter_reading) != null ? String(serverWo.new_system_reading ?? serverWo.new_meter_reading) : undefined,
+    oldSystemType: serverWo.old_system_type || serverWo.old_meter_type || undefined,
+    newSystemType: serverWo.new_system_type || serverWo.new_meter_type || undefined,
     oldGps: serverWo.old_gps || serverWo.gps || serverWo.location || serverWo.meter_gps || serverWo.meter_location || undefined,
     newGps: serverWo.new_gps || undefined,
     serviceAddress: serverWo.address || "",
@@ -177,7 +184,7 @@ function mapServerWorkOrder(serverWo: ServerWorkOrder): WorkOrder {
     customerName: serverWo.customer_name || undefined,
     customerPhone: serverWo.phone || undefined,
     customerEmail: serverWo.email || undefined,
-    meterType: serverWo.old_meter_type || undefined,
+    systemType: serverWo.old_system_type || serverWo.old_meter_type || undefined,
     serviceType: serverWo.service_type || undefined,
     serviceTypeColor: serverWo.service_type_color || undefined,
     scheduledDate: serverWo.scheduled_at || undefined,
@@ -208,8 +215,20 @@ function mapServerWorkOrder(serverWo: ServerWorkOrder): WorkOrder {
 }
 
 function normalizeStoredWorkOrder(wo: any): WorkOrder {
-  if (wo.customer_wo_id !== undefined || wo.old_meter_id !== undefined) {
+  if (wo.customer_wo_id !== undefined || wo.old_meter_id !== undefined || wo.old_system_id !== undefined) {
     return mapServerWorkOrder(wo as ServerWorkOrder);
+  }
+  if (wo.oldMeterId !== undefined && wo.oldSystemId === undefined) {
+    return {
+      ...wo,
+      oldSystemId: wo.oldMeterId,
+      newSystemId: wo.newMeterId,
+      oldSystemReading: wo.oldMeterReading,
+      newSystemReading: wo.newMeterReading,
+      oldSystemType: wo.oldMeterType,
+      newSystemType: wo.newMeterType,
+      systemType: wo.meterType,
+    } as WorkOrder;
   }
   return wo as WorkOrder;
 }
@@ -295,9 +314,10 @@ function mapServerReferenceData(serverRef: ServerReferenceData): ReferenceData {
     });
   }
 
-  let meterTypes: string[] = [];
-  if (Array.isArray(serverRef.meterTypes)) {
-    meterTypes = serverRef.meterTypes.map(m =>
+  let systemTypes: string[] = [];
+  const rawSystemTypes = serverRef.systemTypes || serverRef.meterTypes;
+  if (Array.isArray(rawSystemTypes)) {
+    systemTypes = rawSystemTypes.map(m =>
       typeof m === "string" ? m : m.name || m.id
     );
   }
@@ -332,7 +352,7 @@ function mapServerReferenceData(serverRef: ServerReferenceData): ReferenceData {
   return {
     statuses,
     troubleCodes,
-    meterTypes,
+    systemTypes,
     serviceTypes,
     assignees: { users, groups },
   };
@@ -341,11 +361,11 @@ function mapServerReferenceData(serverRef: ServerReferenceData): ReferenceData {
 export interface OfflineWorkOrderData {
   id: string;
   projectId: number;
-  oldMeterId: string;
-  oldMeterReading: number | null;
+  oldSystemId: string;
+  oldSystemReading: number | null;
   oldGps: string;
-  newMeterId: string;
-  newMeterReading: number;
+  newSystemId: string;
+  newSystemReading: number;
   newGps: string;
   signatureData: string | null;
   signatureName: string;
@@ -382,8 +402,8 @@ interface WorkOrderContextType {
   searchWorkOrdersByMeterIdOnServer: (meterId: string) => Promise<WorkOrder[]>;
   clearAllData: () => Promise<void>;
   addOfflineWorkOrder: (data: OfflineWorkOrderData) => Promise<void>;
-  removeOfflineWorkOrder: (oldMeterId: string) => Promise<void>;
-  transformOfflineToServerWorkOrder: (oldMeterId: string, serverData: {
+  removeOfflineWorkOrder: (oldSystemId: string) => Promise<void>;
+  transformOfflineToServerWorkOrder: (oldSystemId: string, serverData: {
     id: number;
     customerWoId?: string;
     status?: string;
@@ -533,11 +553,11 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
           return {
             ...serverWo,
             customerWoId: localWo.customerWoId || serverWo.customerWoId,
-            oldMeterId: localWo.oldMeterId || serverWo.oldMeterId,
+            oldSystemId: localWo.oldSystemId || serverWo.oldSystemId,
             oldGps: localWo.oldGps || serverWo.oldGps,
-            oldMeterReading: localWo.oldMeterReading || serverWo.oldMeterReading,
-            newMeterId: localWo.newMeterId || serverWo.newMeterId,
-            newMeterReading: localWo.newMeterReading || serverWo.newMeterReading,
+            oldSystemReading: localWo.oldSystemReading || serverWo.oldSystemReading,
+            newSystemId: localWo.newSystemId || serverWo.newSystemId,
+            newSystemReading: localWo.newSystemReading || serverWo.newSystemReading,
             newGps: localWo.newGps || serverWo.newGps,
             completedAt: localWo.completedAt || serverWo.completedAt,
             completedBy: localWo.completedBy || serverWo.completedBy,
@@ -830,12 +850,12 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     
     const newWorkOrder: WorkOrder = {
       id: Date.now(),
-      customerWoId: `OFFLINE-${data.oldMeterId}`,
+      customerWoId: `OFFLINE-${data.oldSystemId}`,
       status: data.status,
-      oldMeterId: data.oldMeterId,
-      newMeterId: data.newMeterId,
-      oldMeterReading: data.oldMeterReading != null ? String(data.oldMeterReading) : undefined,
-      newMeterReading: data.newMeterReading != null ? String(data.newMeterReading) : undefined,
+      oldSystemId: data.oldSystemId,
+      newSystemId: data.newSystemId,
+      oldSystemReading: data.oldSystemReading != null ? String(data.oldSystemReading) : undefined,
+      newSystemReading: data.newSystemReading != null ? String(data.newSystemReading) : undefined,
       oldGps: data.oldGps,
       newGps: data.newGps,
       serviceAddress: "Offline Work Order",
@@ -860,9 +880,9 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     console.log("[addOfflineWorkOrder] Work order added successfully");
   }, []);
 
-  const removeOfflineWorkOrder = useCallback(async (oldMeterId: string) => {
-    console.log("[removeOfflineWorkOrder] Removing offline work order for meter:", oldMeterId);
-    const customerWoId = `OFFLINE-${oldMeterId}`;
+  const removeOfflineWorkOrder = useCallback(async (oldSystemId: string) => {
+    console.log("[removeOfflineWorkOrder] Removing offline work order for system:", oldSystemId);
+    const customerWoId = `OFFLINE-${oldSystemId}`;
     
     setWorkOrdersState(prev => {
       const updated = prev.filter(wo => wo.customerWoId !== customerWoId);
@@ -874,7 +894,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const transformOfflineToServerWorkOrder = useCallback(async (oldMeterId: string, serverData: {
+  const transformOfflineToServerWorkOrder = useCallback(async (oldSystemId: string, serverData: {
     id: number;
     customerWoId?: string;
     status?: string;
@@ -882,8 +902,8 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     oldGps?: string;
     newGps?: string;
   }) => {
-    console.log("[transformOfflineToServerWorkOrder] Transforming offline WO for meter:", oldMeterId, "to server ID:", serverData.id);
-    const offlineCustomerWoId = `OFFLINE-${oldMeterId}`;
+    console.log("[transformOfflineToServerWorkOrder] Transforming offline WO for system:", oldSystemId, "to server ID:", serverData.id);
+    const offlineCustomerWoId = `OFFLINE-${oldSystemId}`;
     
     setWorkOrdersState(prev => {
       const updated = prev.map(wo => {
@@ -1001,8 +1021,8 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         wo.customerWoId?.toLowerCase().includes(query) ||
         wo.serviceAddress?.toLowerCase().includes(query) ||
         wo.customerName?.toLowerCase().includes(query) ||
-        wo.oldMeterId?.toLowerCase().includes(query) ||
-        wo.newMeterId?.toLowerCase().includes(query)
+        wo.oldSystemId?.toLowerCase().includes(query) ||
+        wo.newSystemId?.toLowerCase().includes(query)
       );
     }
 

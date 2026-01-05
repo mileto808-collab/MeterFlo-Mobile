@@ -106,7 +106,7 @@ export function ScanConfirmModal({
           
           <View style={[styles.meterIdBox, { backgroundColor: theme.backgroundSecondary }]}>
             <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              Scanned Meter ID
+              Scanned System ID
             </ThemedText>
             <ThemedText type="h3" style={{ fontWeight: "700", marginTop: Spacing.xs }}>
               {meterId}
@@ -148,15 +148,15 @@ export function ScanConfirmModal({
                   </ThemedText>
                 </View>
                 <View style={styles.infoRow}>
-                  <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Meter ID:</ThemedText>
+                  <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID:</ThemedText>
                   <ThemedText type="body" style={{ fontWeight: "600" }}>
-                    {workOrder.oldMeterId || "N/A"}
+                    {workOrder.oldSystemId || "N/A"}
                   </ThemedText>
                 </View>
                 <View style={styles.infoRow}>
-                  <ThemedText type="body" style={{ color: theme.textSecondary }}>New Meter ID:</ThemedText>
+                  <ThemedText type="body" style={{ color: theme.textSecondary }}>New System ID:</ThemedText>
                   <ThemedText type="body" style={{ fontWeight: "600" }}>
-                    {workOrder.newMeterId || "N/A"}
+                    {workOrder.newSystemId || "N/A"}
                   </ThemedText>
                 </View>
                 <View style={styles.infoRow}>

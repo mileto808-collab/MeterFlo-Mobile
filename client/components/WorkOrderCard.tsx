@@ -82,9 +82,9 @@ export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
           WO: {workOrder.customerWoId}
         </ThemedText>
         <ThemedText type="body" style={[styles.idLabel, { color: theme.text }]}>
-          Meter: {workOrder.status?.toLowerCase() === "completed" 
-            ? (workOrder.newMeterId || workOrder.oldMeterId || "N/A")
-            : (workOrder.oldMeterId || "N/A")}
+          System: {workOrder.status?.toLowerCase() === "completed" 
+            ? (workOrder.newSystemId || workOrder.oldSystemId || "N/A")
+            : (workOrder.oldSystemId || "N/A")}
         </ThemedText>
       </View>
 
