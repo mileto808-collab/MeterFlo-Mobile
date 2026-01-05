@@ -783,7 +783,24 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json();
-      const serverWorkOrders: ServerWorkOrder[] = data.workOrders || data || [];
+      // Handle different response formats: array, { workOrders: [...] }, { workOrder: {...} }, or null
+      let serverWorkOrders: ServerWorkOrder[];
+      if (!data || typeof data !== 'object') {
+        // Null, undefined, or primitive response
+        serverWorkOrders = [];
+      } else if (Array.isArray(data)) {
+        serverWorkOrders = data;
+      } else if (Array.isArray(data.workOrders)) {
+        serverWorkOrders = data.workOrders;
+      } else if (data.workOrder && typeof data.workOrder === 'object') {
+        // Single work order returned
+        serverWorkOrders = [data.workOrder];
+      } else if (data.id) {
+        // Single work order returned directly (not wrapped)
+        serverWorkOrders = [data as ServerWorkOrder];
+      } else {
+        serverWorkOrders = [];
+      }
       const mappedWorkOrders = serverWorkOrders.map(mapServerWorkOrder);
       
       console.log("[searchWorkOrdersByMeterIdOnServer] Found", mappedWorkOrders.length, "work orders");
