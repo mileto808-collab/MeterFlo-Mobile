@@ -60,10 +60,18 @@ export default function WorkOrdersScreen() {
         return true;
       }
       
-      // Exact match on customer work order ID
+      // Exact match on work order ID: check customerWoId first, fall back to internal id if customerWoId is empty
       const customerWoId = wo.customerWoId?.trim().toLowerCase() || "";
-      if (customerWoId === normalizedTerm) {
-        return true;
+      if (customerWoId) {
+        if (customerWoId === normalizedTerm) {
+          return true;
+        }
+      } else {
+        // Fall back to internal id when customerWoId is not set
+        const internalId = String(wo.id).toLowerCase();
+        if (internalId === normalizedTerm) {
+          return true;
+        }
       }
       
       // Partial match on service address (case-insensitive)

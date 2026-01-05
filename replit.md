@@ -117,9 +117,9 @@ All API requests to the MeterFlo server include the following headers for CSRF p
 
 ### Unified Multi-Field Search
 - **All scan methods use unified flow**: Camera barcode, camera QR, HID scanner, and manual search all use consistent search logic
-- **Multi-field matching**: Search checks meter ID (old/new), customer ID, and service address
+- **Multi-field matching**: Search checks meter ID (old/new), work order ID, and service address
   - Meter IDs: Exact match (case-insensitive)
-  - Customer ID: Exact match (case-insensitive)
+  - Work Order ID: Exact match on `customerWoId` first; falls back to internal `id` when `customerWoId` is empty
   - Address: Partial match (e.g., "4525 Bison" matches "4525 Bison Drive")
 - **Search order**: Locally cached work orders are searched first, then server is queried if online
 - **Server endpoint**: `GET /api/projects/:projectId/work-orders/by-meter/:searchTerm` - supports multi-field search
