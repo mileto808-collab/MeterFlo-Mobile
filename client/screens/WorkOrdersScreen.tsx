@@ -28,6 +28,7 @@ interface ScanResult {
   isSearching: boolean;
   searchError: string | null;
   isAlreadyCompleted?: boolean;
+  isManualSearch?: boolean;
 }
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -84,7 +85,7 @@ export default function WorkOrdersScreen() {
     });
   }, [workOrders]);
 
-  const handleScanResult = useCallback(async (scannedValue: string) => {
+  const handleScanResult = useCallback(async (scannedValue: string, isManualSearch: boolean = false) => {
     const normalizedValue = scannedValue.trim();
     
     // Helper to check if work order is completed/closed
@@ -100,6 +101,7 @@ export default function WorkOrdersScreen() {
       matchSource: "none",
       isSearching: true,
       searchError: null,
+      isManualSearch,
     });
     
     // Search locally first (by meter ID, customer ID, or address)
@@ -115,6 +117,7 @@ export default function WorkOrdersScreen() {
         isSearching: false,
         searchError: null,
         isAlreadyCompleted: false,
+        isManualSearch,
       });
       return;
     }
@@ -129,6 +132,7 @@ export default function WorkOrdersScreen() {
         isSearching: false,
         searchError: null,
         isAlreadyCompleted: true,
+        isManualSearch,
       });
       return;
     }
@@ -148,6 +152,7 @@ export default function WorkOrdersScreen() {
             isSearching: false,
             searchError: null,
             isAlreadyCompleted: false,
+            isManualSearch,
           });
           return;
         }
@@ -162,6 +167,7 @@ export default function WorkOrdersScreen() {
             isSearching: false,
             searchError: null,
             isAlreadyCompleted: true,
+            isManualSearch,
           });
           return;
         }
@@ -173,6 +179,7 @@ export default function WorkOrdersScreen() {
           matchSource: "none",
           isSearching: false,
           searchError: null,
+          isManualSearch,
         });
       } catch (err) {
         setScanConfirmResult({
@@ -181,6 +188,7 @@ export default function WorkOrdersScreen() {
           matchSource: "none",
           isSearching: false,
           searchError: err instanceof Error ? err.message : "Server search failed",
+          isManualSearch,
         });
       }
     } else {
@@ -191,6 +199,7 @@ export default function WorkOrdersScreen() {
         matchSource: "none",
         isSearching: false,
         searchError: null,
+        isManualSearch,
       });
     }
   }, [findWorkOrdersBySearchTerm, isOnline, searchWorkOrdersByMeterIdOnServer]);
@@ -211,6 +220,10 @@ export default function WorkOrdersScreen() {
     setScanConfirmResult(null);
     setShowManualSearch(true);
   }, []);
+
+  const handleManualSearchResult = useCallback((scannedValue: string) => {
+    handleScanResult(scannedValue, true);
+  }, [handleScanResult]);
 
   const handleCloseScanConfirm = useCallback(() => {
     setScanConfirmResult(null);
@@ -366,7 +379,7 @@ export default function WorkOrdersScreen() {
         value={filters.searchQuery}
         onClose={() => setShowManualSearch(false)}
         onChangeText={handleSearchChange}
-        onFindWorkOrder={handleScanResult}
+        onFindWorkOrder={handleManualSearchResult}
       />
 
       <ScanConfirmModal
@@ -378,6 +391,7 @@ export default function WorkOrdersScreen() {
         searchError={scanConfirmResult?.searchError || null}
         isOffline={!isOnline}
         isAlreadyCompleted={scanConfirmResult?.isAlreadyCompleted || false}
+        isManualSearch={scanConfirmResult?.isManualSearch || false}
         onConfirm={handleConfirmScan}
         onScanAgain={handleScanAgain}
         onEditSearch={handleEditSearch}

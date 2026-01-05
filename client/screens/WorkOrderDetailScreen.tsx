@@ -607,7 +607,7 @@ export default function WorkOrderDetailScreen() {
               fontWeight: "600",
             }}
           >
-            {isCompleted ? "Edit Completion" : isCancelled ? "Cancelled" : "Start Meter Changeout"}
+            {isCompleted ? "Edit Completion" : isCancelled ? "Cancelled" : "Start System Changeout"}
           </ThemedText>
         </Button>
       </View>

@@ -19,6 +19,7 @@ interface ScanConfirmModalProps {
   searchError?: string | null;
   isOffline?: boolean;
   isAlreadyCompleted?: boolean;
+  isManualSearch?: boolean;
   onConfirm: () => void;
   onScanAgain: () => void;
   onEditSearch?: () => void;
@@ -34,6 +35,7 @@ export function ScanConfirmModal({
   searchError = null,
   isOffline = false,
   isAlreadyCompleted = false,
+  isManualSearch = false,
   onConfirm, 
   onScanAgain,
   onEditSearch,
@@ -197,16 +199,18 @@ export function ScanConfirmModal({
                     style={{ backgroundColor: theme.primary, flex: 1 }}
                   >
                     <Icon name="arrow-right" size={18} color="#FFFFFF" />
-                    Start Wizard
+                    Start System Changeout
                   </Button>
                 ) : null}
-                <Button
-                  onPress={onScanAgain}
-                  style={{ backgroundColor: theme.backgroundSecondary, flex: (workOrder && !isAlreadyCompleted) ? 0 : 1, minWidth: 120 }}
-                >
-                  <Icon name="refresh-cw" size={18} color={theme.text} />
-                  <ThemedText>Scan Again</ThemedText>
-                </Button>
+                {!isManualSearch ? (
+                  <Button
+                    onPress={onScanAgain}
+                    style={{ backgroundColor: theme.backgroundSecondary, flex: (workOrder && !isAlreadyCompleted) ? 0 : 1, minWidth: 120 }}
+                  >
+                    <Icon name="refresh-cw" size={18} color={theme.text} />
+                    <ThemedText>Scan Again</ThemedText>
+                  </Button>
+                ) : null}
               </View>
               {onEditSearch ? (
                 <Button
