@@ -110,7 +110,7 @@ export function ManualSearchModal({ visible, value, onClose, onChangeText, onFin
             >
               <Icon name="search" size={18} color="#FFFFFF" />
               <ThemedText style={{ color: "#FFFFFF", marginLeft: Spacing.sm, fontWeight: "600" }}>
-                Find Work Order by Meter ID
+                Search Work Orders
               </ThemedText>
             </Pressable>
           ) : null}

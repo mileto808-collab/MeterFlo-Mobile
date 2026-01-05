@@ -47,11 +47,31 @@ export default function WorkOrdersScreen() {
 
   const filteredWorkOrders = useMemo(() => getFilteredWorkOrders(), [getFilteredWorkOrders]);
 
-  const findWorkOrderByMeterId = useCallback((meterId: string): WorkOrder | undefined => {
-    const normalizedMeterId = meterId.trim().toLowerCase();
-    return workOrders.find(wo => {
-      const oldMeterId = wo.oldMeterId?.trim().toLowerCase();
-      return oldMeterId === normalizedMeterId;
+  const findWorkOrdersBySearchTerm = useCallback((searchTerm: string): WorkOrder[] => {
+    const normalizedTerm = searchTerm.trim().toLowerCase();
+    if (!normalizedTerm) return [];
+    
+    return workOrders.filter(wo => {
+      // Exact match on meter IDs
+      const oldMeterId = wo.oldMeterId?.trim().toLowerCase() || "";
+      const newMeterId = wo.newMeterId?.trim().toLowerCase() || "";
+      if (oldMeterId === normalizedTerm || newMeterId === normalizedTerm) {
+        return true;
+      }
+      
+      // Exact match on customer work order ID
+      const customerWoId = wo.customerWoId?.trim().toLowerCase() || "";
+      if (customerWoId === normalizedTerm) {
+        return true;
+      }
+      
+      // Partial match on service address (case-insensitive)
+      const serviceAddress = wo.serviceAddress?.trim().toLowerCase() || "";
+      if (serviceAddress.includes(normalizedTerm)) {
+        return true;
+      }
+      
+      return false;
     });
   }, [workOrders]);
 
@@ -67,8 +87,13 @@ export default function WorkOrdersScreen() {
       searchError: null,
     });
     
-    // Search locally first
-    const localWorkOrder = findWorkOrderByMeterId(normalizedValue);
+    // Search locally first (by meter ID, customer ID, or address)
+    const localMatches = findWorkOrdersBySearchTerm(normalizedValue);
+    // Find an eligible (non-completed) work order from local matches
+    const localWorkOrder = localMatches.find(wo => {
+      const status = wo.status?.toLowerCase();
+      return status !== "completed" && status !== "closed";
+    });
     if (localWorkOrder) {
       setScanConfirmResult({
         meterId: normalizedValue,
@@ -115,7 +140,7 @@ export default function WorkOrdersScreen() {
         searchError: null,
       });
     }
-  }, [findWorkOrderByMeterId, isOnline, searchWorkOrdersByMeterIdOnServer]);
+  }, [findWorkOrdersBySearchTerm, isOnline, searchWorkOrdersByMeterIdOnServer]);
 
   const handleConfirmScan = useCallback(() => {
     if (scanConfirmResult?.workOrder) {
