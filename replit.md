@@ -115,9 +115,14 @@ All API requests to the MeterFlo server include the following headers for CSRF p
 - **Photo Count Tracking**: Pending actions include photoCount for accurate history when syncing queued actions
 - **Error Handling**: History recording wrapped in try/catch to prevent AsyncStorage failures from breaking app flow
 
-### Unified Meter ID Search
+### Unified Multi-Field Search
 - **All scan methods use unified flow**: Camera barcode, camera QR, HID scanner, and manual search all use consistent search logic
+- **Multi-field matching**: Search checks meter ID (old/new), customer ID, and service address
+  - Meter IDs: Exact match (case-insensitive)
+  - Customer ID: Exact match (case-insensitive)
+  - Address: Partial match (e.g., "4525 Bison" matches "4525 Bison Drive")
 - **Search order**: Locally cached work orders are searched first, then server is queried if online
+- **Server endpoint**: `GET /api/projects/:projectId/work-orders/by-meter/:searchTerm` - supports multi-field search
 - **Unified messaging**: 
   - Found locally: "Matched from cached work orders" (green badge)
   - Found on server: "Matched from server" (blue badge with "Requires Claim")
