@@ -754,13 +754,14 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     }
   }, [serverUrl, projectId]);
 
-  const searchWorkOrdersByMeterIdOnServer = useCallback(async (meterId: string): Promise<WorkOrder[]> => {
+  const searchWorkOrdersByMeterIdOnServer = useCallback(async (searchTerm: string): Promise<WorkOrder[]> => {
     if (!serverUrl || !projectId) return [];
 
     try {
-      console.log("[searchWorkOrdersByMeterIdOnServer] Searching for meter ID:", meterId);
+      console.log("[searchWorkOrdersByMeterIdOnServer] Searching for term:", searchTerm);
+      // Use the multi-field search endpoint that supports meter ID, customer ID, and address matching
       const response = await fetch(
-        `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(meterId)}`,
+        `${serverUrl}/api/projects/${projectId}/work-orders/by-meter/${encodeURIComponent(searchTerm)}`,
         {
           method: "GET",
           headers: {
@@ -774,7 +775,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         if (response.status === 404) {
-          console.log("[searchWorkOrdersByMeterIdOnServer] No work orders found for meter ID:", meterId);
+          console.log("[searchWorkOrdersByMeterIdOnServer] No work orders found for term:", searchTerm);
           return [];
         }
         const errorText = await response.text();
