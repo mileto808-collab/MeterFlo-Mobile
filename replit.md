@@ -107,6 +107,7 @@ All API requests to the MeterFlo server include the following headers for CSRF p
 - **Mobile API Payload Fields**: Uses camelCase fields for mobile-specific endpoints
   - Trouble: `{ projectId, troubleCode, notes, oldSystemReading, photos }`
   - Complete: `{ projectId, oldSystemReading, newSystemId, newSystemReading, gpsCoordinates, signatureData, signatureName, completedAt, beforePhotos, afterPhotos }`
+- **Server-Found Work Order Persistence**: When completing a work order found via server search (not cached locally), the completed work order is automatically added to local storage using upsert logic in `updateWorkOrder`. The base work order is normalized via `normalizeStoredWorkOrder()` to ensure consistent field naming and required fields (createdAt, updatedAt, localUpdatedAt, syncPending) are set.
 
 ### Sync History Tracking
 - **SyncHistoryEntry Interface**: Tracks timestamp, work order IDs/titles, status, counts, photo count, error messages
