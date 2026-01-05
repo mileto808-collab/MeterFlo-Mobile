@@ -94,8 +94,8 @@ export function ScanConfirmModal({
               } 
               size={56} 
               color={workOrder 
-                ? (isAlreadyCompleted ? theme.warning : theme.success) 
-                : (searchError ? (theme.error || theme.warning) : theme.warning)
+                ? (isAlreadyCompleted ? (theme.error || "#EF4444") : theme.success) 
+                : (searchError ? (theme.error || "#EF4444") : theme.warning)
               } 
             />
           )}
@@ -161,13 +161,21 @@ export function ScanConfirmModal({
                 </View>
                 <View style={styles.infoRow}>
                   <ThemedText type="body" style={{ color: theme.textSecondary }}>Status:</ThemedText>
-                  <ThemedText type="body" style={{ fontWeight: "500", color: isAlreadyCompleted ? theme.warning : undefined }}>
+                  <ThemedText type="body" style={{ fontWeight: "500", color: isAlreadyCompleted ? (theme.error || "#EF4444") : undefined }}>
                     {workOrder.status}
                   </ThemedText>
                 </View>
+                {isAlreadyCompleted && workOrder.completedByUsername ? (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>Completed By:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {workOrder.completedByUsername}
+                    </ThemedText>
+                  </View>
+                ) : null}
               </View>
               {isAlreadyCompleted ? (
-                <ThemedText type="body" style={[styles.noMatchText, { color: theme.warning }]}>
+                <ThemedText type="body" style={[styles.noMatchText, { color: theme.error || "#EF4444" }]}>
                   This work order has already been completed and cannot be processed again.
                 </ThemedText>
               ) : null}

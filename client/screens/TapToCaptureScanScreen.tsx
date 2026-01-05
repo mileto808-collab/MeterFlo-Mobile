@@ -261,7 +261,7 @@ export default function TapToCaptureScanScreen() {
                   <Icon 
                     name={matchedWorkOrder ? "check-circle" : unavailableWorkOrders.length > 0 ? "check-circle" : "alert-circle"} 
                     size={56} 
-                    color={matchedWorkOrder ? theme.success : unavailableWorkOrders.length > 0 ? theme.warning : theme.warning} 
+                    color={matchedWorkOrder ? theme.success : unavailableWorkOrders.length > 0 ? (theme.error || "#EF4444") : theme.warning} 
                   />
                 </View>
 
@@ -422,12 +422,20 @@ export default function TapToCaptureScanScreen() {
                   </View>
                   <View style={styles.detailRow}>
                     <ThemedText type="body" style={{ color: theme.textSecondary }}>Status:</ThemedText>
-                    <ThemedText type="body" style={{ fontWeight: "500", color: theme.warning }}>
+                    <ThemedText type="body" style={{ fontWeight: "500", color: theme.error || "#EF4444" }}>
                       {unavailableWorkOrders[0].status}
                     </ThemedText>
                   </View>
+                  {unavailableWorkOrders[0].completedByUsername ? (
+                    <View style={styles.detailRow}>
+                      <ThemedText type="body" style={{ color: theme.textSecondary }}>Completed By:</ThemedText>
+                      <ThemedText type="body" style={{ fontWeight: "600" }}>
+                        {unavailableWorkOrders[0].completedByUsername}
+                      </ThemedText>
+                    </View>
+                  ) : null}
                 </View>
-                <ThemedText type="body" style={[styles.noMatchText, { color: theme.warning }]}>
+                <ThemedText type="body" style={[styles.noMatchText, { color: theme.error || "#EF4444" }]}>
                   This work order has already been completed and cannot be processed again.
                 </ThemedText>
               </>
