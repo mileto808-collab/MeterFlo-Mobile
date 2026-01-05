@@ -128,6 +128,11 @@ All API requests to the MeterFlo server include the following headers for CSRF p
   - Found on server: "Matched from server" (blue badge with "Requires Claim")
   - Not found (online): "No work order found in cached work orders or on the server."
   - Not found (offline): "No work order found in cached data. Go online to search the server."
+- **Completed work order detection**: When a work order is found but already completed/closed:
+  - Shows "Already Completed" title with warning (orange) icon
+  - Displays message: "This work order has already been completed and cannot be processed again."
+  - Hides "Start Wizard" button to prevent processing
+  - Navigation guard blocks completed work orders from reaching WorkflowWizard
 - **Loading state**: Modal shows spinner while searching server
 - **Empty list state**: "No matches in cached work orders. Use scan to search the server."
 
