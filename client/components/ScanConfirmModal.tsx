@@ -18,6 +18,7 @@ interface ScanConfirmModalProps {
   isSearching?: boolean;
   searchError?: string | null;
   isOffline?: boolean;
+  isAlreadyCompleted?: boolean;
   onConfirm: () => void;
   onScanAgain: () => void;
   onClose: () => void;
@@ -31,6 +32,7 @@ export function ScanConfirmModal({
   isSearching = false,
   searchError = null,
   isOffline = false,
+  isAlreadyCompleted = false,
   onConfirm, 
   onScanAgain, 
   onClose 
@@ -42,6 +44,7 @@ export function ScanConfirmModal({
     if (isSearching) return "Searching...";
     if (searchError) return "Search Failed";
     if (workOrder) {
+      if (isAlreadyCompleted) return "Already Completed";
       if (matchSource === "server") return "Found on Server";
       return "Work Order Found";
     }
@@ -85,9 +88,15 @@ export function ScanConfirmModal({
             <ActivityIndicator size="large" color={theme.primary} />
           ) : (
             <Icon 
-              name={workOrder ? "check-circle" : searchError ? "x-circle" : "alert-circle"} 
+              name={workOrder 
+                ? (isAlreadyCompleted ? "check-circle" : "check-circle") 
+                : (searchError ? "x-circle" : "alert-circle")
+              } 
               size={56} 
-              color={workOrder ? theme.success : searchError ? (theme.error || theme.warning) : theme.warning} 
+              color={workOrder 
+                ? (isAlreadyCompleted ? theme.warning : theme.success) 
+                : (searchError ? (theme.error || theme.warning) : theme.warning)
+              } 
             />
           )}
           
@@ -140,9 +149,16 @@ export function ScanConfirmModal({
                 </View>
                 <View style={styles.infoRow}>
                   <ThemedText type="body" style={{ color: theme.textSecondary }}>Status:</ThemedText>
-                  <ThemedText type="body" style={{ fontWeight: "500" }}>{workOrder.status}</ThemedText>
+                  <ThemedText type="body" style={{ fontWeight: "500", color: isAlreadyCompleted ? theme.warning : undefined }}>
+                    {workOrder.status}
+                  </ThemedText>
                 </View>
               </View>
+              {isAlreadyCompleted ? (
+                <ThemedText type="body" style={[styles.noMatchText, { color: theme.warning }]}>
+                  This work order has already been completed and cannot be processed again.
+                </ThemedText>
+              ) : null}
             </>
           ) : (
             <ThemedText type="body" style={[styles.noMatchText, { color: theme.textSecondary }]}>
@@ -152,7 +168,7 @@ export function ScanConfirmModal({
 
           {!isSearching ? (
             <View style={styles.buttonRow}>
-              {workOrder ? (
+              {workOrder && !isAlreadyCompleted ? (
                 <Button
                   onPress={onConfirm}
                   style={{ backgroundColor: theme.primary, flex: 1 }}
@@ -163,7 +179,7 @@ export function ScanConfirmModal({
               ) : null}
               <Button
                 onPress={onScanAgain}
-                style={{ backgroundColor: theme.backgroundSecondary, flex: workOrder ? 0 : 1, minWidth: 120 }}
+                style={{ backgroundColor: theme.backgroundSecondary, flex: (workOrder && !isAlreadyCompleted) ? 0 : 1, minWidth: 120 }}
               >
                 <Icon name="refresh-cw" size={18} color={theme.text} />
                 <ThemedText>Scan Again</ThemedText>

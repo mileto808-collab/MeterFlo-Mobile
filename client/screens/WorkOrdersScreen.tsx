@@ -27,6 +27,7 @@ interface ScanResult {
   matchSource: MatchSource;
   isSearching: boolean;
   searchError: string | null;
+  isAlreadyCompleted?: boolean;
 }
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -78,6 +79,12 @@ export default function WorkOrdersScreen() {
   const handleScanResult = useCallback(async (scannedValue: string) => {
     const normalizedValue = scannedValue.trim();
     
+    // Helper to check if work order is completed/closed
+    const isCompletedOrClosed = (wo: WorkOrder) => {
+      const status = wo.status?.toLowerCase();
+      return status === "completed" || status === "closed";
+    };
+    
     // First, show the modal in searching state
     setScanConfirmResult({
       meterId: normalizedValue,
@@ -89,18 +96,31 @@ export default function WorkOrdersScreen() {
     
     // Search locally first (by meter ID, customer ID, or address)
     const localMatches = findWorkOrdersBySearchTerm(normalizedValue);
-    // Find an eligible (non-completed) work order from local matches
-    const localWorkOrder = localMatches.find(wo => {
-      const status = wo.status?.toLowerCase();
-      return status !== "completed" && status !== "closed";
-    });
-    if (localWorkOrder) {
+    
+    // First try to find an eligible (non-completed) work order
+    const eligibleLocalWo = localMatches.find(wo => !isCompletedOrClosed(wo));
+    if (eligibleLocalWo) {
       setScanConfirmResult({
         meterId: normalizedValue,
-        workOrder: localWorkOrder,
+        workOrder: eligibleLocalWo,
         matchSource: "local",
         isSearching: false,
         searchError: null,
+        isAlreadyCompleted: false,
+      });
+      return;
+    }
+    
+    // Check if there's a completed work order locally
+    const completedLocalWo = localMatches.find(wo => isCompletedOrClosed(wo));
+    if (completedLocalWo) {
+      setScanConfirmResult({
+        meterId: normalizedValue,
+        workOrder: completedLocalWo,
+        matchSource: "local",
+        isSearching: false,
+        searchError: null,
+        isAlreadyCompleted: true,
       });
       return;
     }
@@ -109,15 +129,40 @@ export default function WorkOrdersScreen() {
     if (isOnline) {
       try {
         const serverResults = await searchWorkOrdersByMeterIdOnServer(normalizedValue);
-        const eligibleWorkOrder = serverResults.find(wo => {
-          const status = wo.status?.toLowerCase();
-          return status !== "completed" && status !== "closed";
-        });
         
+        // First try to find an eligible work order
+        const eligibleServerWo = serverResults.find(wo => !isCompletedOrClosed(wo));
+        if (eligibleServerWo) {
+          setScanConfirmResult({
+            meterId: normalizedValue,
+            workOrder: eligibleServerWo,
+            matchSource: "server",
+            isSearching: false,
+            searchError: null,
+            isAlreadyCompleted: false,
+          });
+          return;
+        }
+        
+        // Check if there's a completed work order on server
+        const completedServerWo = serverResults.find(wo => isCompletedOrClosed(wo));
+        if (completedServerWo) {
+          setScanConfirmResult({
+            meterId: normalizedValue,
+            workOrder: completedServerWo,
+            matchSource: "server",
+            isSearching: false,
+            searchError: null,
+            isAlreadyCompleted: true,
+          });
+          return;
+        }
+        
+        // No match at all
         setScanConfirmResult({
           meterId: normalizedValue,
-          workOrder: eligibleWorkOrder,
-          matchSource: eligibleWorkOrder ? "server" : "none",
+          workOrder: undefined,
+          matchSource: "none",
           isSearching: false,
           searchError: null,
         });
@@ -143,7 +188,7 @@ export default function WorkOrdersScreen() {
   }, [findWorkOrdersBySearchTerm, isOnline, searchWorkOrdersByMeterIdOnServer]);
 
   const handleConfirmScan = useCallback(() => {
-    if (scanConfirmResult?.workOrder) {
+    if (scanConfirmResult?.workOrder && !scanConfirmResult?.isAlreadyCompleted) {
       setScanConfirmResult(null);
       navigation.navigate("WorkflowWizard", { workOrder: scanConfirmResult.workOrder });
     }
@@ -319,6 +364,7 @@ export default function WorkOrdersScreen() {
         isSearching={scanConfirmResult?.isSearching || false}
         searchError={scanConfirmResult?.searchError || null}
         isOffline={!isOnline}
+        isAlreadyCompleted={scanConfirmResult?.isAlreadyCompleted || false}
         onConfirm={handleConfirmScan}
         onScanAgain={handleScanAgain}
         onClose={handleCloseScanConfirm}
