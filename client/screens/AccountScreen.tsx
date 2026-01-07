@@ -1,5 +1,6 @@
-import React from "react";
-import { View, ScrollView, StyleSheet, Pressable, Alert, Platform } from "react-native";
+import React, { useState, useCallback, useEffect } from "react";
+import { View, StyleSheet, Pressable, Alert, Platform, TextInput, ActivityIndicator } from "react-native";
+import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -12,6 +13,14 @@ import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
+import {
+  checkForUpdates,
+  downloadUpdate,
+  getStoredGitHubUrl,
+  setGitHubUrl,
+  getCurrentVersion,
+  UpdateCheckResult,
+} from "@/lib/github-updates";
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
@@ -23,6 +32,65 @@ export default function AccountScreen() {
   const { lastSyncTime } = useWorkOrders();
 
   const currentProject = projects.find(p => p.id === projectId);
+
+  const [githubUrl, setGithubUrlState] = useState("");
+  const [isEditingGithub, setIsEditingGithub] = useState(false);
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+  const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
+
+  useEffect(() => {
+    loadGitHubUrl();
+  }, []);
+
+  const loadGitHubUrl = async () => {
+    const url = await getStoredGitHubUrl();
+    if (url) {
+      setGithubUrlState(url);
+    }
+  };
+
+  const handleSaveGitHubUrl = async () => {
+    await setGitHubUrl(githubUrl);
+    setIsEditingGithub(false);
+    setUpdateResult(null);
+  };
+
+  const handleCheckForUpdates = useCallback(async () => {
+    if (!githubUrl) {
+      Alert.alert("No Repository", "Please configure a GitHub repository URL first.");
+      return;
+    }
+    
+    setIsCheckingUpdates(true);
+    setUpdateResult(null);
+    
+    try {
+      const result = await checkForUpdates(githubUrl);
+      setUpdateResult(result);
+      
+      if (result.error) {
+        Alert.alert("Update Check Failed", result.error);
+      } else if (result.updateAvailable && result.updateInfo) {
+        Alert.alert(
+          "Update Available",
+          `Version ${result.latestVersion} is available.\n\nCurrent version: ${result.currentVersion}\n\n${result.updateInfo.releaseNotes || ""}`,
+          [
+            { text: "Later", style: "cancel" },
+            { 
+              text: "Download", 
+              onPress: () => downloadUpdate(result.updateInfo!.apkUrl)
+            },
+          ]
+        );
+      } else {
+        Alert.alert("Up to Date", `You have the latest version (${result.currentVersion}).`);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to check for updates.");
+    } finally {
+      setIsCheckingUpdates(false);
+    }
+  }, [githubUrl]);
 
   const handleLogout = () => {
     if (Platform.OS === "web") {
@@ -52,7 +120,7 @@ export default function AccountScreen() {
   };
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollViewCompat
       style={[styles.container, { backgroundColor: theme.backgroundRoot }]}
       contentContainerStyle={[
         styles.content,
@@ -161,6 +229,104 @@ export default function AccountScreen() {
       </View>
 
       <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
+        <ThemedText type="h4" style={styles.sectionTitle}>App Updates</ThemedText>
+        
+        <View style={styles.infoRow}>
+          <View style={styles.infoLabel}>
+            <Icon name="github" size={16} color={theme.textSecondary} />
+            <ThemedText type="small" style={{ color: theme.textSecondary }}>GitHub Repository</ThemedText>
+          </View>
+          {isEditingGithub ? null : (
+            <Pressable onPress={() => setIsEditingGithub(true)}>
+              <Icon name="edit-2" size={16} color={theme.primary} />
+            </Pressable>
+          )}
+        </View>
+        
+        {isEditingGithub ? (
+          <View style={styles.githubEditContainer}>
+            <TextInput
+              style={[
+                styles.githubInput,
+                { 
+                  backgroundColor: theme.backgroundSecondary,
+                  color: theme.text,
+                  borderColor: theme.border,
+                }
+              ]}
+              value={githubUrl}
+              onChangeText={setGithubUrlState}
+              placeholder="https://github.com/owner/repo"
+              placeholderTextColor={theme.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+            />
+            <View style={styles.githubButtonRow}>
+              <Pressable 
+                style={[styles.githubButton, { backgroundColor: theme.backgroundSecondary }]}
+                onPress={() => {
+                  setIsEditingGithub(false);
+                  loadGitHubUrl();
+                }}
+              >
+                <ThemedText type="small">Cancel</ThemedText>
+              </Pressable>
+              <Pressable 
+                style={[styles.githubButton, { backgroundColor: theme.primary }]}
+                onPress={handleSaveGitHubUrl}
+              >
+                <ThemedText type="small" style={{ color: "#FFFFFF" }}>Save</ThemedText>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <ThemedText type="body" numberOfLines={1} style={{ color: githubUrl ? theme.text : theme.textSecondary }}>
+            {githubUrl || "Not configured - tap edit to set up"}
+          </ThemedText>
+        )}
+
+        <Pressable
+          style={[
+            styles.updateButton,
+            { 
+              backgroundColor: theme.primary,
+              opacity: isCheckingUpdates || !githubUrl ? 0.6 : 1,
+            }
+          ]}
+          onPress={handleCheckForUpdates}
+          disabled={isCheckingUpdates || !githubUrl}
+        >
+          {isCheckingUpdates ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Icon name="download" size={18} color="#FFFFFF" />
+          )}
+          <ThemedText type="body" style={{ color: "#FFFFFF", fontWeight: "600" }}>
+            {isCheckingUpdates ? "Checking..." : "Check for Updates"}
+          </ThemedText>
+        </Pressable>
+
+        {updateResult && !updateResult.error ? (
+          <View style={[
+            styles.updateStatus,
+            { backgroundColor: updateResult.updateAvailable ? theme.warning + "20" : theme.success + "20" }
+          ]}>
+            <Icon 
+              name={updateResult.updateAvailable ? "alert-circle" : "check-circle"} 
+              size={16} 
+              color={updateResult.updateAvailable ? theme.warning : theme.success} 
+            />
+            <ThemedText type="small" style={{ color: updateResult.updateAvailable ? theme.warning : theme.success }}>
+              {updateResult.updateAvailable 
+                ? `Update available: v${updateResult.latestVersion}` 
+                : `Up to date (v${updateResult.currentVersion})`}
+            </ThemedText>
+          </View>
+        ) : null}
+      </View>
+
+      <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
         <ThemedText type="h4" style={styles.sectionTitle}>App Information</ThemedText>
         
         <View style={styles.infoRow}>
@@ -168,7 +334,7 @@ export default function AccountScreen() {
             <Icon name="info" size={16} color={theme.textSecondary} />
             <ThemedText type="small" style={{ color: theme.textSecondary }}>Version</ThemedText>
           </View>
-          <ThemedText type="body">1.0.0</ThemedText>
+          <ThemedText type="body">{getCurrentVersion()}</ThemedText>
         </View>
 
         <View style={styles.infoRow}>
@@ -188,7 +354,7 @@ export default function AccountScreen() {
           Log Out
         </Button>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollViewCompat>
   );
 }
 
@@ -267,5 +433,42 @@ const styles = StyleSheet.create({
   offlineSessionText: {
     flex: 1,
     gap: Spacing.xs,
+  },
+  githubEditContainer: {
+    gap: Spacing.sm,
+  },
+  githubInput: {
+    height: Spacing.inputHeight,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    fontSize: 14,
+  },
+  githubButtonRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: Spacing.sm,
+  },
+  githubButton: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+  },
+  updateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    marginTop: Spacing.sm,
+  },
+  updateStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.sm,
   },
 });
