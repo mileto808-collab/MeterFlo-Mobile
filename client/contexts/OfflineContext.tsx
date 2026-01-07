@@ -135,8 +135,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               signatureName: data.signature_name ?? data.signatureName,
               completedAt: data.completed_at ?? data.completedAt,
               notes: data.notes ?? null,
-              beforePhotos: formatLegacyPhotos(data.before_photos ?? data.beforePhotos ?? [], 'before'),
-              afterPhotos: formatLegacyPhotos(data.after_photos ?? data.afterPhotos ?? [], 'after'),
+              attachments: {
+                before: formatLegacyPhotos(data.before_photos ?? data.beforePhotos ?? [], 'before'),
+                after: formatLegacyPhotos(data.after_photos ?? data.afterPhotos ?? [], 'after'),
+              },
             } : {
               projectId: data.projectId || 0,
               troubleCode: data.trouble ?? data.troubleCode,
@@ -416,8 +418,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               signatureName: offlineData.signatureName,
               completedAt: offlineData.completedAt,
               notes: offlineData.notes || null,
-              beforePhotos: offlineData.beforePhotos || [],
-              afterPhotos: offlineData.afterPhotos || [],
+              attachments: {
+                before: offlineData.beforePhotos || [],
+                after: offlineData.afterPhotos || [],
+              },
             };
             
             const completeHeaders = await getAuthHeaders();
