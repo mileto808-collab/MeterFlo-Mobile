@@ -23,8 +23,9 @@ Preferred communication style: Simple, everyday language.
 - **API Backend**: Connects to an external, user-configured WorkFlow Pro server.
 - **Key API Endpoints**:
     - `POST /api/mobile/auth/login` for JWT authentication.
-    - `GET /api/projects/{projectId}/mobile/sync/download` for downloading work orders.
-    - `POST /api/projects/{projectId}/mobile/sync/upload` for batch uploading completed work orders.
+    - `GET /api/mobile/users/{userId}/projects` for fetching user projects.
+    - `GET /api/mobile/projects/{projectId}/sync/download` for downloading work orders.
+    - `POST /api/mobile/projects/{projectId}/sync/upload` for batch uploading completed work orders.
     - Mobile-specific endpoints for completing (`/api/mobile/workorders/{id}/complete`) and troubleshooting (`/api/mobile/workorders/{id}/trouble`) work orders, including photo and signature data.
 
 ### Data Storage & Offline-First Design
@@ -54,6 +55,14 @@ Preferred communication style: Simple, everyday language.
 - **Search Order**: Prioritizes local cache, then queries the server if online.
 - **Completed Work Orders**: Clearly indicates if a found work order is already completed and prevents further processing.
 
+### GitHub Updates (Self-Update Feature)
+- **Purpose**: Allows the app to check for and download updates from a GitHub repository without using app stores.
+- **Configuration**: Users can configure a GitHub repository URL in the Account screen settings.
+- **Update Check**: App fetches `update.json` from the repository (tries `main` then `master` branch).
+- **Version Comparison**: Uses semantic versioning to compare current version with latest available.
+- **Download**: Opens browser to download the APK when an update is available.
+- **Note**: Requires a development build (not Expo Go) for full APK installation capability. The `react-native-update-apk` library can be added for native installation when building a standalone app.
+
 ### Key Design Patterns
 - **Path Aliases**: `@/` for `client/` and `@shared/` for `shared/`.
 - **Themed Components**: `ThemedText`, `ThemedView` for consistent UI.
@@ -68,6 +77,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Key Libraries
 - **expo-secure-store**: For encrypted credential storage.
+- **expo-application**: For retrieving app version information.
 - **@react-native-async-storage/async-storage**: For local data persistence.
 - **@react-native-community/netinfo**: For network connectivity monitoring.
 - **react-native-gesture-handler**: For touch gesture handling.
