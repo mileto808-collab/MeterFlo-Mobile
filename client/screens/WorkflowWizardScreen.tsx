@@ -105,7 +105,7 @@ export default function WorkflowWizardScreen() {
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
   const { updateWorkOrder, referenceData, claimWorkOrder, deleteLocalWorkOrder } = useWorkOrders();
-  const { serverUrl, projectId, user, getAuthHeaders } = useAuth();
+  const { serverUrl, projectId, user } = useAuth();
   const { isOnline, addPendingAction, addDirectSubmissionHistory } = useOffline();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
@@ -683,12 +683,13 @@ export default function WorkflowWizardScreen() {
         const payloadSize = JSON.stringify(mobilePayload).length;
         console.log(`[WorkflowWizard] Payload size: ${Math.round(payloadSize / 1024)}KB`);
         
-        const authHeaders = await getAuthHeaders();
         const response = await fetch(endpoint, {
           method: "POST",
           headers: { 
-            ...authHeaders,
             "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "Origin": serverUrl,
+            "Referer": `${serverUrl}/`,
           },
           credentials: "include",
           body: JSON.stringify(mobilePayload),

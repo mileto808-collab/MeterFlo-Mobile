@@ -23,7 +23,6 @@ Preferred communication style: Simple, everyday language.
 - **Data Storage**: Expo SecureStore for encrypted credentials, React Native AsyncStorage for cached work orders and an offline queue.
 - **Offline-First Design**: Monitors network status, caches work orders locally, queues pending actions, and automatically syncs when online. Includes visual indicators for sync status.
 - **Offline Login**: Caches credentials for local validation when offline, transitioning to an "offline session" mode. Revalidates sessions silently upon reconnect.
-- **Session Token Authentication**: All authenticated API calls include `x-mobile-session-token` header via centralized `getAuthHeaders()` function in AuthContext. The session token is obtained from login response, stored securely, and refreshed on session revalidation.
 - **Full Sync Behavior**: Supports pull-to-refresh and sync buttons for full data synchronization. Handles removal of server-processed work orders while preserving local pending changes. Offline completions use specific mobile endpoints.
 - **Multi-User Conflict Handling**: Employs a unified `checkWorkOrderConflict()` helper for both online and offline paths to detect and manage conflicts (e.g., work orders claimed or completed by other users).
 - **Workflow Wizard**: Supports trouble code display with labels, photo uploads (base64 conversion with compression), and signature capture (base64 PNG). Uses camelCase for mobile API payloads.

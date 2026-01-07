@@ -27,7 +27,6 @@ interface AuthState {
   needsProjectSelection: boolean;
   isOfflineSession: boolean;
   updateUrl: string | null;
-  sessionToken: string | null;
 }
 
 interface AuthContextType extends AuthState {
@@ -38,8 +37,6 @@ interface AuthContextType extends AuthState {
   getApiUrl: (path: string) => string;
   revalidateSession: () => Promise<boolean>;
   getUpdateUrl: () => Promise<string | null>;
-  getSessionToken: () => Promise<string | null>;
-  getAuthHeaders: () => Promise<Record<string, string>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -51,7 +48,6 @@ const STORAGE_KEYS = {
   PROJECTS: "meterflo_projects",
   CREDENTIALS: "meterflo_credentials",
   UPDATE_URL: "meterflo_update_url",
-  SESSION_TOKEN: "meterflo_session_token",
 };
 
 interface StoredCredentials {
@@ -63,7 +59,6 @@ interface StoredCredentials {
   user: User;
   projects: Project[];
   lastProjectId: number | null;
-  sessionToken?: string;
 }
 
 async function secureGet(key: string): Promise<string | null> {
@@ -161,7 +156,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     needsProjectSelection: false,
     isOfflineSession: false,
     updateUrl: null,
-    sessionToken: null,
   });
 
   useEffect(() => {
@@ -170,13 +164,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadStoredAuth = async () => {
     try {
-      const [storedUser, storedServerUrl, storedProjectId, storedProjects, storedUpdateUrl, storedSessionToken] = await Promise.all([
+      const [storedUser, storedServerUrl, storedProjectId, storedProjects, storedUpdateUrl] = await Promise.all([
         secureGet(STORAGE_KEYS.USER),
         secureGet(STORAGE_KEYS.SERVER_URL),
         secureGet(STORAGE_KEYS.PROJECT_ID),
         secureGet(STORAGE_KEYS.PROJECTS),
         secureGet(STORAGE_KEYS.UPDATE_URL),
-        secureGet(STORAGE_KEYS.SESSION_TOKEN),
       ]);
 
       if (storedUser && storedServerUrl && storedProjectId) {
@@ -190,7 +183,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           needsProjectSelection: false,
           isOfflineSession: false,
           updateUrl: storedUpdateUrl || null,
-          sessionToken: storedSessionToken || null,
         });
       } else if (storedUser && storedServerUrl && storedProjects) {
         setState({
@@ -203,7 +195,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           needsProjectSelection: true,
           isOfflineSession: false,
           updateUrl: storedUpdateUrl || null,
-          sessionToken: storedSessionToken || null,
         });
       } else {
         setState(prev => ({
@@ -281,10 +272,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           secureSet(STORAGE_KEYS.PROJECTS, JSON.stringify(projects)),
         ]);
 
-        const [storedUpdateUrl, storedSessionToken] = await Promise.all([
-          secureGet(STORAGE_KEYS.UPDATE_URL),
-          secureGet(STORAGE_KEYS.SESSION_TOKEN),
-        ]);
+        // Get stored update URL for offline login
+        const storedUpdateUrl = await secureGet(STORAGE_KEYS.UPDATE_URL);
         
         if (projectId) {
           await secureSet(STORAGE_KEYS.PROJECT_ID, String(projectId));
@@ -298,7 +287,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             needsProjectSelection: false,
             isOfflineSession: true,
             updateUrl: storedUpdateUrl || null,
-            sessionToken: storedSessionToken || null,
           });
         } else if (projects && projects.length === 1) {
           await secureSet(STORAGE_KEYS.PROJECT_ID, String(projects[0].id));
@@ -312,7 +300,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             needsProjectSelection: false,
             isOfflineSession: true,
             updateUrl: storedUpdateUrl || null,
-            sessionToken: storedSessionToken || null,
           });
         } else {
           setState({
@@ -325,7 +312,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             needsProjectSelection: true,
             isOfflineSession: true,
             updateUrl: storedUpdateUrl || null,
-            sessionToken: storedSessionToken || null,
           });
         }
         return;
@@ -363,9 +349,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: loginData.user?.role || loginData.role || "User",
       };
 
-      const sessionToken: string | null = loginData.sessionToken || null;
-      console.log(`[Auth] Session token received: ${sessionToken ? 'yes' : 'no'}`);
-
       const projectsResponse = await fetch(`${normalizedUrl}/api/users/${user.id}/projects`, {
         method: "GET",
         headers: {
@@ -398,7 +381,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         projects,
         lastProjectId: null,
-        sessionToken: sessionToken || undefined,
       });
 
       const storagePromises = [
@@ -407,16 +389,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         secureSet(STORAGE_KEYS.PROJECTS, JSON.stringify(projects)),
       ];
       
+      // Store or clear update URL
       if (updateUrl) {
         storagePromises.push(secureSet(STORAGE_KEYS.UPDATE_URL, updateUrl));
       } else {
         storagePromises.push(secureDelete(STORAGE_KEYS.UPDATE_URL));
-      }
-      
-      if (sessionToken) {
-        storagePromises.push(secureSet(STORAGE_KEYS.SESSION_TOKEN, sessionToken));
-      } else {
-        storagePromises.push(secureDelete(STORAGE_KEYS.SESSION_TOKEN));
       }
       
       await Promise.all(storagePromises);
@@ -439,7 +416,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           needsProjectSelection: false,
           isOfflineSession: false,
           updateUrl,
-          sessionToken,
         });
       } else {
         setState({
@@ -452,7 +428,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           needsProjectSelection: true,
           isOfflineSession: false,
           updateUrl,
-          sessionToken,
         });
       }
     } catch (error) {
@@ -558,15 +533,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      const loginData = await loginResponse.json();
-      const newSessionToken: string | null = loginData.sessionToken || null;
-      
-      if (newSessionToken) {
-        await secureSet(STORAGE_KEYS.SESSION_TOKEN, newSessionToken);
-      }
-
       console.log("[Auth] Silent re-authentication successful");
-      setState(prev => ({ ...prev, isOfflineSession: false, sessionToken: newSessionToken }));
+      setState(prev => ({ ...prev, isOfflineSession: false }));
       return true;
     } catch (error) {
       console.warn("[Auth] Failed to revalidate session:", error);
@@ -588,38 +556,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [state.serverUrl, state.projectId]);
 
   const getUpdateUrl = useCallback(async (): Promise<string | null> => {
+    // Return from state if available
     if (state.updateUrl) {
       return state.updateUrl;
     }
+    // Otherwise check storage
     const storedUrl = await secureGet(STORAGE_KEYS.UPDATE_URL);
     return storedUrl || null;
   }, [state.updateUrl]);
 
-  const getSessionToken = useCallback(async (): Promise<string | null> => {
-    if (state.sessionToken) {
-      return state.sessionToken;
-    }
-    const storedToken = await secureGet(STORAGE_KEYS.SESSION_TOKEN);
-    return storedToken || null;
-  }, [state.sessionToken]);
-
-  const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
-    const token = await getSessionToken();
-    const headers: Record<string, string> = {
-      "X-Requested-With": "XMLHttpRequest",
-    };
-    if (state.serverUrl) {
-      headers["Origin"] = state.serverUrl;
-      headers["Referer"] = `${state.serverUrl}/`;
-    }
-    if (token) {
-      headers["x-mobile-session-token"] = token;
-    }
-    return headers;
-  }, [state.serverUrl, getSessionToken]);
-
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, selectProject, updateServerUrl, getApiUrl, revalidateSession, getUpdateUrl, getSessionToken, getAuthHeaders }}>
+    <AuthContext.Provider value={{ ...state, login, logout, selectProject, updateServerUrl, getApiUrl, revalidateSession, getUpdateUrl }}>
       {children}
     </AuthContext.Provider>
   );

@@ -8,8 +8,7 @@ export async function checkWorkOrderConflict(
   workOrderId: string | number,
   serverUrl: string,
   projectId: string,
-  currentUsername: string,
-  authHeaders?: Record<string, string>
+  currentUsername: string
 ): Promise<ConflictCheckResult> {
   const result: ConflictCheckResult = {
     hasConflict: false,
@@ -20,17 +19,15 @@ export async function checkWorkOrderConflict(
   try {
     console.log(`[ConflictCheck] Fetching WO ${workOrderId} to check claim status...`);
     
-    const headers = authHeaders || {
-      "X-Requested-With": "XMLHttpRequest",
-      "Origin": serverUrl,
-      "Referer": `${serverUrl}/`,
-    };
-    
     const response = await fetch(
       `${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}`,
       {
         method: "GET",
-        headers,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "Origin": serverUrl,
+          "Referer": `${serverUrl}/`,
+        },
         credentials: "include",
       }
     );

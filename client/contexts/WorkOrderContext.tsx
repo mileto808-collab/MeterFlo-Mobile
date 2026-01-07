@@ -431,7 +431,7 @@ const defaultFilters: FilterConfig = {
 const defaultSort: SortConfig = [];
 
 export function WorkOrderProvider({ children }: { children: ReactNode }) {
-  const { serverUrl, projectId, isAuthenticated, getAuthHeaders } = useAuth();
+  const { serverUrl, projectId, isAuthenticated } = useAuth();
   const [workOrders, setWorkOrdersState] = useState<WorkOrder[]>([]);
   const [referenceData, setReferenceData] = useState<ReferenceData | null>(null);
   const [filters, setFiltersState] = useState<FilterConfig>(defaultFilters);
@@ -512,10 +512,13 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       const fullUrl = `${serverUrl}${path}`;
       console.log("[refreshWorkOrders] forceFullSync:", forceFullSync, "preserveLocal:", preserveLocal, "lastSyncTime:", currentLastSyncTime, "fullUrl:", fullUrl);
 
-      const authHeaders = await getAuthHeaders();
       const response = await fetch(fullUrl, {
         method: "GET",
-        headers: authHeaders,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "Origin": serverUrl,
+          "Referer": `${serverUrl}/`,
+        },
         credentials: "include",
       });
 
@@ -687,15 +690,18 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [serverUrl, projectId, getAuthHeaders]);
+  }, [serverUrl, projectId]);
 
   const claimWorkOrder = useCallback(async (workOrderId: number) => {
     if (!serverUrl || !projectId) return;
 
-    const authHeaders = await getAuthHeaders();
     const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}/claim`, {
       method: "POST",
-      headers: authHeaders,
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+        "Origin": serverUrl,
+        "Referer": `${serverUrl}/`,
+      },
       credentials: "include",
     });
 
@@ -724,16 +730,19 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         return updated;
       });
     }
-  }, [serverUrl, projectId, getAuthHeaders]);
+  }, [serverUrl, projectId]);
 
   const fetchSingleWorkOrder = useCallback(async (workOrderId: number): Promise<WorkOrder | null> => {
     if (!serverUrl || !projectId) return null;
 
     try {
-      const authHeaders = await getAuthHeaders();
       const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}`, {
         method: "GET",
-        headers: authHeaders,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "Origin": serverUrl,
+          "Referer": `${serverUrl}/`,
+        },
         credentials: "include",
       });
 
@@ -763,19 +772,23 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       console.error("Failed to fetch single work order:", err);
       throw err;
     }
-  }, [serverUrl, projectId, getAuthHeaders]);
+  }, [serverUrl, projectId]);
 
   const searchWorkOrdersByMeterIdOnServer = useCallback(async (searchTerm: string): Promise<WorkOrder[]> => {
     if (!serverUrl || !projectId) return [];
 
     try {
       console.log("[searchWorkOrdersByMeterIdOnServer] Searching for term:", searchTerm);
-      const authHeaders = await getAuthHeaders();
+      // Use the multi-field search endpoint that supports meter ID, customer ID, and address matching
       const response = await fetch(
         `${serverUrl}/api/projects/${projectId}/work-orders/by-meter/${encodeURIComponent(searchTerm)}`,
         {
           method: "GET",
-          headers: authHeaders,
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "Origin": serverUrl,
+            "Referer": `${serverUrl}/`,
+          },
           credentials: "include",
         }
       );
@@ -816,7 +829,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       console.error("[searchWorkOrdersByMeterIdOnServer] Failed to search:", err);
       throw err;
     }
-  }, [serverUrl, projectId, getAuthHeaders]);
+  }, [serverUrl, projectId]);
 
   const clearAllData = useCallback(async () => {
     console.log("[clearAllData] Clearing all work order data");
