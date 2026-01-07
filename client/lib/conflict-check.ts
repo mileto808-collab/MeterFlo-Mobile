@@ -25,6 +25,7 @@ export async function checkWorkOrderConflict(
         method: "GET",
         headers: {
           "X-Requested-With": "XMLHttpRequest",
+          "X-Mobile-App": "MeterFlo",
           "Origin": serverUrl,
           "Referer": `${serverUrl}/`,
         },

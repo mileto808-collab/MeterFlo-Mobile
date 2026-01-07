@@ -41,8 +41,8 @@ export async function apiRequest(
   const res = await fetch(url, {
     method,
     headers: data 
-      ? { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" } 
-      : { "X-Requested-With": "XMLHttpRequest" },
+      ? { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest", "X-Mobile-App": "MeterFlo" } 
+      : { "X-Requested-With": "XMLHttpRequest", "X-Mobile-App": "MeterFlo" },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -71,6 +71,7 @@ export const getQueryFn: <T>(options: {
     const res = await fetch(url, {
       headers: {
         "X-Requested-With": "XMLHttpRequest",
+        "X-Mobile-App": "MeterFlo",
       },
       credentials: "include",
     });

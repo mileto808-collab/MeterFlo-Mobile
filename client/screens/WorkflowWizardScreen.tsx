@@ -688,6 +688,7 @@ export default function WorkflowWizardScreen() {
           headers: { 
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest",
+            "X-Mobile-App": "MeterFlo",
             "Origin": serverUrl,
             "Referer": `${serverUrl}/`,
           },

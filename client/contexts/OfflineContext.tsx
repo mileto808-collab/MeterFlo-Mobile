@@ -271,6 +271,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               headers: { 
                 "Content-Type": "application/json",
                 "X-Requested-With": "XMLHttpRequest",
+                "X-Mobile-App": "MeterFlo",
                 "Origin": serverUrl,
                 "Referer": `${serverUrl}/`,
               },
@@ -316,7 +317,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
                 `${serverUrl}/api/projects/${projectId}/work-orders/search?systemId=${encodeURIComponent(oldSystemId)}`,
                 { 
                   method: "GET", 
-                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
+                  headers: { "X-Requested-With": "XMLHttpRequest", "X-Mobile-App": "MeterFlo", "Origin": serverUrl, "Referer": `${serverUrl}/` },
                   credentials: "include" 
                 }
               );
@@ -331,7 +332,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
                 `${serverUrl}/api/projects/${projectId}/work-orders/search?systemId=${encodeURIComponent(newSystemId)}`,
                 { 
                   method: "GET", 
-                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
+                  headers: { "X-Requested-With": "XMLHttpRequest", "X-Mobile-App": "MeterFlo", "Origin": serverUrl, "Referer": `${serverUrl}/` },
                   credentials: "include" 
                 }
               );
@@ -391,6 +392,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
                 headers: { 
                   "Content-Type": "application/json",
                   "X-Requested-With": "XMLHttpRequest",
+                  "X-Mobile-App": "MeterFlo",
                   "Origin": serverUrl,
                   "Referer": `${serverUrl}/`,
                 },
@@ -430,6 +432,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
                 headers: { 
                   "Content-Type": "application/json",
                   "X-Requested-With": "XMLHttpRequest",
+                  "X-Mobile-App": "MeterFlo",
                   "Origin": serverUrl,
                   "Referer": `${serverUrl}/`,
                 },
@@ -476,6 +479,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               headers: { 
                 "Content-Type": "application/json",
                 "X-Requested-With": "XMLHttpRequest",
+                "X-Mobile-App": "MeterFlo",
                 "Origin": serverUrl,
                 "Referer": `${serverUrl}/`,
               },
@@ -506,6 +510,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               headers: { 
                 "Content-Type": "application/json",
                 "X-Requested-With": "XMLHttpRequest",
+                "X-Mobile-App": "MeterFlo",
                 "Origin": serverUrl,
                 "Referer": `${serverUrl}/`,
               },

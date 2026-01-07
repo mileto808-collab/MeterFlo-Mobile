@@ -516,6 +516,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         method: "GET",
         headers: {
           "X-Requested-With": "XMLHttpRequest",
+          "X-Mobile-App": "MeterFlo",
           "Origin": serverUrl,
           "Referer": `${serverUrl}/`,
         },
@@ -699,6 +700,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       method: "POST",
       headers: {
         "X-Requested-With": "XMLHttpRequest",
+        "X-Mobile-App": "MeterFlo",
         "Origin": serverUrl,
         "Referer": `${serverUrl}/`,
       },
@@ -740,6 +742,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         method: "GET",
         headers: {
           "X-Requested-With": "XMLHttpRequest",
+          "X-Mobile-App": "MeterFlo",
           "Origin": serverUrl,
           "Referer": `${serverUrl}/`,
         },
@@ -786,6 +789,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
           method: "GET",
           headers: {
             "X-Requested-With": "XMLHttpRequest",
+            "X-Mobile-App": "MeterFlo",
             "Origin": serverUrl,
             "Referer": `${serverUrl}/`,
           },

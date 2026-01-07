@@ -129,6 +129,7 @@ async function isServerReachable(serverUrl: string, timeoutMs: number = 5000): P
       method: "GET",
       headers: {
         "X-Requested-With": "XMLHttpRequest",
+        "X-Mobile-App": "MeterFlo",
         "Origin": serverUrl,
         "Referer": `${serverUrl}/`,
       },
@@ -304,14 +305,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      console.log(`[Auth] Attempting login to: ${normalizedUrl}/api/auth/local/login`);
-      console.log(`[Auth] Headers: Origin=${normalizedUrl}, X-Requested-With=XMLHttpRequest, Referer=${normalizedUrl}/`);
+      console.log(`[Auth] Attempting login to: ${normalizedUrl}/api/mobile/auth/login`);
+      console.log(`[Auth] Headers: X-Mobile-App=MeterFlo, X-Requested-With=XMLHttpRequest`);
       
-      const loginResponse = await fetch(`${normalizedUrl}/api/auth/local/login`, {
+      const loginResponse = await fetch(`${normalizedUrl}/api/mobile/auth/login`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
+          "X-Mobile-App": "MeterFlo",
           "Origin": normalizedUrl,
           "Referer": `${normalizedUrl}/`,
         },
@@ -340,6 +342,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: "GET",
         headers: {
           "X-Requested-With": "XMLHttpRequest",
+          "X-Mobile-App": "MeterFlo",
           "Origin": normalizedUrl,
           "Referer": `${normalizedUrl}/`,
         },
@@ -433,6 +436,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           method: "POST",
           headers: {
             "X-Requested-With": "XMLHttpRequest",
+            "X-Mobile-App": "MeterFlo",
             "Origin": storedServerUrl,
             "Referer": `${storedServerUrl}/`,
           },
@@ -486,11 +490,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       console.log("[Auth] Attempting silent re-authentication...");
       
-      const loginResponse = await fetch(`${state.serverUrl}/api/auth/local/login`, {
+      const loginResponse = await fetch(`${state.serverUrl}/api/mobile/auth/login`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
+          "X-Mobile-App": "MeterFlo",
           "Origin": state.serverUrl,
           "Referer": `${state.serverUrl}/`,
         },
