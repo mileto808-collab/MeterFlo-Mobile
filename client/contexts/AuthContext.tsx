@@ -363,7 +363,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: loginData.user?.role || loginData.role || "User",
       };
 
-      const sessionToken: string | null = loginData.sessionToken || null;
+      const sessionToken: string | null = loginData.mobileSessionToken || loginData.sessionToken || null;
       console.log(`[Auth] Session token received: ${sessionToken ? 'yes' : 'no'}`);
 
       const projectsResponse = await fetch(`${normalizedUrl}/api/users/${user.id}/projects`, {
@@ -559,7 +559,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const loginData = await loginResponse.json();
-      const newSessionToken: string | null = loginData.sessionToken || null;
+      const newSessionToken: string | null = loginData.mobileSessionToken || loginData.sessionToken || null;
       
       if (newSessionToken) {
         await secureSet(STORAGE_KEYS.SESSION_TOKEN, newSessionToken);
