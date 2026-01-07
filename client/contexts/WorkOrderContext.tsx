@@ -747,7 +747,14 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error("[fetchSingleWorkOrder] Server error:", response.status, errorText?.substring(0, 200));
         throw new Error(errorText || "Failed to fetch work order");
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        console.warn("[fetchSingleWorkOrder] Non-JSON response, content-type:", contentType);
+        throw new Error("Server returned non-JSON response");
       }
 
       const data = await response.json();
@@ -794,7 +801,16 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
           return [];
         }
         const errorText = await response.text();
+        console.error("[searchWorkOrdersByMeterIdOnServer] Server error:", response.status, errorText?.substring(0, 200));
         throw new Error(errorText || "Failed to search work orders");
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        console.warn("[searchWorkOrdersByMeterIdOnServer] Non-JSON response, content-type:", contentType);
+        const textContent = await response.text();
+        console.warn("[searchWorkOrdersByMeterIdOnServer] Response preview:", textContent.substring(0, 100));
+        return [];
       }
 
       const data = await response.json();

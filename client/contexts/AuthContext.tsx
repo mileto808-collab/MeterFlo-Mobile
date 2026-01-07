@@ -512,9 +512,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const jwtToken = await secureGet(STORAGE_KEYS.JWT_TOKEN);
     const headers: Record<string, string> = {
       "X-Mobile-App": "MeterFlo",
+      "Accept": "application/json",
     };
     if (jwtToken) {
       headers["Authorization"] = `Bearer ${jwtToken}`;
+      console.log("[getAuthHeaders] Using token:", jwtToken.substring(0, 20) + "...");
+    } else {
+      console.warn("[getAuthHeaders] No JWT token found!");
     }
     return headers;
   }, []);

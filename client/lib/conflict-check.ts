@@ -33,6 +33,12 @@ export async function checkWorkOrderConflict(
       return result;
     }
 
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      console.warn(`[ConflictCheck] Non-JSON response for WO ${workOrderId}, content-type: ${contentType}`);
+      return result;
+    }
+
     const data = await response.json();
     const serverWo = data.workOrder || data;
     
