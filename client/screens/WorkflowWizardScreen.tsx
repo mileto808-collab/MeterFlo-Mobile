@@ -672,8 +672,8 @@ export default function WorkflowWizardScreen() {
           signatureName: formData.signatureName,
           completedAt: completedAt,
           notes: formData.notes || null,
-          beforePhotos: formatPhotosForServer(beforePhotosBase64, 'before'),
-          afterPhotos: formatPhotosForServer(afterPhotosBase64, 'after'),
+          before_photos: formatPhotosForServer(beforePhotosBase64, 'before'),
+          after_photos: formatPhotosForServer(afterPhotosBase64, 'after'),
         } : {
           projectId: Number(projectId),
           troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
