@@ -702,9 +702,17 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       throw new Error(errorText || "Failed to claim work order");
     }
 
-    const data = await response.json();
+    let data: any = null;
+    try {
+      const responseText = await response.text();
+      if (responseText && responseText.trim()) {
+        data = JSON.parse(responseText);
+      }
+    } catch (parseError) {
+      console.log("[claimWorkOrder] Response is not JSON, claim still successful");
+    }
     
-    if (data.workOrder) {
+    if (data?.workOrder) {
       const mappedWorkOrder = mapServerWorkOrder(data.workOrder);
       setWorkOrdersState(prev => {
         const updated = prev.map(wo => {
@@ -721,8 +729,11 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
         return updated;
       });
+    } else {
+      console.log("[claimWorkOrder] Claim successful, refreshing work order data");
+      await refreshWorkOrders(true, true);
     }
-  }, [serverUrl, projectId]);
+  }, [serverUrl, projectId, refreshWorkOrders]);
 
   const fetchSingleWorkOrder = useCallback(async (workOrderId: number): Promise<WorkOrder | null> => {
     if (!serverUrl || !projectId) return null;
