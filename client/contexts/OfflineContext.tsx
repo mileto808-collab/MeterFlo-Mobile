@@ -314,7 +314,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             const searchByOldSystem = async () => {
               const authHeaders = await getAuthHeaders();
               const response = await fetch(
-                `${serverUrl}/api/projects/${projectId}/work-orders/search?systemId=${encodeURIComponent(oldSystemId)}`,
+                `${serverUrl}/api/mobile/projects/${projectId}/workorders/search?query=${encodeURIComponent(oldSystemId)}`,
                 { 
                   method: "GET", 
                   headers: authHeaders,
@@ -329,7 +329,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               if (!newSystemId) return [];
               const authHeaders = await getAuthHeaders();
               const response = await fetch(
-                `${serverUrl}/api/projects/${projectId}/work-orders/search?systemId=${encodeURIComponent(newSystemId)}`,
+                `${serverUrl}/api/mobile/projects/${projectId}/workorders/search?query=${encodeURIComponent(newSystemId)}`,
                 { 
                   method: "GET", 
                   headers: authHeaders,
@@ -388,7 +388,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             const claimHeaders = await getAuthHeaders();
             const claimResponse = await fetch(
-              `${serverUrl}/api/projects/${projectId}/work-orders/${serverWorkOrderId}/claim`,
+              `${serverUrl}/api/mobile/projects/${projectId}/workorders/${serverWorkOrderId}/claim`,
               {
                 method: "POST",
                 headers: claimHeaders,
@@ -463,7 +463,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             });
             
           } else if (action.type === "claim") {
-            const claimEndpoint = `${serverUrl}/api/projects/${projectId}/work-orders/${action.workOrderId}/claim`;
+            const claimEndpoint = `${serverUrl}/api/mobile/projects/${projectId}/workorders/${action.workOrderId}/claim`;
             console.log(`[syncPendingActions] Syncing claim for WO ${action.workOrderId}`);
             
             const claimAuthHeaders = await getAuthHeaders();

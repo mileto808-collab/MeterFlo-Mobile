@@ -529,7 +529,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { serverUrl, projectId } = state;
     if (!serverUrl || !projectId) return "";
     const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    return `${serverUrl}/api/projects/${projectId}${cleanPath}`;
+    return `${serverUrl}/api/mobile/projects/${projectId}${cleanPath}`;
   }, [state.serverUrl, state.projectId]);
 
   return (
