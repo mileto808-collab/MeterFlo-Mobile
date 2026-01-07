@@ -314,7 +314,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             const searchByOldSystem = async () => {
               const authHeaders = await getAuthHeaders();
               const response = await fetch(
-                `${serverUrl}/api/mobile/projects/${projectId}/workorders/search?query=${encodeURIComponent(oldSystemId)}`,
+                `${serverUrl}/api/mobile/workorders/search?projectId=${projectId}&query=${encodeURIComponent(oldSystemId)}`,
                 { 
                   method: "GET", 
                   headers: authHeaders,
@@ -329,7 +329,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               if (!newSystemId) return [];
               const authHeaders = await getAuthHeaders();
               const response = await fetch(
-                `${serverUrl}/api/mobile/projects/${projectId}/workorders/search?query=${encodeURIComponent(newSystemId)}`,
+                `${serverUrl}/api/mobile/workorders/search?projectId=${projectId}&query=${encodeURIComponent(newSystemId)}`,
                 { 
                   method: "GET", 
                   headers: authHeaders,
@@ -388,10 +388,14 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             const claimHeaders = await getAuthHeaders();
             const claimResponse = await fetch(
-              `${serverUrl}/api/mobile/projects/${projectId}/workorders/${serverWorkOrderId}/claim`,
+              `${serverUrl}/api/mobile/workorders/${serverWorkOrderId}/claim`,
               {
                 method: "POST",
-                headers: claimHeaders,
+                headers: {
+                  ...claimHeaders,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ projectId: Number(projectId) }),
               }
             );
             
@@ -463,13 +467,17 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             });
             
           } else if (action.type === "claim") {
-            const claimEndpoint = `${serverUrl}/api/mobile/projects/${projectId}/workorders/${action.workOrderId}/claim`;
+            const claimEndpoint = `${serverUrl}/api/mobile/workorders/${action.workOrderId}/claim`;
             console.log(`[syncPendingActions] Syncing claim for WO ${action.workOrderId}`);
             
             const claimAuthHeaders = await getAuthHeaders();
             const response = await fetch(claimEndpoint, {
               method: "POST",
-              headers: claimAuthHeaders,
+              headers: {
+                ...claimAuthHeaders,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ projectId: Number(projectId) }),
             });
             
             if (!response.ok) {

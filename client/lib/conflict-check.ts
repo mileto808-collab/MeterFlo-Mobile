@@ -21,7 +21,7 @@ export async function checkWorkOrderConflict(
     console.log(`[ConflictCheck] Fetching WO ${workOrderId} to check claim status...`);
     
     const response = await fetch(
-      `${serverUrl}/api/mobile/projects/${projectId}/workorders/${workOrderId}`,
+      `${serverUrl}/api/mobile/workorders/${workOrderId}?projectId=${projectId}`,
       {
         method: "GET",
         headers: authHeaders,

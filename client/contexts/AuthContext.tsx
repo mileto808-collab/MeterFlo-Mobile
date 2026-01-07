@@ -526,11 +526,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const getApiUrl = useCallback((path: string) => {
-    const { serverUrl, projectId } = state;
-    if (!serverUrl || !projectId) return "";
+    const { serverUrl } = state;
+    if (!serverUrl) return "";
     const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    return `${serverUrl}/api/mobile/projects/${projectId}${cleanPath}`;
-  }, [state.serverUrl, state.projectId]);
+    return `${serverUrl}/api/mobile${cleanPath}`;
+  }, [state.serverUrl]);
 
   return (
     <AuthContext.Provider value={{ ...state, login, logout, selectProject, updateServerUrl, getApiUrl, revalidateSession, getAuthHeaders }}>

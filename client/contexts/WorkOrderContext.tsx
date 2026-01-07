@@ -692,9 +692,13 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     if (!serverUrl || !projectId) return;
 
     const authHeaders = await getAuthHeaders();
-    const response = await fetch(`${serverUrl}/api/mobile/projects/${projectId}/workorders/${workOrderId}/claim`, {
+    const response = await fetch(`${serverUrl}/api/mobile/workorders/${workOrderId}/claim`, {
       method: "POST",
-      headers: authHeaders,
+      headers: {
+        ...authHeaders,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ projectId: Number(projectId) }),
     });
 
     if (!response.ok) {
@@ -729,7 +733,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
     try {
       const authHeaders = await getAuthHeaders();
-      const response = await fetch(`${serverUrl}/api/mobile/projects/${projectId}/workorders/${workOrderId}`, {
+      const response = await fetch(`${serverUrl}/api/mobile/workorders/${workOrderId}?projectId=${projectId}`, {
         method: "GET",
         headers: authHeaders,
       });
@@ -770,7 +774,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       // Use the multi-field search endpoint that supports meter ID, customer ID, and address matching
       const authHeaders = await getAuthHeaders();
       const response = await fetch(
-        `${serverUrl}/api/mobile/projects/${projectId}/workorders/search?query=${encodeURIComponent(searchTerm)}`,
+        `${serverUrl}/api/mobile/workorders/search?projectId=${projectId}&query=${encodeURIComponent(searchTerm)}`,
         {
           method: "GET",
           headers: authHeaders,
