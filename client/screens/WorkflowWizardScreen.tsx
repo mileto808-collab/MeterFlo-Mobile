@@ -105,7 +105,7 @@ export default function WorkflowWizardScreen() {
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
   const { updateWorkOrder, referenceData, claimWorkOrder, deleteLocalWorkOrder } = useWorkOrders();
-  const { serverUrl, projectId, user, getAuthHeaders } = useAuth();
+  const { serverUrl, projectId, user } = useAuth();
   const { isOnline, addPendingAction, addDirectSubmissionHistory } = useOffline();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
@@ -588,13 +588,11 @@ export default function WorkflowWizardScreen() {
       console.log(`[WorkflowWizard] Submitting with photos - trouble: ${troublePhotosBase64.length}, before: ${beforePhotosBase64.length}, after: ${afterPhotosBase64.length}`);
 
       if (isOnline && serverUrl && projectId && user?.username) {
-        const conflictCheckHeaders = await getAuthHeaders();
         const conflictResult = await checkWorkOrderConflict(
           String(workOrder.id),
           serverUrl,
           String(projectId),
-          user.username,
-          conflictCheckHeaders
+          user.username
         );
 
         if (conflictResult.hasConflict) {
@@ -672,10 +670,8 @@ export default function WorkflowWizardScreen() {
           signatureName: formData.signatureName,
           completedAt: completedAt,
           notes: formData.notes || null,
-          attachments: {
-            before: formatPhotosForServer(beforePhotosBase64, 'before'),
-            after: formatPhotosForServer(afterPhotosBase64, 'after'),
-          },
+          beforePhotos: formatPhotosForServer(beforePhotosBase64, 'before'),
+          afterPhotos: formatPhotosForServer(afterPhotosBase64, 'after'),
         } : {
           projectId: Number(projectId),
           troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
@@ -687,13 +683,15 @@ export default function WorkflowWizardScreen() {
         const payloadSize = JSON.stringify(mobilePayload).length;
         console.log(`[WorkflowWizard] Payload size: ${Math.round(payloadSize / 1024)}KB`);
         
-        const authHeaders = await getAuthHeaders();
         const response = await fetch(endpoint, {
           method: "POST",
           headers: { 
-            ...authHeaders,
             "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "Origin": serverUrl,
+            "Referer": `${serverUrl}/`,
           },
+          credentials: "include",
           body: JSON.stringify(mobilePayload),
         });
 

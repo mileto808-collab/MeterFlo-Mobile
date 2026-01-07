@@ -35,7 +35,6 @@ interface AuthContextType extends AuthState {
   updateServerUrl: (url: string) => Promise<void>;
   getApiUrl: (path: string) => string;
   revalidateSession: () => Promise<boolean>;
-  getAuthHeaders: () => Promise<Record<string, string>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,7 +45,6 @@ const STORAGE_KEYS = {
   PROJECT_ID: "meterflo_project_id",
   PROJECTS: "meterflo_projects",
   CREDENTIALS: "meterflo_credentials",
-  JWT_TOKEN: "meterflo_jwt_token",
 };
 
 interface StoredCredentials {
@@ -131,7 +129,6 @@ async function isServerReachable(serverUrl: string, timeoutMs: number = 5000): P
       method: "GET",
       headers: {
         "X-Requested-With": "XMLHttpRequest",
-        "X-Mobile-App": "MeterFlo",
         "Origin": serverUrl,
         "Referer": `${serverUrl}/`,
       },
@@ -307,14 +304,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      console.log(`[Auth] Attempting JWT login to: ${normalizedUrl}/api/mobile/auth/login`);
+      console.log(`[Auth] Attempting login to: ${normalizedUrl}/api/auth/local/login`);
+      console.log(`[Auth] Headers: Origin=${normalizedUrl}, X-Requested-With=XMLHttpRequest, Referer=${normalizedUrl}/`);
       
-      const loginResponse = await fetch(`${normalizedUrl}/api/mobile/auth/login`, {
+      const loginResponse = await fetch(`${normalizedUrl}/api/auth/local/login`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "X-Mobile-App": "MeterFlo",
+          "X-Requested-With": "XMLHttpRequest",
+          "Origin": normalizedUrl,
+          "Referer": `${normalizedUrl}/`,
         },
+        credentials: "include",
         body: JSON.stringify({ username, password }),
       });
 
@@ -327,14 +328,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const loginData = await loginResponse.json();
-      
-      const jwtToken = loginData.token;
-      if (!jwtToken) {
-        throw new Error("No token received from server");
-      }
-      
-      console.log(`[Auth] JWT token received, storing securely`);
-      await secureSet(STORAGE_KEYS.JWT_TOKEN, jwtToken);
 
       const user: User = {
         id: loginData.user?.id || loginData.id,
@@ -343,12 +336,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: loginData.user?.role || loginData.role || "User",
       };
 
-      const projectsResponse = await fetch(`${normalizedUrl}/api/mobile/users/${user.id}/projects`, {
+      const projectsResponse = await fetch(`${normalizedUrl}/api/users/${user.id}/projects`, {
         method: "GET",
         headers: {
-          "X-Mobile-App": "MeterFlo",
-          "Authorization": `Bearer ${jwtToken}`,
+          "X-Requested-With": "XMLHttpRequest",
+          "Origin": normalizedUrl,
+          "Referer": `${normalizedUrl}/`,
         },
+        credentials: "include",
       });
 
       if (!projectsResponse.ok) {
@@ -431,11 +426,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    const storedServerUrl = await secureGet(STORAGE_KEYS.SERVER_URL);
+    if (storedServerUrl) {
+      try {
+        await fetch(`${storedServerUrl}/api/auth/logout`, {
+          method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "Origin": storedServerUrl,
+            "Referer": `${storedServerUrl}/`,
+          },
+          credentials: "include",
+        });
+      } catch (e) {
+        console.warn("Failed to logout from server:", e);
+      }
+    }
+    
     await Promise.all([
       secureDelete(STORAGE_KEYS.USER),
       secureDelete(STORAGE_KEYS.PROJECT_ID),
       secureDelete(STORAGE_KEYS.PROJECTS),
-      secureDelete(STORAGE_KEYS.JWT_TOKEN),
     ]);
 
     setState(prev => ({
@@ -473,14 +484,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      console.log("[Auth] Attempting silent re-authentication with JWT...");
+      console.log("[Auth] Attempting silent re-authentication...");
       
-      const loginResponse = await fetch(`${state.serverUrl}/api/mobile/auth/login`, {
+      const loginResponse = await fetch(`${state.serverUrl}/api/auth/local/login`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "X-Mobile-App": "MeterFlo",
+          "X-Requested-With": "XMLHttpRequest",
+          "Origin": state.serverUrl,
+          "Referer": `${state.serverUrl}/`,
         },
+        credentials: "include",
         body: JSON.stringify({ 
           username: storedCreds.username, 
           password: storedCreds.password 
@@ -492,13 +506,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      const loginData = await loginResponse.json();
-      const jwtToken = loginData.token;
-      if (jwtToken) {
-        await secureSet(STORAGE_KEYS.JWT_TOKEN, jwtToken);
-        console.log("[Auth] JWT token refreshed during revalidation");
-      }
-
       console.log("[Auth] Silent re-authentication successful");
       setState(prev => ({ ...prev, isOfflineSession: false }));
       return true;
@@ -508,21 +515,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [state.isOfflineSession, state.user, state.serverUrl]);
 
-  const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
-    const jwtToken = await secureGet(STORAGE_KEYS.JWT_TOKEN);
-    const headers: Record<string, string> = {
-      "X-Mobile-App": "MeterFlo",
-      "Accept": "application/json",
-    };
-    if (jwtToken) {
-      headers["Authorization"] = `Bearer ${jwtToken}`;
-      console.log("[getAuthHeaders] Using token:", jwtToken.substring(0, 20) + "...");
-    } else {
-      console.warn("[getAuthHeaders] No JWT token found!");
-    }
-    return headers;
-  }, []);
-
   const updateServerUrl = useCallback(async (url: string) => {
     const normalizedUrl = url.endsWith("/") ? url.slice(0, -1) : url;
     await secureSet(STORAGE_KEYS.SERVER_URL, normalizedUrl);
@@ -530,14 +522,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const getApiUrl = useCallback((path: string) => {
-    const { serverUrl } = state;
-    if (!serverUrl) return "";
+    const { serverUrl, projectId } = state;
+    if (!serverUrl || !projectId) return "";
     const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    return `${serverUrl}/api/mobile${cleanPath}`;
-  }, [state.serverUrl]);
+    return `${serverUrl}/api/projects/${projectId}${cleanPath}`;
+  }, [state.serverUrl, state.projectId]);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, selectProject, updateServerUrl, getApiUrl, revalidateSession, getAuthHeaders }}>
+    <AuthContext.Provider value={{ ...state, login, logout, selectProject, updateServerUrl, getApiUrl, revalidateSession }}>
       {children}
     </AuthContext.Provider>
   );

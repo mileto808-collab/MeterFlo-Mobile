@@ -81,7 +81,7 @@ const STORAGE_KEYS = {
 const MAX_SYNC_HISTORY = 20;
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
-  const { serverUrl, projectId, user, getAuthHeaders } = useAuth();
+  const { serverUrl, projectId, user } = useAuth();
   const [isOnline, setIsOnline] = useState(true);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [syncHistory, setSyncHistory] = useState<SyncHistoryEntry[]>([]);
@@ -135,10 +135,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               signatureName: data.signature_name ?? data.signatureName,
               completedAt: data.completed_at ?? data.completedAt,
               notes: data.notes ?? null,
-              attachments: {
-                before: formatLegacyPhotos(data.before_photos ?? data.beforePhotos ?? [], 'before'),
-                after: formatLegacyPhotos(data.after_photos ?? data.afterPhotos ?? [], 'after'),
-              },
+              beforePhotos: formatLegacyPhotos(data.before_photos ?? data.beforePhotos ?? [], 'before'),
+              afterPhotos: formatLegacyPhotos(data.after_photos ?? data.afterPhotos ?? [], 'after'),
             } : {
               projectId: data.projectId || 0,
               troubleCode: data.trouble ?? data.troubleCode,
@@ -240,13 +238,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
           if (action.type === "complete" && action.completionMode) {
             // Pre-flight check using shared helper
             if (user?.username) {
-              const conflictCheckHeaders = await getAuthHeaders();
               const conflictResult = await checkWorkOrderConflict(
                 action.workOrderId,
                 serverUrl,
                 String(projectId),
-                user.username,
-                conflictCheckHeaders
+                user.username
               );
               
               if (conflictResult.hasConflict) {
@@ -270,13 +266,15 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               projectId: action.data.projectId || Number(projectId),
             };
             
-            const authHeaders = await getAuthHeaders();
             const response = await fetch(endpoint, {
               method: "POST",
               headers: { 
-                ...authHeaders,
                 "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "Origin": serverUrl,
+                "Referer": `${serverUrl}/`,
               },
+              credentials: "include",
               body: JSON.stringify(payloadWithProjectId),
             });
             
@@ -314,12 +312,12 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             let eligibleWorkOrder: any = null;
             
             const searchByOldSystem = async () => {
-              const authHeaders = await getAuthHeaders();
               const response = await fetch(
-                `${serverUrl}/api/mobile/workorders/search?projectId=${projectId}&query=${encodeURIComponent(oldSystemId)}`,
+                `${serverUrl}/api/projects/${projectId}/work-orders/search?systemId=${encodeURIComponent(oldSystemId)}`,
                 { 
                   method: "GET", 
-                  headers: authHeaders,
+                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
+                  credentials: "include" 
                 }
               );
               if (!response.ok) return [];
@@ -329,12 +327,12 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             const searchByNewSystem = async () => {
               if (!newSystemId) return [];
-              const authHeaders = await getAuthHeaders();
               const response = await fetch(
-                `${serverUrl}/api/mobile/workorders/search?projectId=${projectId}&query=${encodeURIComponent(newSystemId)}`,
+                `${serverUrl}/api/projects/${projectId}/work-orders/search?systemId=${encodeURIComponent(newSystemId)}`,
                 { 
                   method: "GET", 
-                  headers: authHeaders,
+                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
+                  credentials: "include" 
                 }
               );
               if (!response.ok) return [];
@@ -367,13 +365,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             // Pre-flight check using shared helper
             if (user?.username) {
-              const conflictCheckHeaders = await getAuthHeaders();
               const conflictResult = await checkWorkOrderConflict(
                 String(serverWorkOrderId),
                 serverUrl,
                 String(projectId),
-                user.username,
-                conflictCheckHeaders
+                user.username
               );
               
               if (conflictResult.hasConflict) {
@@ -388,12 +384,17 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             console.log(`[syncPendingActions] Found matching server work order ${serverWorkOrderId}, claiming...`);
             
-            const claimHeaders = await getAuthHeaders();
             const claimResponse = await fetch(
-              `${serverUrl}/api/mobile/workorders/${serverWorkOrderId}/claim`,
+              `${serverUrl}/api/projects/${projectId}/work-orders/${serverWorkOrderId}/claim`,
               {
                 method: "POST",
-                headers: claimHeaders,
+                headers: { 
+                  "Content-Type": "application/json",
+                  "X-Requested-With": "XMLHttpRequest",
+                  "Origin": serverUrl,
+                  "Referer": `${serverUrl}/`,
+                },
+                credentials: "include",
               }
             );
             
@@ -418,21 +419,21 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               signatureName: offlineData.signatureName,
               completedAt: offlineData.completedAt,
               notes: offlineData.notes || null,
-              attachments: {
-                before: offlineData.beforePhotos || [],
-                after: offlineData.afterPhotos || [],
-              },
+              beforePhotos: offlineData.beforePhotos || [],
+              afterPhotos: offlineData.afterPhotos || [],
             };
             
-            const completeHeaders = await getAuthHeaders();
             const completeResponse = await fetch(
               `${serverUrl}/api/mobile/workorders/${serverWorkOrderId}/complete`,
               {
                 method: "POST",
                 headers: { 
-                  ...completeHeaders,
                   "Content-Type": "application/json",
+                  "X-Requested-With": "XMLHttpRequest",
+                  "Origin": serverUrl,
+                  "Referer": `${serverUrl}/`,
                 },
+                credentials: "include",
                 body: JSON.stringify(completePayload),
               }
             );
@@ -467,13 +468,18 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             });
             
           } else if (action.type === "claim") {
-            const claimEndpoint = `${serverUrl}/api/mobile/workorders/${action.workOrderId}/claim`;
+            const claimEndpoint = `${serverUrl}/api/projects/${projectId}/work-orders/${action.workOrderId}/claim`;
             console.log(`[syncPendingActions] Syncing claim for WO ${action.workOrderId}`);
             
-            const claimAuthHeaders = await getAuthHeaders();
             const response = await fetch(claimEndpoint, {
               method: "POST",
-              headers: claimAuthHeaders,
+              headers: { 
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "Origin": serverUrl,
+                "Referer": `${serverUrl}/`,
+              },
+              credentials: "include",
             });
             
             if (!response.ok) {
@@ -495,13 +501,15 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             console.log(`[syncPendingActions] Successfully claimed WO ${action.workOrderId}`);
             successfulActionIds.push(action.id);
           } else {
-            const batchHeaders = await getAuthHeaders();
-            const batchResponse = await fetch(`${serverUrl}/api/mobile/projects/${projectId}/sync/upload`, {
+            const batchResponse = await fetch(`${serverUrl}/api/projects/${projectId}/mobile/sync/upload`, {
               method: "POST",
               headers: { 
-                ...batchHeaders,
                 "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "Origin": serverUrl,
+                "Referer": `${serverUrl}/`,
               },
+              credentials: "include",
               body: JSON.stringify({
                 workOrders: [{
                   workOrderId: parseInt(action.workOrderId, 10),

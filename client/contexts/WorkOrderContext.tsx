@@ -431,7 +431,7 @@ const defaultFilters: FilterConfig = {
 const defaultSort: SortConfig = [];
 
 export function WorkOrderProvider({ children }: { children: ReactNode }) {
-  const { serverUrl, projectId, isAuthenticated, getAuthHeaders } = useAuth();
+  const { serverUrl, projectId, isAuthenticated } = useAuth();
   const [workOrders, setWorkOrdersState] = useState<WorkOrder[]>([]);
   const [referenceData, setReferenceData] = useState<ReferenceData | null>(null);
   const [filters, setFiltersState] = useState<FilterConfig>(defaultFilters);
@@ -502,7 +502,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
     try {
       const includeCompleted = preserveLocal ? "true" : "false";
-      let path = `/api/mobile/projects/${projectId}/sync/download?includeCompleted=${includeCompleted}`;
+      let path = `/api/projects/${projectId}/mobile/sync/download?includeCompleted=${includeCompleted}`;
       
       const currentLastSyncTime = lastSyncTimeRef.current;
       if (currentLastSyncTime && !forceFullSync) {
@@ -512,10 +512,14 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       const fullUrl = `${serverUrl}${path}`;
       console.log("[refreshWorkOrders] forceFullSync:", forceFullSync, "preserveLocal:", preserveLocal, "lastSyncTime:", currentLastSyncTime, "fullUrl:", fullUrl);
 
-      const authHeaders = await getAuthHeaders();
       const response = await fetch(fullUrl, {
         method: "GET",
-        headers: authHeaders,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "Origin": serverUrl,
+          "Referer": `${serverUrl}/`,
+        },
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -691,10 +695,14 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   const claimWorkOrder = useCallback(async (workOrderId: number) => {
     if (!serverUrl || !projectId) return;
 
-    const authHeaders = await getAuthHeaders();
-    const response = await fetch(`${serverUrl}/api/mobile/workorders/${workOrderId}/claim`, {
+    const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}/claim`, {
       method: "POST",
-      headers: authHeaders,
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+        "Origin": serverUrl,
+        "Referer": `${serverUrl}/`,
+      },
+      credentials: "include",
     });
 
     if (!response.ok) {
@@ -702,17 +710,9 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       throw new Error(errorText || "Failed to claim work order");
     }
 
-    let data: any = null;
-    try {
-      const responseText = await response.text();
-      if (responseText && responseText.trim()) {
-        data = JSON.parse(responseText);
-      }
-    } catch (parseError) {
-      console.log("[claimWorkOrder] Response is not JSON, claim still successful");
-    }
+    const data = await response.json();
     
-    if (data?.workOrder) {
+    if (data.workOrder) {
       const mappedWorkOrder = mapServerWorkOrder(data.workOrder);
       setWorkOrdersState(prev => {
         const updated = prev.map(wo => {
@@ -729,32 +729,26 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(updated));
         return updated;
       });
-    } else {
-      console.log("[claimWorkOrder] Claim successful, refreshing work order data");
-      await refreshWorkOrders(true, true);
     }
-  }, [serverUrl, projectId, refreshWorkOrders]);
+  }, [serverUrl, projectId]);
 
   const fetchSingleWorkOrder = useCallback(async (workOrderId: number): Promise<WorkOrder | null> => {
     if (!serverUrl || !projectId) return null;
 
     try {
-      const authHeaders = await getAuthHeaders();
-      const response = await fetch(`${serverUrl}/api/mobile/workorders/${workOrderId}?projectId=${projectId}`, {
+      const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}`, {
         method: "GET",
-        headers: authHeaders,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "Origin": serverUrl,
+          "Referer": `${serverUrl}/`,
+        },
+        credentials: "include",
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("[fetchSingleWorkOrder] Server error:", response.status, errorText?.substring(0, 200));
         throw new Error(errorText || "Failed to fetch work order");
-      }
-
-      const contentType = response.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        console.warn("[fetchSingleWorkOrder] Non-JSON response, content-type:", contentType);
-        throw new Error("Server returned non-JSON response");
       }
 
       const data = await response.json();
@@ -786,12 +780,16 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     try {
       console.log("[searchWorkOrdersByMeterIdOnServer] Searching for term:", searchTerm);
       // Use the multi-field search endpoint that supports meter ID, customer ID, and address matching
-      const authHeaders = await getAuthHeaders();
       const response = await fetch(
-        `${serverUrl}/api/mobile/workorders/search?projectId=${projectId}&query=${encodeURIComponent(searchTerm)}`,
+        `${serverUrl}/api/projects/${projectId}/work-orders/by-meter/${encodeURIComponent(searchTerm)}`,
         {
           method: "GET",
-          headers: authHeaders,
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "Origin": serverUrl,
+            "Referer": `${serverUrl}/`,
+          },
+          credentials: "include",
         }
       );
 
@@ -801,16 +799,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
           return [];
         }
         const errorText = await response.text();
-        console.error("[searchWorkOrdersByMeterIdOnServer] Server error:", response.status, errorText?.substring(0, 200));
         throw new Error(errorText || "Failed to search work orders");
-      }
-
-      const contentType = response.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        console.warn("[searchWorkOrdersByMeterIdOnServer] Non-JSON response, content-type:", contentType);
-        const textContent = await response.text();
-        console.warn("[searchWorkOrdersByMeterIdOnServer] Response preview:", textContent.substring(0, 100));
-        return [];
       }
 
       const data = await response.json();

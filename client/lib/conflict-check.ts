@@ -8,8 +8,7 @@ export async function checkWorkOrderConflict(
   workOrderId: string | number,
   serverUrl: string,
   projectId: string,
-  currentUsername: string,
-  authHeaders: Record<string, string>
+  currentUsername: string
 ): Promise<ConflictCheckResult> {
   const result: ConflictCheckResult = {
     hasConflict: false,
@@ -21,21 +20,20 @@ export async function checkWorkOrderConflict(
     console.log(`[ConflictCheck] Fetching WO ${workOrderId} to check claim status...`);
     
     const response = await fetch(
-      `${serverUrl}/api/mobile/workorders/${workOrderId}?projectId=${projectId}`,
+      `${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}`,
       {
         method: "GET",
-        headers: authHeaders,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "Origin": serverUrl,
+          "Referer": `${serverUrl}/`,
+        },
+        credentials: "include",
       }
     );
 
     if (!response.ok) {
       console.warn(`[ConflictCheck] Could not fetch WO ${workOrderId}, status: ${response.status}`);
-      return result;
-    }
-
-    const contentType = response.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) {
-      console.warn(`[ConflictCheck] Non-JSON response for WO ${workOrderId}, content-type: ${contentType}`);
       return result;
     }
 
