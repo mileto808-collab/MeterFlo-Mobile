@@ -8,7 +8,8 @@ export async function checkWorkOrderConflict(
   workOrderId: string | number,
   serverUrl: string,
   projectId: string,
-  currentUsername: string
+  currentUsername: string,
+  authHeaders: Record<string, string>
 ): Promise<ConflictCheckResult> {
   const result: ConflictCheckResult = {
     hasConflict: false,
@@ -23,13 +24,7 @@ export async function checkWorkOrderConflict(
       `${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}`,
       {
         method: "GET",
-        headers: {
-          "X-Requested-With": "XMLHttpRequest",
-          "X-Mobile-App": "MeterFlo",
-          "Origin": serverUrl,
-          "Referer": `${serverUrl}/`,
-        },
-        credentials: "include",
+        headers: authHeaders,
       }
     );
 

@@ -431,7 +431,7 @@ const defaultFilters: FilterConfig = {
 const defaultSort: SortConfig = [];
 
 export function WorkOrderProvider({ children }: { children: ReactNode }) {
-  const { serverUrl, projectId, isAuthenticated } = useAuth();
+  const { serverUrl, projectId, isAuthenticated, getAuthHeaders } = useAuth();
   const [workOrders, setWorkOrdersState] = useState<WorkOrder[]>([]);
   const [referenceData, setReferenceData] = useState<ReferenceData | null>(null);
   const [filters, setFiltersState] = useState<FilterConfig>(defaultFilters);
@@ -512,15 +512,10 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       const fullUrl = `${serverUrl}${path}`;
       console.log("[refreshWorkOrders] forceFullSync:", forceFullSync, "preserveLocal:", preserveLocal, "lastSyncTime:", currentLastSyncTime, "fullUrl:", fullUrl);
 
+      const authHeaders = await getAuthHeaders();
       const response = await fetch(fullUrl, {
         method: "GET",
-        headers: {
-          "X-Requested-With": "XMLHttpRequest",
-          "X-Mobile-App": "MeterFlo",
-          "Origin": serverUrl,
-          "Referer": `${serverUrl}/`,
-        },
-        credentials: "include",
+        headers: authHeaders,
       });
 
       if (!response.ok) {
@@ -696,15 +691,10 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   const claimWorkOrder = useCallback(async (workOrderId: number) => {
     if (!serverUrl || !projectId) return;
 
+    const authHeaders = await getAuthHeaders();
     const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}/claim`, {
       method: "POST",
-      headers: {
-        "X-Requested-With": "XMLHttpRequest",
-        "X-Mobile-App": "MeterFlo",
-        "Origin": serverUrl,
-        "Referer": `${serverUrl}/`,
-      },
-      credentials: "include",
+      headers: authHeaders,
     });
 
     if (!response.ok) {
@@ -738,15 +728,10 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     if (!serverUrl || !projectId) return null;
 
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch(`${serverUrl}/api/projects/${projectId}/work-orders/${workOrderId}`, {
         method: "GET",
-        headers: {
-          "X-Requested-With": "XMLHttpRequest",
-          "X-Mobile-App": "MeterFlo",
-          "Origin": serverUrl,
-          "Referer": `${serverUrl}/`,
-        },
-        credentials: "include",
+        headers: authHeaders,
       });
 
       if (!response.ok) {
@@ -783,17 +768,12 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     try {
       console.log("[searchWorkOrdersByMeterIdOnServer] Searching for term:", searchTerm);
       // Use the multi-field search endpoint that supports meter ID, customer ID, and address matching
+      const authHeaders = await getAuthHeaders();
       const response = await fetch(
         `${serverUrl}/api/projects/${projectId}/work-orders/by-meter/${encodeURIComponent(searchTerm)}`,
         {
           method: "GET",
-          headers: {
-            "X-Requested-With": "XMLHttpRequest",
-            "X-Mobile-App": "MeterFlo",
-            "Origin": serverUrl,
-            "Referer": `${serverUrl}/`,
-          },
-          credentials: "include",
+          headers: authHeaders,
         }
       );
 
