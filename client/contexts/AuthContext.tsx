@@ -343,7 +343,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: loginData.user?.role || loginData.role || "User",
       };
 
-      const projectsResponse = await fetch(`${normalizedUrl}/api/users/${user.id}/projects`, {
+      const projectsResponse = await fetch(`${normalizedUrl}/api/mobile/users/${user.id}/projects`, {
         method: "GET",
         headers: {
           "X-Mobile-App": "MeterFlo",
