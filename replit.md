@@ -156,6 +156,43 @@ All API requests to the MeterFlo server include the following headers for CSRF p
   - OfflineContext migrates pending actions (complete, offlineWorkOrder) from meter to system fields
 - **API Payloads**: Now send system terminology (newSystemId, oldSystemReading) to server
 
+### GitHub Auto-Update System (Android)
+- **Server Configuration**: Server provides `mobileConfig.updateUrl` in the `/api/users/:userId/projects` response
+  - URL should point to GitHub releases API endpoint: `https://api.github.com/repos/{owner}/{repo}/releases/latest`
+  - AuthContext parses and stores this URL in SecureStore under `meterflo_update_url`
+- **Update Service** (`client/lib/github-update-service.ts`):
+  - `checkForUpdate(updateUrl)`: Fetches latest release from GitHub API, compares versions
+  - `getCurrentAppVersion()`: Returns app version from expo-constants
+  - `compareVersions()`: Semantic version comparison (handles v1.0.0 and 1.0.0 formats)
+  - `findApkAsset()`: Locates APK file in release assets by extension or content-type
+- **Auto-Update Manager** (`client/components/AutoUpdateManager.tsx`):
+  - Runs 3 seconds after authentication
+  - Respects 4-hour minimum interval between checks (only written on successful checks)
+  - Honors user's enable/disable preference from settings
+  - Checks skipped version to avoid re-prompting
+  - Integrated in App.tsx alongside AutoSyncManager
+- **Update Modal** (`client/components/UpdateAvailableModal.tsx`):
+  - Shows release notes, version comparison, file size
+  - Android: Downloads APK with progress bar, triggers install via expo-intent-launcher
+  - iOS/Web: Opens GitHub release page in browser
+  - Security: Enforces HTTPS for APK downloads
+  - Options: "Download & Install", "Skip This Version", "Remind Me Later"
+- **User Settings** (Account screen):
+  - Toggle for auto-update checks with SecureStore persistence
+  - Manual "Check for Updates" button
+  - Shows update source status (Configured/Not configured)
+  - Platform note for iOS/Web users about Android-only automatic updates
+- **Storage Keys**:
+  - `meterflo_update_url`: Update source URL from server
+  - `meterflo_update_check_enabled`: User preference for auto-checks
+  - `meterflo_last_update_check`: Timestamp of last successful check
+  - `meterflo_skipped_version`: Version user chose to skip
+- **Security Considerations**:
+  - HTTPS enforcement for APK downloads (rejects non-HTTPS URLs)
+  - Server-controlled update source (not hardcoded)
+  - User can disable auto-checks
+  - Skip version feature prevents unwanted prompts
+
 ## External Dependencies
 
 ### Third-Party Services

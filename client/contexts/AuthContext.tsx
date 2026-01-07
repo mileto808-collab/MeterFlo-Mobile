@@ -26,6 +26,7 @@ interface AuthState {
   isAuthenticated: boolean;
   needsProjectSelection: boolean;
   isOfflineSession: boolean;
+  updateUrl: string | null;
 }
 
 interface AuthContextType extends AuthState {
@@ -35,6 +36,7 @@ interface AuthContextType extends AuthState {
   updateServerUrl: (url: string) => Promise<void>;
   getApiUrl: (path: string) => string;
   revalidateSession: () => Promise<boolean>;
+  getUpdateUrl: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,6 +47,7 @@ const STORAGE_KEYS = {
   PROJECT_ID: "meterflo_project_id",
   PROJECTS: "meterflo_projects",
   CREDENTIALS: "meterflo_credentials",
+  UPDATE_URL: "meterflo_update_url",
 };
 
 interface StoredCredentials {
@@ -152,6 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
     needsProjectSelection: false,
     isOfflineSession: false,
+    updateUrl: null,
   });
 
   useEffect(() => {
@@ -160,11 +164,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadStoredAuth = async () => {
     try {
-      const [storedUser, storedServerUrl, storedProjectId, storedProjects] = await Promise.all([
+      const [storedUser, storedServerUrl, storedProjectId, storedProjects, storedUpdateUrl] = await Promise.all([
         secureGet(STORAGE_KEYS.USER),
         secureGet(STORAGE_KEYS.SERVER_URL),
         secureGet(STORAGE_KEYS.PROJECT_ID),
         secureGet(STORAGE_KEYS.PROJECTS),
+        secureGet(STORAGE_KEYS.UPDATE_URL),
       ]);
 
       if (storedUser && storedServerUrl && storedProjectId) {
@@ -177,6 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isAuthenticated: true,
           needsProjectSelection: false,
           isOfflineSession: false,
+          updateUrl: storedUpdateUrl || null,
         });
       } else if (storedUser && storedServerUrl && storedProjects) {
         setState({
@@ -188,6 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isAuthenticated: false,
           needsProjectSelection: true,
           isOfflineSession: false,
+          updateUrl: storedUpdateUrl || null,
         });
       } else {
         setState(prev => ({
@@ -265,6 +272,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           secureSet(STORAGE_KEYS.PROJECTS, JSON.stringify(projects)),
         ]);
 
+        // Get stored update URL for offline login
+        const storedUpdateUrl = await secureGet(STORAGE_KEYS.UPDATE_URL);
+        
         if (projectId) {
           await secureSet(STORAGE_KEYS.PROJECT_ID, String(projectId));
           setState({
@@ -276,6 +286,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAuthenticated: true,
             needsProjectSelection: false,
             isOfflineSession: true,
+            updateUrl: storedUpdateUrl || null,
           });
         } else if (projects && projects.length === 1) {
           await secureSet(STORAGE_KEYS.PROJECT_ID, String(projects[0].id));
@@ -288,6 +299,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAuthenticated: true,
             needsProjectSelection: false,
             isOfflineSession: true,
+            updateUrl: storedUpdateUrl || null,
           });
         } else {
           setState({
@@ -299,6 +311,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAuthenticated: false,
             needsProjectSelection: true,
             isOfflineSession: true,
+            updateUrl: storedUpdateUrl || null,
           });
         }
         return;
@@ -352,6 +365,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const projectsData = await projectsResponse.json();
       const projects: Project[] = Array.isArray(projectsData) ? projectsData : projectsData.projects || [];
+      
+      // Extract mobileConfig.updateUrl if provided by server
+      const updateUrl: string | null = projectsData?.mobileConfig?.updateUrl || null;
 
       const salt = await generateSalt();
       const passwordHash = await hashPassword(password, salt);
@@ -367,11 +383,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastProjectId: null,
       });
 
-      await Promise.all([
+      const storagePromises = [
         secureSet(STORAGE_KEYS.USER, JSON.stringify(user)),
         secureSet(STORAGE_KEYS.SERVER_URL, normalizedUrl),
         secureSet(STORAGE_KEYS.PROJECTS, JSON.stringify(projects)),
-      ]);
+      ];
+      
+      // Store or clear update URL
+      if (updateUrl) {
+        storagePromises.push(secureSet(STORAGE_KEYS.UPDATE_URL, updateUrl));
+      } else {
+        storagePromises.push(secureDelete(STORAGE_KEYS.UPDATE_URL));
+      }
+      
+      await Promise.all(storagePromises);
 
       if (projects.length === 1) {
         await secureSet(STORAGE_KEYS.PROJECT_ID, String(projects[0].id));
@@ -390,6 +415,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isAuthenticated: true,
           needsProjectSelection: false,
           isOfflineSession: false,
+          updateUrl,
         });
       } else {
         setState({
@@ -401,6 +427,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isAuthenticated: false,
           needsProjectSelection: true,
           isOfflineSession: false,
+          updateUrl,
         });
       }
     } catch (error) {
@@ -528,8 +555,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return `${serverUrl}/api/projects/${projectId}${cleanPath}`;
   }, [state.serverUrl, state.projectId]);
 
+  const getUpdateUrl = useCallback(async (): Promise<string | null> => {
+    // Return from state if available
+    if (state.updateUrl) {
+      return state.updateUrl;
+    }
+    // Otherwise check storage
+    const storedUrl = await secureGet(STORAGE_KEYS.UPDATE_URL);
+    return storedUrl || null;
+  }, [state.updateUrl]);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, selectProject, updateServerUrl, getApiUrl, revalidateSession }}>
+    <AuthContext.Provider value={{ ...state, login, logout, selectProject, updateServerUrl, getApiUrl, revalidateSession, getUpdateUrl }}>
       {children}
     </AuthContext.Provider>
   );

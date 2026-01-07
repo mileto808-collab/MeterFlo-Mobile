@@ -15,6 +15,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
 import { WorkOrderProvider } from "@/contexts/WorkOrderContext";
 import { AutoSyncManager } from "@/components/AutoSyncManager";
+import { AutoUpdateManager } from "@/components/AutoUpdateManager";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <OfflineProvider>
             <WorkOrderProvider>
               <AutoSyncManager />
+              <AutoUpdateManager />
               <SafeAreaProvider>
                 <GestureHandlerRootView style={styles.root}>
                   <KeyboardProvider>

@@ -1,8 +1,9 @@
-import React from "react";
-import { View, ScrollView, StyleSheet, Pressable, Alert, Platform } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, ScrollView, StyleSheet, Pressable, Alert, Platform, Switch } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import * as SecureStore from "expo-secure-store";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,17 +13,92 @@ import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
+import { getCurrentAppVersion, checkForUpdate, UpdateInfo } from "@/lib/github-update-service";
+import { UpdateAvailableModal } from "@/components/UpdateAvailableModal";
+
+const STORAGE_KEYS = {
+  UPDATE_CHECK_ENABLED: "meterflo_update_check_enabled",
+  SKIPPED_VERSION: "meterflo_skipped_version",
+};
+
+async function secureGet(key: string): Promise<string | null> {
+  if (Platform.OS === "web") {
+    return localStorage.getItem(key);
+  }
+  return SecureStore.getItemAsync(key);
+}
+
+async function secureSet(key: string, value: string): Promise<void> {
+  if (Platform.OS === "web") {
+    localStorage.setItem(key, value);
+    return;
+  }
+  await SecureStore.setItemAsync(key, value);
+}
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
-  const { user, serverUrl, projectId, projects, logout, isOfflineSession } = useAuth();
+  const { user, serverUrl, projectId, projects, logout, isOfflineSession, getUpdateUrl, updateUrl } = useAuth();
   const { isOnline } = useOffline();
   const { lastSyncTime } = useWorkOrders();
 
+  const [updateCheckEnabled, setUpdateCheckEnabled] = useState(true);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+
   const currentProject = projects.find(p => p.id === projectId);
+  const appVersion = getCurrentAppVersion();
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      const enabled = await secureGet(STORAGE_KEYS.UPDATE_CHECK_ENABLED);
+      setUpdateCheckEnabled(enabled !== "false");
+    };
+    loadSettings();
+  }, []);
+
+  const handleUpdateCheckToggle = useCallback(async (value: boolean) => {
+    setUpdateCheckEnabled(value);
+    await secureSet(STORAGE_KEYS.UPDATE_CHECK_ENABLED, value ? "true" : "false");
+  }, []);
+
+  const handleCheckForUpdates = useCallback(async () => {
+    const url = await getUpdateUrl();
+    if (!url) {
+      Alert.alert("No Update Source", "No update source has been configured by your server administrator.");
+      return;
+    }
+
+    setIsCheckingUpdate(true);
+    try {
+      const info = await checkForUpdate(url);
+      if (!info) {
+        Alert.alert("Check Failed", "Could not reach the update server. Please check your connection and try again.");
+        return;
+      }
+      if (info.isUpdateAvailable) {
+        setUpdateInfo(info);
+        setShowUpdateModal(true);
+      } else {
+        Alert.alert("Up to Date", `You're running the latest version (${appVersion}).`);
+      }
+    } catch (error) {
+      Alert.alert("Check Failed", "Failed to check for updates. Please try again later.");
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  }, [getUpdateUrl, appVersion]);
+
+  const handleSkipVersion = useCallback(async () => {
+    if (updateInfo) {
+      await secureSet(STORAGE_KEYS.SKIPPED_VERSION, updateInfo.latestVersion);
+    }
+    setShowUpdateModal(false);
+  }, [updateInfo]);
 
   const handleLogout = () => {
     if (Platform.OS === "web") {
@@ -168,7 +244,7 @@ export default function AccountScreen() {
             <Icon name="info" size={16} color={theme.textSecondary} />
             <ThemedText type="small" style={{ color: theme.textSecondary }}>Version</ThemedText>
           </View>
-          <ThemedText type="body">1.0.0</ThemedText>
+          <ThemedText type="body">{appVersion}</ThemedText>
         </View>
 
         <View style={styles.infoRow}>
@@ -180,6 +256,71 @@ export default function AccountScreen() {
         </View>
       </View>
 
+      <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
+        <ThemedText type="h4" style={styles.sectionTitle}>Updates</ThemedText>
+        
+        <View style={styles.infoRow}>
+          <View style={styles.infoLabel}>
+            <Icon name="download" size={16} color={theme.textSecondary} />
+            <ThemedText type="small" style={{ color: theme.textSecondary }}>Auto-check for updates</ThemedText>
+          </View>
+          <Switch
+            value={updateCheckEnabled}
+            onValueChange={handleUpdateCheckToggle}
+            trackColor={{ false: theme.border, true: theme.primary + "80" }}
+            thumbColor={updateCheckEnabled ? theme.primary : theme.textSecondary}
+          />
+        </View>
+
+        {updateUrl ? (
+          <View style={styles.infoRow}>
+            <View style={styles.infoLabel}>
+              <Icon name="server" size={16} color={theme.textSecondary} />
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>Update source</ThemedText>
+            </View>
+            <View style={[styles.statusIndicator, { backgroundColor: theme.success + "20" }]}>
+              <ThemedText type="small" style={{ color: theme.success }}>Configured</ThemedText>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.infoRow}>
+            <View style={styles.infoLabel}>
+              <Icon name="server" size={16} color={theme.textSecondary} />
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>Update source</ThemedText>
+            </View>
+            <View style={[styles.statusIndicator, { backgroundColor: theme.warning + "20" }]}>
+              <ThemedText type="small" style={{ color: theme.warning }}>Not configured</ThemedText>
+            </View>
+          </View>
+        )}
+
+        {Platform.OS !== "android" ? (
+          <View style={[styles.platformNote, { backgroundColor: theme.backgroundSecondary }]}>
+            <Icon name="info" size={14} color={theme.textSecondary} />
+            <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
+              Automatic updates are only available on Android. Use GitHub to download updates manually.
+            </ThemedText>
+          </View>
+        ) : null}
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.checkUpdateButton,
+            { 
+              backgroundColor: theme.primary,
+              opacity: pressed || isCheckingUpdate ? 0.7 : 1,
+            },
+          ]}
+          onPress={handleCheckForUpdates}
+          disabled={isCheckingUpdate}
+        >
+          <Icon name="refresh-cw" size={18} color="#FFFFFF" />
+          <ThemedText type="body" style={{ color: "#FFFFFF", fontWeight: "600" }}>
+            {isCheckingUpdate ? "Checking..." : "Check for Updates"}
+          </ThemedText>
+        </Pressable>
+      </View>
+
       <View style={styles.logoutSection}>
         <Button
           onPress={handleLogout}
@@ -188,6 +329,13 @@ export default function AccountScreen() {
           Log Out
         </Button>
       </View>
+
+      <UpdateAvailableModal
+        visible={showUpdateModal}
+        updateInfo={updateInfo}
+        onClose={() => setShowUpdateModal(false)}
+        onSkip={handleSkipVersion}
+      />
     </ScrollView>
   );
 }
@@ -267,5 +415,22 @@ const styles = StyleSheet.create({
   offlineSessionText: {
     flex: 1,
     gap: Spacing.xs,
+  },
+  platformNote: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    gap: Spacing.sm,
+  },
+  checkUpdateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
   },
 });
