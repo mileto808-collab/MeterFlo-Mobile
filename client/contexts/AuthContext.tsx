@@ -305,6 +305,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       
+      // Test ping endpoint to diagnose header transmission
+      console.log(`[Auth] Testing ping endpoint: ${normalizedUrl}/api/mobile/ping`);
+      try {
+        const pingResponse = await fetch(`${normalizedUrl}/api/mobile/ping`, {
+          method: "GET",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "X-Mobile-App": "MeterFlo",
+          },
+        });
+        const pingData = await pingResponse.text();
+        console.log(`[Auth] Ping response status: ${pingResponse.status}`);
+        console.log(`[Auth] Ping response body: ${pingData}`);
+      } catch (pingError) {
+        console.error(`[Auth] Ping failed:`, pingError);
+      }
+      
       console.log(`[Auth] Attempting login to: ${normalizedUrl}/api/mobile/auth/login`);
       console.log(`[Auth] Headers: X-Mobile-App=MeterFlo, X-Requested-With=XMLHttpRequest`);
       
