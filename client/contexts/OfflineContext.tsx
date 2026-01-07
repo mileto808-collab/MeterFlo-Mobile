@@ -492,7 +492,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             successfulActionIds.push(action.id);
           } else {
             const batchHeaders = await getAuthHeaders();
-            const batchResponse = await fetch(`${serverUrl}/api/projects/${projectId}/mobile/sync/upload`, {
+            const batchResponse = await fetch(`${serverUrl}/api/mobile/projects/${projectId}/sync/upload`, {
               method: "POST",
               headers: { 
                 ...batchHeaders,

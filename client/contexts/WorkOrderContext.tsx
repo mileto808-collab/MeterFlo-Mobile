@@ -502,7 +502,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
     try {
       const includeCompleted = preserveLocal ? "true" : "false";
-      let path = `/api/projects/${projectId}/mobile/sync/download?includeCompleted=${includeCompleted}`;
+      let path = `/api/mobile/projects/${projectId}/sync/download?includeCompleted=${includeCompleted}`;
       
       const currentLastSyncTime = lastSyncTimeRef.current;
       if (currentLastSyncTime && !forceFullSync) {
