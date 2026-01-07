@@ -233,7 +233,7 @@ export default function AccountScreen() {
         
         <View style={styles.infoRow}>
           <View style={styles.infoLabel}>
-            <Icon name="download-cloud" size={16} color={theme.textSecondary} />
+            <Icon name="globe" size={16} color={theme.textSecondary} />
             <ThemedText type="small" style={{ color: theme.textSecondary }}>GitHub Repository</ThemedText>
           </View>
           {isEditingGithub ? null : (

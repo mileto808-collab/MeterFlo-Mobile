@@ -391,11 +391,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               `${serverUrl}/api/mobile/workorders/${serverWorkOrderId}/claim`,
               {
                 method: "POST",
-                headers: {
-                  ...claimHeaders,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ projectId: Number(projectId) }),
+                headers: claimHeaders,
               }
             );
             
@@ -473,11 +469,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             const claimAuthHeaders = await getAuthHeaders();
             const response = await fetch(claimEndpoint, {
               method: "POST",
-              headers: {
-                ...claimAuthHeaders,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ projectId: Number(projectId) }),
+              headers: claimAuthHeaders,
             });
             
             if (!response.ok) {

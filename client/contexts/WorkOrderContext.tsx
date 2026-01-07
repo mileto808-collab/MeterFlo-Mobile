@@ -694,11 +694,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     const authHeaders = await getAuthHeaders();
     const response = await fetch(`${serverUrl}/api/mobile/workorders/${workOrderId}/claim`, {
       method: "POST",
-      headers: {
-        ...authHeaders,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ projectId: Number(projectId) }),
+      headers: authHeaders,
     });
 
     if (!response.ok) {
