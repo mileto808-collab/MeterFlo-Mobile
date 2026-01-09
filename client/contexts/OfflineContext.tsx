@@ -374,55 +374,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             let eligibleWorkOrder: any = null;
             
-            const searchByOldSystem = async () => {
-              if (!oldSystemId) return [];
+            // Server uses meterId parameter that searches across all ID fields (old_meter_id, new_meter_id, old_module_id, new_module_id)
+            const searchByMeterId = async (id: string) => {
+              if (!id) return [];
               const response = await fetch(
-                `${serverUrl}/api/projects/${projectId}/work-orders/search?systemId=${encodeURIComponent(oldSystemId)}`,
-                { 
-                  method: "GET", 
-                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
-                  credentials: "include" 
-                }
-              );
-              if (!response.ok) return [];
-              const data = await response.json();
-              return data.workOrders || data || [];
-            };
-            
-            const searchByOldModule = async () => {
-              if (!oldModuleId) return [];
-              const response = await fetch(
-                `${serverUrl}/api/projects/${projectId}/work-orders/search?moduleId=${encodeURIComponent(oldModuleId)}`,
-                { 
-                  method: "GET", 
-                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
-                  credentials: "include" 
-                }
-              );
-              if (!response.ok) return [];
-              const data = await response.json();
-              return data.workOrders || data || [];
-            };
-            
-            const searchByNewSystem = async () => {
-              if (!newSystemId) return [];
-              const response = await fetch(
-                `${serverUrl}/api/projects/${projectId}/work-orders/search?systemId=${encodeURIComponent(newSystemId)}`,
-                { 
-                  method: "GET", 
-                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
-                  credentials: "include" 
-                }
-              );
-              if (!response.ok) return [];
-              const data = await response.json();
-              return data.workOrders || data || [];
-            };
-            
-            const searchByNewModule = async () => {
-              if (!newModuleId) return [];
-              const response = await fetch(
-                `${serverUrl}/api/projects/${projectId}/work-orders/search?moduleId=${encodeURIComponent(newModuleId)}`,
+                `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(id)}`,
                 { 
                   method: "GET", 
                   headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
@@ -442,26 +398,28 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             };
             
             // Search order: old system ID -> old module ID -> new system ID -> new module ID
+            // All searches use the unified meterId parameter that searches across all ID fields
             if (oldSystemId) {
-              const oldSystemResults = await searchByOldSystem();
+              console.log(`[syncPendingActions] Searching by old system ID: ${oldSystemId}`);
+              const oldSystemResults = await searchByMeterId(oldSystemId);
               eligibleWorkOrder = findEligible(oldSystemResults);
             }
             
             if (!eligibleWorkOrder && oldModuleId) {
               console.log(`[syncPendingActions] No match by old system ID, searching by old module ID: ${oldModuleId}`);
-              const oldModuleResults = await searchByOldModule();
+              const oldModuleResults = await searchByMeterId(oldModuleId);
               eligibleWorkOrder = findEligible(oldModuleResults);
             }
             
             if (!eligibleWorkOrder && newSystemId) {
               console.log(`[syncPendingActions] No match by old IDs, searching by new system ID: ${newSystemId}`);
-              const newSystemResults = await searchByNewSystem();
+              const newSystemResults = await searchByMeterId(newSystemId);
               eligibleWorkOrder = findEligible(newSystemResults);
             }
             
             if (!eligibleWorkOrder && newModuleId) {
               console.log(`[syncPendingActions] No match by system IDs, searching by new module ID: ${newModuleId}`);
-              const newModuleResults = await searchByNewModule();
+              const newModuleResults = await searchByMeterId(newModuleId);
               eligibleWorkOrder = findEligible(newModuleResults);
             }
             
