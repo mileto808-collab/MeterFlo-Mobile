@@ -149,10 +149,12 @@ const styles = StyleSheet.create({
   },
   idRow: {
     flexDirection: "row",
-    gap: Spacing.lg,
+    flexWrap: "wrap",
+    gap: Spacing.sm,
   },
   idLabel: {
     fontWeight: "600",
+    marginBottom: Spacing.xs,
   },
   footer: {
     flexDirection: "row",

@@ -334,7 +334,7 @@ export default function WorkOrderDetailScreen() {
               style={({ pressed }) => [styles.quickInfoItem, { opacity: pressed ? 0.6 : 1 }]}
             >
               <Icon name="map-pin" size={14} color={theme.primary} />
-              <ThemedText type="small" style={{ color: theme.primary, flex: 1 }}>
+              <ThemedText type="small" style={{ color: theme.primary, flex: 1, flexShrink: 1 }}>
                 {fullAddress || "No address"}
               </ThemedText>
             </Pressable>
@@ -342,7 +342,7 @@ export default function WorkOrderDetailScreen() {
             {workOrder.customerName ? (
               <View style={styles.quickInfoItem}>
                 <Icon name="user" size={14} color={theme.textSecondary} />
-                <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
+                <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1, flexShrink: 1 }}>
                   {workOrder.customerName}
                 </ThemedText>
               </View>
@@ -360,7 +360,7 @@ export default function WorkOrderDetailScreen() {
             {workOrder.assignedUserDisplayName || workOrder.assignedUserUsername ? (
               <View style={styles.quickInfoItem}>
                 <Icon name="user-check" size={14} color={theme.textSecondary} />
-                <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
+                <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1, flexShrink: 1 }}>
                   {workOrder.assignedUserDisplayName || workOrder.assignedUserUsername}
                 </ThemedText>
               </View>
@@ -765,6 +765,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: Spacing.sm,
+    flexWrap: "wrap",
   },
   quickInfoIcon: {
     marginTop: 2,
