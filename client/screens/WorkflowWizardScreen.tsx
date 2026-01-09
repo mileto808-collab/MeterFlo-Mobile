@@ -131,13 +131,14 @@ export default function WorkflowWizardScreen() {
   const [oldSystemReadingTouched, setOldSystemReadingTouched] = useState(false);
   const [oldModuleReadingTouched, setOldModuleReadingTouched] = useState(false);
   const [scannerTargetField, setScannerTargetField] = useState<"system" | "module">("system");
+  const [captureMode, setCaptureMode] = useState<"system" | "module" | "summary">("system");
   
   useEffect(() => {
     if (showScanner && !cameraPermission) {
       requestCameraPermission();
     }
   }, [showScanner, cameraPermission, requestCameraPermission]);
-  
+
   const [viewingPhoto, setViewingPhoto] = useState<{ uri: string; type: "before" | "after" | "trouble"; id: string } | null>(null);
   
   const hasUnsyncedDraft = Boolean(workOrder.syncPending);
@@ -182,6 +183,20 @@ export default function WorkflowWizardScreen() {
   const totalSteps = steps.length;
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;
+
+  useEffect(() => {
+    if (currentStep === "newSystemId") {
+      const hasSystem = Boolean(workOrder.oldSystemId);
+      const hasModule = Boolean(workOrder.oldModuleId);
+      if (hasSystem && !formData.newSystemId.trim()) {
+        setCaptureMode("system");
+        setScannerTargetField("system");
+      } else if (hasModule && !formData.newModuleId.trim()) {
+        setCaptureMode("module");
+        setScannerTargetField("module");
+      }
+    }
+  }, [currentStep]);
 
   const troubleCodeOptions = referenceData?.troubleCodes || [
     { code: "ACCESS_DENIED", label: "Access Denied", description: "" },
@@ -414,10 +429,18 @@ export default function WorkflowWizardScreen() {
   
   const handleCaptureBarcode = () => {
     if (detectedBarcode) {
+      const hasModule = Boolean(workOrder.oldModuleId);
       if (scannerTargetField === "module") {
         setFormData(prev => ({ ...prev, newModuleId: detectedBarcode }));
+        setCaptureMode("summary");
       } else {
         setFormData(prev => ({ ...prev, newSystemId: detectedBarcode }));
+        if (hasModule) {
+          setCaptureMode("module");
+          setScannerTargetField("module");
+        } else {
+          setCaptureMode("summary");
+        }
       }
       setShowScanner(false);
       setDetectedBarcode(null);
@@ -1269,11 +1292,7 @@ export default function WorkflowWizardScreen() {
 
         const newIdHasSystem = Boolean(workOrder.oldSystemId);
         const newIdHasModule = Boolean(workOrder.oldModuleId);
-        const newIdHelpText = newIdHasSystem && newIdHasModule
-          ? "Scan or enter the new system ID and module ID"
-          : newIdHasModule && !newIdHasSystem
-            ? "Scan or enter the new module ID"
-            : "Scan or enter the new system ID";
+        const newIdHelpText = "Capture the new system and module IDs by scanning or entering manually.";
 
         const openScannerFor = (target: "system" | "module", type: "barcode" | "qr") => {
           setScannerTargetField(target);
@@ -1281,6 +1300,45 @@ export default function WorkflowWizardScreen() {
           setDetectedBarcode(null);
           setShowScanner(true);
         };
+
+        const clearCapturedId = (target: "system" | "module") => {
+          if (target === "system") {
+            setFormData(prev => ({ ...prev, newSystemId: "" }));
+            setCaptureMode("system");
+            setScannerTargetField("system");
+          } else {
+            setFormData(prev => ({ ...prev, newModuleId: "" }));
+            setCaptureMode("module");
+            setScannerTargetField("module");
+          }
+        };
+
+        const handleSystemIdChange = (text: string) => {
+          setFormData(prev => ({ ...prev, newSystemId: text }));
+        };
+
+        const handleSystemIdBlur = () => {
+          if (formData.newSystemId.trim().length > 0 && newIdHasModule) {
+            setCaptureMode("module");
+            setScannerTargetField("module");
+          } else if (formData.newSystemId.trim().length > 0) {
+            setCaptureMode("summary");
+          }
+        };
+
+        const handleModuleIdChange = (text: string) => {
+          setFormData(prev => ({ ...prev, newModuleId: text }));
+        };
+
+        const handleModuleIdBlur = () => {
+          if (formData.newModuleId.trim().length > 0) {
+            setCaptureMode("summary");
+          }
+        };
+
+        const currentCapturing = captureMode === "system" ? "New System ID" : captureMode === "module" ? "New Module ID" : null;
+        const isCapturingSystem = captureMode === "system" && newIdHasSystem;
+        const isCapturingModule = captureMode === "module" && newIdHasModule;
         
         return (
           <View>
@@ -1290,72 +1348,83 @@ export default function WorkflowWizardScreen() {
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
               {newIdHelpText}
             </ThemedText>
-            
-            {newIdHasSystem ? (
-              <View style={{ marginBottom: newIdHasModule ? Spacing.xl : 0 }}>
-                <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.sm }}>
-                  New System ID
-                </ThemedText>
-                <View style={styles.scanButtonsRow}>
-                  <Pressable
-                    style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
-                    onPress={() => openScannerFor("system", "barcode")}
+
+            {newIdHasSystem && formData.newSystemId.trim().length > 0 && !isCapturingSystem ? (
+              <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.md, marginBottom: Spacing.md }]}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>New System ID</ThemedText>
+                    <ThemedText type="h4" style={{ fontWeight: "600" }}>{formData.newSystemId}</ThemedText>
+                  </View>
+                  <Button
+                    onPress={() => clearCapturedId("system")}
+                    style={{ backgroundColor: theme.backgroundDefault, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm }}
                   >
-                    <Icon name="maximize" size={28} color={theme.primary} />
-                    <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>Barcode</ThemedText>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
-                    onPress={() => openScannerFor("system", "qr")}
-                  >
-                    <Icon name="grid" size={28} color={theme.primary} />
-                    <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>QR Code</ThemedText>
-                  </Pressable>
+                    <ThemedText type="small">Clear</ThemedText>
+                  </Button>
                 </View>
-                <TextInput
-                  value={formData.newSystemId}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemId: text }))}
-                  placeholder="Type or use HID scanner"
-                  autoCapitalize="characters"
-                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50, marginTop: Spacing.sm }}
-                />
               </View>
             ) : null}
-            
-            {newIdHasModule ? (
+
+            {newIdHasModule && formData.newModuleId.trim().length > 0 && !isCapturingModule ? (
+              <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.md, marginBottom: Spacing.md }]}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>New Module ID</ThemedText>
+                    <ThemedText type="h4" style={{ fontWeight: "600" }}>{formData.newModuleId}</ThemedText>
+                  </View>
+                  <Button
+                    onPress={() => clearCapturedId("module")}
+                    style={{ backgroundColor: theme.backgroundDefault, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm }}
+                  >
+                    <ThemedText type="small">Clear</ThemedText>
+                  </Button>
+                </View>
+              </View>
+            ) : null}
+
+            {(isCapturingSystem || isCapturingModule) && currentCapturing ? (
               <View>
-                <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.sm }}>
-                  New Module ID
-                </ThemedText>
+                <View style={[{ backgroundColor: theme.primary, padding: Spacing.md, borderRadius: 8, marginBottom: Spacing.lg }]}>
+                  <ThemedText type="body" style={{ color: "#FFFFFF", textAlign: "center", fontWeight: "600" }}>
+                    Capturing: {currentCapturing}
+                  </ThemedText>
+                </View>
+
                 <View style={styles.scanButtonsRow}>
                   <Pressable
                     style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
-                    onPress={() => openScannerFor("module", "barcode")}
+                    onPress={() => openScannerFor(captureMode as "system" | "module", "barcode")}
                   >
                     <Icon name="maximize" size={28} color={theme.primary} />
                     <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>Barcode</ThemedText>
                   </Pressable>
                   <Pressable
                     style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
-                    onPress={() => openScannerFor("module", "qr")}
+                    onPress={() => openScannerFor(captureMode as "system" | "module", "qr")}
                   >
                     <Icon name="grid" size={28} color={theme.primary} />
                     <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>QR Code</ThemedText>
                   </Pressable>
                 </View>
+
+                <ThemedText type="body" style={{ color: theme.textSecondary, marginVertical: Spacing.lg, textAlign: "center" }}>
+                  or enter manually
+                </ThemedText>
+
                 <TextInput
-                  value={formData.newModuleId}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, newModuleId: text }))}
+                  value={isCapturingSystem ? formData.newSystemId : formData.newModuleId}
+                  onChangeText={isCapturingSystem ? handleSystemIdChange : handleModuleIdChange}
+                  onBlur={isCapturingSystem ? handleSystemIdBlur : handleModuleIdBlur}
                   placeholder="Type or use HID scanner"
                   autoCapitalize="characters"
-                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50, marginTop: Spacing.sm }}
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
+                <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm, textAlign: "center" }}>
+                  Tap field and scan with Bluetooth/USB barcode gun
+                </ThemedText>
               </View>
             ) : null}
-            
-            <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.lg, textAlign: "center" }}>
-              Tap field and scan with Bluetooth/USB barcode gun
-            </ThemedText>
           </View>
         );
 
@@ -2041,5 +2110,11 @@ const styles = StyleSheet.create({
   scannerInstructions: {
     alignItems: "center",
     marginTop: Spacing.lg,
+  },
+  captureOptionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
   },
 });
