@@ -643,6 +643,16 @@ export function Maximize2Icon({ size = 24, color = "#000" }: IconProps) {
   );
 }
 
+export function DatabaseIcon({ size = 24, color = "#000" }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M12 2C6.48 2 2 4.02 2 6.5V17.5C2 20 6.48 22 12 22C17.52 22 22 20 22 17.5V6.5C22 4.02 17.52 2 12 2Z" />
+      <Path d="M2 6.5C2 9 6.48 11 12 11C17.52 11 22 9 22 6.5" />
+      <Path d="M2 12C2 14.5 6.48 16.5 12 16.5C17.52 16.5 22 14.5 22 12" />
+    </Svg>
+  );
+}
+
 const iconMap: Record<string, React.FC<IconProps>> = {
   "map-pin": MapPinIcon,
   "user": UserIcon,
@@ -710,6 +720,7 @@ const iconMap: Record<string, React.FC<IconProps>> = {
   "trash-2": Trash2Icon,
   "lock": LockIcon,
   "maximize-2": Maximize2Icon,
+  "database": DatabaseIcon,
 };
 
 interface FeatherIconProps {

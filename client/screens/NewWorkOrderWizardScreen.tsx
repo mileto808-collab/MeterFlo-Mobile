@@ -858,7 +858,7 @@ export default function NewWorkOrderWizardScreen() {
               ]}
               onPress={() => setCaptureType("system")}
             >
-              <Icon name="disc" size={24} color={captureType === "system" ? "#FFFFFF" : theme.text} />
+              <Icon name="database" size={24} color={captureType === "system" ? "#FFFFFF" : theme.text} />
               <ThemedText type="body" style={{ marginLeft: Spacing.md, fontWeight: "600", color: captureType === "system" ? "#FFFFFF" : theme.text }}>
                 System Only
               </ThemedText>
