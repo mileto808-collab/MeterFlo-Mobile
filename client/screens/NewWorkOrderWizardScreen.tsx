@@ -25,17 +25,22 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 type WizardStep = 
+  | "captureType"
   | "oldSystemId"
+  | "oldModuleId"
   | "oldReading"
   | "oldGps"
   | "beforePhotos"
   | "physicalChange"
   | "newSystemId"
+  | "newModuleId"
   | "newReading"
   | "afterPhotos"
   | "signature"
   | "notes"
   | "confirm";
+
+type CaptureType = "system" | "module" | "both";
 
 interface PhotoAsset {
   uri: string;
@@ -46,13 +51,13 @@ interface NewWorkOrderData {
   oldSystemId: string;
   oldSystemReading: string;
   oldModuleId: string;
-  oldModuleRead: string;
+  oldModuleReading: string;
   oldGps: string;
   beforePhotos: PhotoAsset[];
   newSystemId: string;
   newSystemReading: string;
   newModuleId: string;
-  newModuleRead: string;
+  newModuleReading: string;
   afterPhotos: PhotoAsset[];
   newGps: string;
   signatureData: string;
@@ -60,32 +65,74 @@ interface NewWorkOrderData {
   notes: string;
 }
 
-const STEPS: WizardStep[] = [
-  "oldSystemId",
-  "oldReading", 
-  "oldGps",
-  "beforePhotos",
-  "physicalChange",
-  "newSystemId",
-  "newReading",
-  "afterPhotos",
-  "signature",
-  "notes",
-  "confirm",
-];
-
 const STEP_TITLES: Record<WizardStep, string> = {
+  captureType: "What are you capturing?",
   oldSystemId: "Old System ID",
-  oldReading: "Old System Final Reading",
+  oldModuleId: "Old Module ID",
+  oldReading: "Capture Old Reading",
   oldGps: "System Location GPS",
   beforePhotos: "Before Photos",
   physicalChange: "Perform Physical Changeout",
   newSystemId: "New System ID",
-  newReading: "New System Reading",
+  newModuleId: "New Module ID",
+  newReading: "Capture New Reading",
   afterPhotos: "After Photos",
-  signature: "Signature",
+  signature: "Capture Signature",
   notes: "Notes",
   confirm: "Confirm & Submit",
+};
+
+const getStepsForCaptureType = (captureType: CaptureType): WizardStep[] => {
+  const baseSteps: WizardStep[] = ["captureType"];
+  
+  if (captureType === "system") {
+    return [
+      ...baseSteps,
+      "oldSystemId",
+      "oldReading",
+      "oldGps",
+      "beforePhotos",
+      "physicalChange",
+      "newSystemId",
+      "newReading",
+      "afterPhotos",
+      "signature",
+      "notes",
+      "confirm",
+    ];
+  } else if (captureType === "module") {
+    return [
+      ...baseSteps,
+      "oldModuleId",
+      "oldReading",
+      "oldGps",
+      "beforePhotos",
+      "physicalChange",
+      "newModuleId",
+      "newReading",
+      "afterPhotos",
+      "signature",
+      "notes",
+      "confirm",
+    ];
+  } else {
+    return [
+      ...baseSteps,
+      "oldSystemId",
+      "oldModuleId",
+      "oldReading",
+      "oldGps",
+      "beforePhotos",
+      "physicalChange",
+      "newSystemId",
+      "newModuleId",
+      "newReading",
+      "afterPhotos",
+      "signature",
+      "notes",
+      "confirm",
+    ];
+  }
 };
 
 export default function NewWorkOrderWizardScreen() {
@@ -98,10 +145,11 @@ export default function NewWorkOrderWizardScreen() {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [captureType, setCaptureType] = useState<CaptureType>("both");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [scannerType, setScannerType] = useState<"barcode" | "qr">("barcode");
-  const [scannerTarget, setScannerTarget] = useState<"old" | "new">("old");
+  const [scannerTarget, setScannerTarget] = useState<"oldSystem" | "oldModule" | "newSystem" | "newModule">("oldSystem");
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [isCapturingGps, setIsCapturingGps] = useState(false);
   
@@ -117,13 +165,13 @@ export default function NewWorkOrderWizardScreen() {
     oldSystemId: "",
     oldSystemReading: "",
     oldModuleId: "",
-    oldModuleRead: "",
+    oldModuleReading: "",
     oldGps: "",
     beforePhotos: [],
     newSystemId: "",
     newSystemReading: "",
     newModuleId: "",
-    newModuleRead: "",
+    newModuleReading: "",
     afterPhotos: [],
     newGps: "",
     signatureData: "",
@@ -131,8 +179,9 @@ export default function NewWorkOrderWizardScreen() {
     notes: "",
   });
 
-  const currentStep = STEPS[currentStepIndex];
-  const totalSteps = STEPS.length;
+  const steps = getStepsForCaptureType(captureType);
+  const currentStep = steps[currentStepIndex];
+  const totalSteps = steps.length;
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;
 
@@ -255,10 +304,14 @@ export default function NewWorkOrderWizardScreen() {
   
   const handleCaptureBarcode = () => {
     if (detectedBarcode) {
-      if (scannerTarget === "old") {
+      if (scannerTarget === "oldSystem") {
         setFormData(prev => ({ ...prev, oldSystemId: detectedBarcode }));
-      } else {
+      } else if (scannerTarget === "oldModule") {
+        setFormData(prev => ({ ...prev, oldModuleId: detectedBarcode }));
+      } else if (scannerTarget === "newSystem") {
         setFormData(prev => ({ ...prev, newSystemId: detectedBarcode }));
+      } else if (scannerTarget === "newModule") {
+        setFormData(prev => ({ ...prev, newModuleId: detectedBarcode }));
       }
       setShowScanner(false);
       setDetectedBarcode(null);
@@ -323,10 +376,20 @@ export default function NewWorkOrderWizardScreen() {
 
   const isCurrentStepValid = (): boolean => {
     switch (currentStep) {
+      case "captureType":
+        return true;
       case "oldSystemId": 
         return formData.oldSystemId.trim().length > 0;
+      case "oldModuleId":
+        return formData.oldModuleId.trim().length > 0;
       case "oldReading": 
-        return formData.oldSystemReading.trim().length > 0;
+        if (captureType === "system") {
+          return formData.oldSystemReading.trim().length > 0;
+        } else if (captureType === "module") {
+          return formData.oldModuleRead.trim().length > 0;
+        } else {
+          return formData.oldSystemReading.trim().length > 0 && formData.oldModuleRead.trim().length > 0;
+        }
       case "oldGps":
         return formData.oldGps.trim().length > 0;
       case "beforePhotos":
@@ -335,12 +398,20 @@ export default function NewWorkOrderWizardScreen() {
         return true;
       case "newSystemId": 
         return formData.newSystemId.trim().length > 0;
+      case "newModuleId":
+        return formData.newModuleId.trim().length > 0;
       case "newReading": 
-        return formData.newSystemReading.trim().length > 0;
+        if (captureType === "system") {
+          return formData.newSystemReading.trim().length > 0;
+        } else if (captureType === "module") {
+          return formData.newModuleRead.trim().length > 0;
+        } else {
+          return formData.newSystemReading.trim().length > 0 && formData.newModuleRead.trim().length > 0;
+        }
       case "afterPhotos":
         return formData.afterPhotos.length >= 1;
       case "signature": 
-        return formData.signatureName.trim().length > 0;
+        return formData.signatureData.length > 0 && formData.signatureName.trim().length > 0;
       case "notes":
         return true;
       case "confirm":
@@ -439,12 +510,12 @@ export default function NewWorkOrderWizardScreen() {
         oldSystemId: formData.oldSystemId,
         oldSystemReading: parseReading(formData.oldSystemReading),
         oldModuleId: formData.oldModuleId || null,
-        oldModuleRead: parseReading(formData.oldModuleRead),
+        oldModuleReading: parseReading(formData.oldModuleRead),
         oldGps: formData.oldGps,
         newSystemId: formData.newSystemId,
         newSystemReading: parseReading(formData.newSystemReading) ?? 0,
         newModuleId: formData.newModuleId || null,
-        newModuleRead: parseReading(formData.newModuleRead),
+        newModuleReading: parseReading(formData.newModuleRead),
         newGps: formData.newGps,
         signatureData: formData.signatureData || null,
         signatureName: formData.signatureName,
@@ -518,7 +589,7 @@ export default function NewWorkOrderWizardScreen() {
     }
   };
 
-  const renderScannerUI = (target: "old" | "new") => {
+  const renderScannerUI = () => {
     const permissionDenied = cameraPermission && !cameraPermission.granted && !cameraPermission.canAskAgain;
     
     return (
@@ -623,13 +694,27 @@ export default function NewWorkOrderWizardScreen() {
     );
   };
 
-  const renderSystemIdInput = (target: "old" | "new") => {
-    const value = target === "old" ? formData.oldSystemId : formData.newSystemId;
+  const renderIdInput = (target: "oldSystem" | "oldModule" | "newSystem" | "newModule") => {
+    const isSystem = target === "oldSystem" || target === "newSystem";
+    const isOld = target === "oldSystem" || target === "oldModule";
+    const label = isSystem ? "System" : "Module";
+    const ageLabel = isOld ? "old" : "new";
+    
+    const getValue = () => {
+      switch (target) {
+        case "oldSystem": return formData.oldSystemId;
+        case "oldModule": return formData.oldModuleId;
+        case "newSystem": return formData.newSystemId;
+        case "newModule": return formData.newModuleId;
+      }
+    };
+    
     const setValue = (text: string) => {
-      if (target === "old") {
-        setFormData(prev => ({ ...prev, oldSystemId: text }));
-      } else {
-        setFormData(prev => ({ ...prev, newSystemId: text }));
+      switch (target) {
+        case "oldSystem": setFormData(prev => ({ ...prev, oldSystemId: text })); break;
+        case "oldModule": setFormData(prev => ({ ...prev, oldModuleId: text })); break;
+        case "newSystem": setFormData(prev => ({ ...prev, newSystemId: text })); break;
+        case "newModule": setFormData(prev => ({ ...prev, newModuleId: text })); break;
       }
     };
     
@@ -639,7 +724,7 @@ export default function NewWorkOrderWizardScreen() {
           <Icon name="hash" size={48} color={theme.primary} />
         </View>
         <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-          Scan or enter the {target === "old" ? "old" : "new"} system ID
+          Scan or enter the {ageLabel} {label.toLowerCase()} ID
         </ThemedText>
         
         <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
@@ -668,7 +753,7 @@ export default function NewWorkOrderWizardScreen() {
         </ThemedText>
         
         <TextInput
-          value={value}
+          value={getValue()}
           onChangeText={setValue}
           placeholder="Type or use HID scanner"
           autoCapitalize="characters"
@@ -683,12 +768,77 @@ export default function NewWorkOrderWizardScreen() {
 
   const renderStepInput = () => {
     if (showScanner) {
-      return renderScannerUI(scannerTarget);
+      return renderScannerUI();
     }
     
     switch (currentStep) {
+      case "captureType":
+        return (
+          <View>
+            <View style={styles.iconHeader}>
+              <Icon name="layers" size={48} color={theme.primary} />
+            </View>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
+              What equipment are you replacing?
+            </ThemedText>
+            
+            <Pressable
+              style={[
+                styles.captureTypeOption,
+                { 
+                  backgroundColor: captureType === "system" ? theme.primary : theme.backgroundSecondary,
+                  borderColor: captureType === "system" ? theme.primary : theme.border,
+                }
+              ]}
+              onPress={() => setCaptureType("system")}
+            >
+              <Icon name="box" size={24} color={captureType === "system" ? "#FFFFFF" : theme.text} />
+              <ThemedText type="body" style={{ marginLeft: Spacing.md, fontWeight: "600", color: captureType === "system" ? "#FFFFFF" : theme.text }}>
+                System Only
+              </ThemedText>
+            </Pressable>
+            
+            <Pressable
+              style={[
+                styles.captureTypeOption,
+                { 
+                  backgroundColor: captureType === "module" ? theme.primary : theme.backgroundSecondary,
+                  borderColor: captureType === "module" ? theme.primary : theme.border,
+                  marginTop: Spacing.md,
+                }
+              ]}
+              onPress={() => setCaptureType("module")}
+            >
+              <Icon name="cpu" size={24} color={captureType === "module" ? "#FFFFFF" : theme.text} />
+              <ThemedText type="body" style={{ marginLeft: Spacing.md, fontWeight: "600", color: captureType === "module" ? "#FFFFFF" : theme.text }}>
+                Module Only
+              </ThemedText>
+            </Pressable>
+            
+            <Pressable
+              style={[
+                styles.captureTypeOption,
+                { 
+                  backgroundColor: captureType === "both" ? theme.primary : theme.backgroundSecondary,
+                  borderColor: captureType === "both" ? theme.primary : theme.border,
+                  marginTop: Spacing.md,
+                }
+              ]}
+              onPress={() => setCaptureType("both")}
+            >
+              <Icon name="package" size={24} color={captureType === "both" ? "#FFFFFF" : theme.text} />
+              <ThemedText type="body" style={{ marginLeft: Spacing.md, fontWeight: "600", color: captureType === "both" ? "#FFFFFF" : theme.text }}>
+                System and Module
+              </ThemedText>
+            </Pressable>
+          </View>
+        );
+      
       case "oldSystemId":
-        return renderSystemIdInput("old");
+        return renderIdInput("oldSystem");
+      
+      case "oldModuleId":
+        return renderIdInput("oldModule");
 
       case "oldReading":
         return (
@@ -697,15 +847,38 @@ export default function NewWorkOrderWizardScreen() {
               <Icon name="activity" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Enter the final reading from the old system
+              Enter the final reading(s) from the old equipment
             </ThemedText>
-            <TextInput
-              value={formData.oldSystemReading}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, oldSystemReading: text }))}
-              placeholder="Enter reading (e.g., 12345)"
-              keyboardType="numeric"
-              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg, minHeight: 60 }}
-            />
+            
+            {(captureType === "system" || captureType === "both") && (
+              <View style={{ marginBottom: Spacing.lg }}>
+                <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+                  System Reading
+                </ThemedText>
+                <TextInput
+                  value={formData.oldSystemReading}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, oldSystemReading: text }))}
+                  placeholder="Enter system reading"
+                  keyboardType="numeric"
+                  style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+              </View>
+            )}
+            
+            {(captureType === "module" || captureType === "both") && (
+              <View>
+                <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+                  Module Reading
+                </ThemedText>
+                <TextInput
+                  value={formData.oldModuleReading}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, oldModuleReading: text }))}
+                  placeholder="Enter module reading"
+                  keyboardType="numeric"
+                  style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+              </View>
+            )}
           </View>
         );
 
@@ -785,18 +958,39 @@ export default function NewWorkOrderWizardScreen() {
               <Icon name="tool" size={48} color={theme.primary} />
             </View>
             <ThemedText type="h4" style={{ marginBottom: Spacing.lg, textAlign: "center" }}>
-              Safely remove the old system and install the new system
+              {captureType === "module" 
+                ? "Safely remove the old module and install the new module"
+                : captureType === "both"
+                ? "Safely remove the old equipment and install the new equipment"
+                : "Safely remove the old system and install the new system"
+              }
             </ThemedText>
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
-              <View style={styles.summaryRow}>
-                <Icon name="check-circle" size={24} color={theme.success} />
-                <ThemedText type="body" style={{ fontWeight: "500" }}>Old System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId}</ThemedText></ThemedText>
-              </View>
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="check-circle" size={24} color={theme.success} />
-                <ThemedText type="body" style={{ fontWeight: "500" }}>Old Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
-              </View>
+              {(captureType === "system" || captureType === "both") && (
+                <>
+                  <View style={styles.summaryRow}>
+                    <Icon name="check-circle" size={24} color={theme.success} />
+                    <ThemedText type="body" style={{ fontWeight: "500" }}>Old System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId}</ThemedText></ThemedText>
+                  </View>
+                  <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="check-circle" size={24} color={theme.success} />
+                    <ThemedText type="body" style={{ fontWeight: "500" }}>System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
+                  </View>
+                </>
+              )}
+              {(captureType === "module" || captureType === "both") && (
+                <>
+                  <View style={[styles.summaryRow, { marginTop: captureType === "both" ? Spacing.md : 0 }]}>
+                    <Icon name="check-circle" size={24} color={theme.success} />
+                    <ThemedText type="body" style={{ fontWeight: "500" }}>Old Module: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleId}</ThemedText></ThemedText>
+                  </View>
+                  <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="check-circle" size={24} color={theme.success} />
+                    <ThemedText type="body" style={{ fontWeight: "500" }}>Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleReading}</ThemedText></ThemedText>
+                  </View>
+                </>
+              )}
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="check-circle" size={24} color={theme.success} />
                 <ThemedText type="body" style={{ fontWeight: "500" }} numberOfLines={1}>GPS: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldGps}</ThemedText></ThemedText>
@@ -808,13 +1002,16 @@ export default function NewWorkOrderWizardScreen() {
             </View>
             
             <ThemedText type="body" style={{ color: theme.primary, marginTop: Spacing.xl, textAlign: "center", fontWeight: "500" }}>
-              Tap "Next" when the new system is installed
+              Tap "Next" when the new equipment is installed
             </ThemedText>
           </View>
         );
 
       case "newSystemId":
-        return renderSystemIdInput("new");
+        return renderIdInput("newSystem");
+      
+      case "newModuleId":
+        return renderIdInput("newModule");
 
       case "newReading":
         return (
@@ -823,15 +1020,38 @@ export default function NewWorkOrderWizardScreen() {
               <Icon name="activity" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Enter the initial reading from the new system (usually 0)
+              Enter the initial reading(s) from the new equipment (usually 0)
             </ThemedText>
-            <TextInput
-              value={formData.newSystemReading}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: text }))}
-              placeholder="Enter reading (usually 0)"
-              keyboardType="numeric"
-              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg, minHeight: 60 }}
-            />
+            
+            {(captureType === "system" || captureType === "both") && (
+              <View style={{ marginBottom: Spacing.lg }}>
+                <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+                  System Reading
+                </ThemedText>
+                <TextInput
+                  value={formData.newSystemReading}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: text }))}
+                  placeholder="Enter system reading (usually 0)"
+                  keyboardType="numeric"
+                  style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+              </View>
+            )}
+            
+            {(captureType === "module" || captureType === "both") && (
+              <View>
+                <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+                  Module Reading
+                </ThemedText>
+                <TextInput
+                  value={formData.newModuleReading}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, newModuleReading: text }))}
+                  placeholder="Enter module reading (usually 0)"
+                  keyboardType="numeric"
+                  style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+              </View>
+            )}
           </View>
         );
 
@@ -919,14 +1139,32 @@ export default function NewWorkOrderWizardScreen() {
             <ThemedText type="h3" style={{ marginBottom: Spacing.lg, textAlign: "center" }}>Review & Submit</ThemedText>
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
-              <View style={styles.summaryRow}>
-                <Icon name="hash" size={20} color={theme.primary} />
-                <ThemedText type="body">Old System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId}</ThemedText></ThemedText>
-              </View>
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="activity" size={20} color={theme.primary} />
-                <ThemedText type="body">Old Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
-              </View>
+              {(captureType === "system" || captureType === "both") && (
+                <>
+                  <View style={styles.summaryRow}>
+                    <Icon name="box" size={20} color={theme.primary} />
+                    <ThemedText type="body">Old System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId}</ThemedText></ThemedText>
+                  </View>
+                  <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="activity" size={20} color={theme.primary} />
+                    <ThemedText type="body">System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
+                  </View>
+                </>
+              )}
+              
+              {(captureType === "module" || captureType === "both") && (
+                <>
+                  <View style={[styles.summaryRow, { marginTop: captureType === "both" ? Spacing.md : 0 }]}>
+                    <Icon name="cpu" size={20} color={theme.primary} />
+                    <ThemedText type="body">Old Module: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleId}</ThemedText></ThemedText>
+                  </View>
+                  <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="activity" size={20} color={theme.primary} />
+                    <ThemedText type="body">Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleReading}</ThemedText></ThemedText>
+                  </View>
+                </>
+              )}
+              
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="map-pin" size={20} color={theme.primary} />
                 <ThemedText type="body" numberOfLines={1}>GPS Location: {formData.oldGps}</ThemedText>
@@ -935,14 +1173,33 @@ export default function NewWorkOrderWizardScreen() {
                 <Icon name="camera" size={20} color={theme.primary} />
                 <ThemedText type="body">{formData.beforePhotos.length} Before Photo(s)</ThemedText>
               </View>
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="hash" size={20} color={theme.primary} />
-                <ThemedText type="body">New System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemId}</ThemedText></ThemedText>
-              </View>
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="activity" size={20} color={theme.primary} />
-                <ThemedText type="body">New Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
-              </View>
+              
+              {(captureType === "system" || captureType === "both") && (
+                <>
+                  <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="box" size={20} color={theme.primary} />
+                    <ThemedText type="body">New System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemId}</ThemedText></ThemedText>
+                  </View>
+                  <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="activity" size={20} color={theme.primary} />
+                    <ThemedText type="body">System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
+                  </View>
+                </>
+              )}
+              
+              {(captureType === "module" || captureType === "both") && (
+                <>
+                  <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="cpu" size={20} color={theme.primary} />
+                    <ThemedText type="body">New Module: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newModuleId}</ThemedText></ThemedText>
+                  </View>
+                  <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="activity" size={20} color={theme.primary} />
+                    <ThemedText type="body">Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newModuleReading}</ThemedText></ThemedText>
+                  </View>
+                </>
+              )}
+              
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="camera" size={20} color={theme.primary} />
                 <ThemedText type="body">{formData.afterPhotos.length} After Photo(s)</ThemedText>
@@ -999,7 +1256,7 @@ export default function NewWorkOrderWizardScreen() {
           </ThemedText>
         </View>
         <View style={styles.progressDotsContainer}>
-          {STEPS.map((_, index) => (
+          {steps.map((_: WizardStep, index: number) => (
             <View
               key={index}
               style={[
@@ -1259,5 +1516,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
+  },
+  captureTypeOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    borderWidth: 2,
   },
 });
