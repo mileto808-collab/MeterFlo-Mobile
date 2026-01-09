@@ -631,6 +631,7 @@ export default function WorkflowWizardScreen() {
         old_system_reading: parseReading(formData.oldSystemReading) ?? 0,
         new_system_reading: parseReading(formData.newSystemReading) ?? 0,
         new_system_id: formData.newSystemId,
+        old_module_id: workOrder.oldModuleId || null,
         old_module_read: parseReading(formData.oldModuleRead),
         new_module_id: formData.newModuleId || null,
         new_module_read: parseReading(formData.newModuleRead),
@@ -647,6 +648,7 @@ export default function WorkflowWizardScreen() {
       } : {
         status: "Trouble",
         old_system_reading: parseReading(formData.oldSystemReading),
+        old_module_id: workOrder.oldModuleId || null,
         old_module_read: parseReading(formData.oldModuleRead),
         trouble: getTroubleCodeFromDisplay(formData.troubleCode),
         notes: formData.troubleNote || null,
@@ -673,6 +675,7 @@ export default function WorkflowWizardScreen() {
         const mobilePayload = canChange ? {
           projectId: Number(projectId),
           oldSystemReading: parseReading(formData.oldSystemReading),
+          oldModuleId: workOrder.oldModuleId || null,
           oldModuleRead: parseReading(formData.oldModuleRead),
           newSystemId: formData.newSystemId,
           newSystemReading: parseReading(formData.newSystemReading) ?? 0,
@@ -690,6 +693,7 @@ export default function WorkflowWizardScreen() {
           troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
           notes: formData.troubleNote || null,
           oldSystemReading: parseReading(formData.oldSystemReading),
+          oldModuleId: workOrder.oldModuleId || null,
           oldModuleRead: parseReading(formData.oldModuleRead),
           photos: formatPhotosForServer(troublePhotosBase64, 'trouble'),
         };
@@ -778,6 +782,7 @@ export default function WorkflowWizardScreen() {
         const offlineMobilePayload = canChange ? {
           projectId: Number(projectId),
           oldSystemReading: parseReading(formData.oldSystemReading),
+          oldModuleId: workOrder.oldModuleId || null,
           oldModuleRead: parseReading(formData.oldModuleRead),
           newSystemId: formData.newSystemId,
           newSystemReading: parseReading(formData.newSystemReading) ?? 0,
@@ -795,6 +800,7 @@ export default function WorkflowWizardScreen() {
           troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
           notes: formData.troubleNote || null,
           oldSystemReading: parseReading(formData.oldSystemReading),
+          oldModuleId: workOrder.oldModuleId || null,
           oldModuleRead: parseReading(formData.oldModuleRead),
           photos: formatPhotosForOffline(troublePhotosBase64, 'trouble'),
         };

@@ -45,10 +45,14 @@ interface PhotoAsset {
 interface NewWorkOrderData {
   oldSystemId: string;
   oldSystemReading: string;
+  oldModuleId: string;
+  oldModuleRead: string;
   oldGps: string;
   beforePhotos: PhotoAsset[];
   newSystemId: string;
   newSystemReading: string;
+  newModuleId: string;
+  newModuleRead: string;
   afterPhotos: PhotoAsset[];
   newGps: string;
   signatureData: string;
@@ -112,10 +116,14 @@ export default function NewWorkOrderWizardScreen() {
   const [formData, setFormData] = useState<NewWorkOrderData>({
     oldSystemId: "",
     oldSystemReading: "",
+    oldModuleId: "",
+    oldModuleRead: "",
     oldGps: "",
     beforePhotos: [],
     newSystemId: "",
     newSystemReading: "",
+    newModuleId: "",
+    newModuleRead: "",
     afterPhotos: [],
     newGps: "",
     signatureData: "",
@@ -430,9 +438,13 @@ export default function NewWorkOrderWizardScreen() {
         projectId: Number(projectId),
         oldSystemId: formData.oldSystemId,
         oldSystemReading: parseReading(formData.oldSystemReading),
+        oldModuleId: formData.oldModuleId || null,
+        oldModuleRead: parseReading(formData.oldModuleRead),
         oldGps: formData.oldGps,
         newSystemId: formData.newSystemId,
         newSystemReading: parseReading(formData.newSystemReading) ?? 0,
+        newModuleId: formData.newModuleId || null,
+        newModuleRead: parseReading(formData.newModuleRead),
         newGps: formData.newGps,
         signatureData: formData.signatureData || null,
         signatureName: formData.signatureName,

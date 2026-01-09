@@ -128,6 +128,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             const migratedPayload = isComplete ? {
               projectId: data.projectId || 0,
               oldSystemReading: data.old_system_reading ?? data.old_meter_reading ?? data.oldSystemReading ?? data.oldMeterReading,
+              oldModuleId: data.old_module_id ?? data.oldModuleId ?? null,
               oldModuleRead: data.old_module_read ?? data.oldModuleRead,
               newSystemId: data.new_system_id ?? data.new_meter_id ?? data.newSystemId ?? data.newMeterId,
               newSystemReading: data.new_system_reading ?? data.new_meter_reading ?? data.newSystemReading ?? data.newMeterReading ?? 0,
@@ -145,6 +146,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               troubleCode: data.trouble ?? data.troubleCode,
               notes: data.notes ?? null,
               oldSystemReading: data.old_system_reading ?? data.old_meter_reading ?? data.oldSystemReading ?? data.oldMeterReading,
+              oldModuleId: data.old_module_id ?? data.oldModuleId ?? null,
               oldModuleRead: data.old_module_read ?? data.oldModuleRead,
               photos: formatLegacyPhotos(data.trouble_photos ?? data.photos ?? [], 'trouble'),
             };
@@ -417,6 +419,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             const completePayload = {
               projectId: Number(projectId),
               oldSystemReading: oldSystemReading,
+              oldModuleId: offlineData.oldModuleId || null,
               oldModuleRead: oldModuleRead,
               newSystemId: newSystemId,
               newSystemReading: newSystemReading,
