@@ -830,11 +830,11 @@ export default function WorkflowWizardScreen() {
           projectId: Number(projectId),
           oldSystemReading: parseReading(formData.oldSystemReading),
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleRead: parseReading(formData.oldModuleRead),
+          oldModuleReading: parseReading(formData.oldModuleRead),
           newSystemId: formData.newSystemId,
           newSystemReading: parseReading(formData.newSystemReading) ?? 0,
           newModuleId: formData.newModuleId || null,
-          newModuleRead: parseReading(formData.newModuleRead),
+          newModuleReading: parseReading(formData.newModuleRead),
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
@@ -848,7 +848,7 @@ export default function WorkflowWizardScreen() {
           notes: formData.troubleNote || null,
           oldSystemReading: parseReading(formData.oldSystemReading),
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleRead: parseReading(formData.oldModuleRead),
+          oldModuleReading: parseReading(formData.oldModuleRead),
           photos: formatPhotosForOffline(troublePhotosBase64, 'trouble'),
         };
         
