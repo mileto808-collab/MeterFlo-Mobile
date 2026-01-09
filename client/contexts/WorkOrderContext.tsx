@@ -381,18 +381,23 @@ export interface OfflineWorkOrderData {
   projectId: number;
   oldSystemId: string;
   oldSystemReading: number | null;
-  oldGps: string;
-  newSystemId: string;
-  newSystemReading: number;
-  newGps: string;
-  signatureData: string | null;
-  signatureName: string;
+  oldModuleId?: string | null;
+  oldModuleReading?: number | null;
+  newSystemId?: string;
+  newSystemReading?: number;
+  newModuleId?: string | null;
+  newModuleReading?: number | null;
+  gpsCoordinates?: string | null;
+  signatureData?: string | null;
+  signatureName?: string;
   completedAt: string;
   completedBy: string | null;
   completedByUsername: string | null;
   notes: string | null;
-  beforePhotos: { base64: string; filename: string }[];
-  afterPhotos: { base64: string; filename: string }[];
+  beforePhotos?: { base64: string; filename: string }[];
+  afterPhotos?: { base64: string; filename: string }[];
+  troubleCode?: string;
+  troublePhotos?: { base64: string; filename: string }[];
   status: string;
   isOfflineCreated: boolean;
   syncPending: boolean;
@@ -872,14 +877,19 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       status: data.status,
       oldSystemId: data.oldSystemId,
       newSystemId: data.newSystemId,
+      oldModuleId: data.oldModuleId || undefined,
+      newModuleId: data.newModuleId || undefined,
       oldSystemReading: data.oldSystemReading != null ? String(data.oldSystemReading) : undefined,
       newSystemReading: data.newSystemReading != null ? String(data.newSystemReading) : undefined,
-      oldGps: data.oldGps,
-      newGps: data.newGps,
+      oldModuleRead: data.oldModuleReading != null ? String(data.oldModuleReading) : undefined,
+      newModuleRead: data.newModuleReading != null ? String(data.newModuleReading) : undefined,
+      oldGps: data.gpsCoordinates || undefined,
+      newGps: data.gpsCoordinates || undefined,
       serviceAddress: "Offline Work Order",
       signatureData: data.signatureData || undefined,
-      signatureName: data.signatureName,
+      signatureName: data.signatureName || undefined,
       notes: data.notes || undefined,
+      troubleCode: data.troubleCode,
       completedAt: data.completedAt,
       completedBy: data.completedBy || undefined,
       completedByUsername: data.completedByUsername || undefined,

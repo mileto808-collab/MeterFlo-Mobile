@@ -26,6 +26,7 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 type WizardStep = 
+  | "captureType"
   | "oldIds"
   | "canChange"
   | "oldReading"
@@ -40,6 +41,8 @@ type WizardStep =
   | "confirm"
   | "troubleCapture"
   | "troubleConfirm";
+
+type CaptureType = "system" | "module" | "both";
 
 interface PhotoAsset {
   uri: string;
@@ -67,29 +70,36 @@ interface NewWorkOrderData {
   notes: string;
 }
 
-const SUCCESS_STEPS: WizardStep[] = [
-  "oldIds",
-  "canChange",
-  "oldReading", 
-  "beforePhotos",
-  "physicalChange",
-  "newIds",
-  "newReading",
-  "afterPhotos",
-  "gps",
-  "notes",
-  "signature",
-  "confirm",
-];
+const getSuccessSteps = (captureType: CaptureType): WizardStep[] => {
+  return [
+    "captureType",
+    "oldIds",
+    "canChange",
+    "oldReading", 
+    "beforePhotos",
+    "physicalChange",
+    "newIds",
+    "newReading",
+    "afterPhotos",
+    "gps",
+    "notes",
+    "signature",
+    "confirm",
+  ];
+};
 
-const TROUBLE_STEPS: WizardStep[] = [
-  "oldIds",
-  "canChange",
-  "troubleCapture",
-  "troubleConfirm",
-];
+const getTroubleSteps = (): WizardStep[] => {
+  return [
+    "captureType",
+    "oldIds",
+    "canChange",
+    "troubleCapture",
+    "troubleConfirm",
+  ];
+};
 
 const STEP_TITLES: Record<WizardStep, string> = {
+  captureType: "What are you replacing?",
   oldIds: "Capture Old System ID",
   canChange: "Can The Changeout Proceed?",
   oldReading: "Capture Old Reading",
@@ -124,6 +134,34 @@ export default function NewWorkOrderWizardScreen() {
   const [isCapturingGps, setIsCapturingGps] = useState(false);
   const { referenceData } = useWorkOrders();
   
+  // Capture type selection (system/module/both)
+  const [captureType, setCaptureType] = useState<CaptureType>("both");
+  
+  // Capture mode for ID capture screens (tracks which ID is being captured)
+  const [oldCaptureMode, setOldCaptureMode] = useState<"system" | "module" | "summary">("system");
+  const [newCaptureMode, setNewCaptureMode] = useState<"system" | "module" | "summary">("system");
+  
+  // Reset capture modes when captureType changes
+  useEffect(() => {
+    if (captureType === "module") {
+      // Module-only: start in module capture mode
+      setOldCaptureMode("module");
+      setNewCaptureMode("module");
+    } else {
+      // System-only or both: start in system capture mode
+      setOldCaptureMode("system");
+      setNewCaptureMode("system");
+    }
+    // Also clear any previously captured IDs when capture type changes
+    setFormData(prev => ({
+      ...prev,
+      oldSystemId: "",
+      oldModuleId: "",
+      newSystemId: "",
+      newModuleId: "",
+    }));
+  }, [captureType]);
+  
   useEffect(() => {
     if (showScanner && !cameraPermission) {
       requestCameraPermission();
@@ -154,11 +192,17 @@ export default function NewWorkOrderWizardScreen() {
   });
 
   // Determine steps based on canChange decision
-  const steps = formData.canChange === false ? TROUBLE_STEPS : SUCCESS_STEPS;
+  const steps = formData.canChange === false ? getTroubleSteps() : getSuccessSteps(captureType);
   const currentStep = steps[currentStepIndex];
   const totalSteps = steps.length;
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;
+  
+  // Derive whether module is needed based on captureType
+  const hasOldModule = captureType === "module" || captureType === "both";
+  const hasNewModule = captureType === "module" || captureType === "both";
+  const hasOldSystem = captureType === "system" || captureType === "both";
+  const hasNewSystem = captureType === "system" || captureType === "both";
   
   // Get trouble codes from reference data
   const troubleCodes = referenceData?.troubleCodes || [];
@@ -357,9 +401,6 @@ export default function NewWorkOrderWizardScreen() {
     }
   };
 
-  const hasOldModule = formData.oldModuleId.trim().length > 0;
-  const hasNewModule = formData.newModuleId.trim().length > 0;
-  
   const getTroubleCodeFromDisplay = (displayValue: string): string => {
     const match = displayValue.match(/^([A-Z0-9]+)\s*-/);
     return match ? match[1] : displayValue;
@@ -367,24 +408,32 @@ export default function NewWorkOrderWizardScreen() {
   
   const isCurrentStepValid = (): boolean => {
     switch (currentStep) {
+      case "captureType":
+        return true;
       case "oldIds": 
-        return formData.oldSystemId.trim().length > 0;
+        // System ID required if capturing system or both, module ID required if capturing module or both
+        if (hasOldSystem && !formData.oldSystemId.trim()) return false;
+        if (hasOldModule && !formData.oldModuleId.trim()) return false;
+        return true;
       case "canChange":
         return formData.canChange !== null;
       case "oldReading": 
-        const oldSystemValid = formData.oldSystemReading.trim().length > 0;
-        const oldModuleValid = !hasOldModule || formData.oldModuleReading.trim().length > 0;
-        return oldSystemValid && oldModuleValid;
+        const oldSysValid = !hasOldSystem || formData.oldSystemReading.trim().length > 0;
+        const oldModValid = !hasOldModule || formData.oldModuleReading.trim().length > 0;
+        return oldSysValid && oldModValid;
       case "beforePhotos":
         return formData.beforePhotos.length >= 1;
       case "physicalChange":
         return true;
       case "newIds": 
-        return formData.newSystemId.trim().length > 0;
+        // System ID required if capturing system or both, module ID required if capturing module or both
+        if (hasNewSystem && !formData.newSystemId.trim()) return false;
+        if (hasNewModule && !formData.newModuleId.trim()) return false;
+        return true;
       case "newReading": 
-        const newSystemValid = formData.newSystemReading.trim().length > 0;
-        const newModuleValid = !hasNewModule || formData.newModuleReading.trim().length > 0;
-        return newSystemValid && newModuleValid;
+        const newSysValid = !hasNewSystem || formData.newSystemReading.trim().length > 0;
+        const newModValid = !hasNewModule || formData.newModuleReading.trim().length > 0;
+        return newSysValid && newModValid;
       case "afterPhotos":
         return formData.afterPhotos.length >= 1;
       case "gps":
@@ -782,40 +831,210 @@ export default function NewWorkOrderWizardScreen() {
     }
     
     switch (currentStep) {
-      case "oldIds":
+      case "captureType":
         return (
           <View>
-            {renderIdInput("oldSystem")}
-            <View style={{ marginTop: Spacing.xl }}>
-              <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
-                Module ID (Optional)
-              </ThemedText>
-              <View style={styles.scanButtonRow}>
-                <Pressable
-                  style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
-                  onPress={() => { setScannerTarget("oldModule"); setScannerType("barcode"); setDetectedBarcode(null); setShowScanner(true); }}
-                >
-                  <Icon name="maximize" size={24} color={theme.primary} />
-                  <ThemedText type="caption" style={{ marginTop: Spacing.xs }}>Barcode</ThemedText>
-                </Pressable>
-                <Pressable
-                  style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
-                  onPress={() => { setScannerTarget("oldModule"); setScannerType("qr"); setDetectedBarcode(null); setShowScanner(true); }}
-                >
-                  <Icon name="grid" size={24} color={theme.primary} />
-                  <ThemedText type="caption" style={{ marginTop: Spacing.xs }}>QR Code</ThemedText>
-                </Pressable>
-              </View>
-              <TextInput
-                value={formData.oldModuleId}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, oldModuleId: text }))}
-                placeholder="Enter module ID (or leave blank)"
-                autoCapitalize="characters"
-                style={{ marginTop: Spacing.sm }}
-              />
+            <View style={styles.iconHeader}>
+              <Icon name="layers" size={48} color={theme.primary} />
             </View>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
+              What equipment are you replacing?
+            </ThemedText>
+            
+            <Pressable
+              style={[
+                styles.captureTypeOption,
+                { 
+                  backgroundColor: captureType === "system" ? theme.primary : theme.backgroundSecondary,
+                  borderColor: captureType === "system" ? theme.primary : theme.border,
+                }
+              ]}
+              onPress={() => setCaptureType("system")}
+            >
+              <Icon name="box" size={24} color={captureType === "system" ? "#FFFFFF" : theme.text} />
+              <ThemedText type="body" style={{ marginLeft: Spacing.md, fontWeight: "600", color: captureType === "system" ? "#FFFFFF" : theme.text }}>
+                System Only
+              </ThemedText>
+            </Pressable>
+            
+            <Pressable
+              style={[
+                styles.captureTypeOption,
+                { 
+                  backgroundColor: captureType === "module" ? theme.primary : theme.backgroundSecondary,
+                  borderColor: captureType === "module" ? theme.primary : theme.border,
+                  marginTop: Spacing.md,
+                }
+              ]}
+              onPress={() => setCaptureType("module")}
+            >
+              <Icon name="cpu" size={24} color={captureType === "module" ? "#FFFFFF" : theme.text} />
+              <ThemedText type="body" style={{ marginLeft: Spacing.md, fontWeight: "600", color: captureType === "module" ? "#FFFFFF" : theme.text }}>
+                Module Only
+              </ThemedText>
+            </Pressable>
+            
+            <Pressable
+              style={[
+                styles.captureTypeOption,
+                { 
+                  backgroundColor: captureType === "both" ? theme.primary : theme.backgroundSecondary,
+                  borderColor: captureType === "both" ? theme.primary : theme.border,
+                  marginTop: Spacing.md,
+                }
+              ]}
+              onPress={() => setCaptureType("both")}
+            >
+              <Icon name="package" size={24} color={captureType === "both" ? "#FFFFFF" : theme.text} />
+              <ThemedText type="body" style={{ marginLeft: Spacing.md, fontWeight: "600", color: captureType === "both" ? "#FFFFFF" : theme.text }}>
+                System and Module
+              </ThemedText>
+            </Pressable>
           </View>
         );
+
+      case "oldIds": {
+        const oldIdHelpText = hasOldSystem && hasOldModule 
+          ? "Capture the old system and module IDs by scanning or entering manually."
+          : hasOldSystem
+          ? "Capture the old system ID by scanning or entering manually."
+          : "Capture the old module ID by scanning or entering manually.";
+          
+        const openOldScannerFor = (target: "oldSystem" | "oldModule", type: "barcode" | "qr") => {
+          setScannerTarget(target);
+          setScannerType(type);
+          setDetectedBarcode(null);
+          setShowScanner(true);
+        };
+        
+        const clearOldCapturedId = (target: "system" | "module") => {
+          if (target === "system") {
+            setFormData(prev => ({ ...prev, oldSystemId: "" }));
+            setOldCaptureMode("system");
+          } else {
+            setFormData(prev => ({ ...prev, oldModuleId: "" }));
+            if (!formData.oldSystemId.trim() && hasOldSystem) {
+              setOldCaptureMode("system");
+            } else {
+              setOldCaptureMode("module");
+            }
+          }
+        };
+        
+        const handleOldSystemIdChange = (text: string) => {
+          setFormData(prev => ({ ...prev, oldSystemId: text }));
+        };
+        
+        const handleOldSystemIdBlur = () => {
+          if (formData.oldSystemId.trim().length > 0 && hasOldModule) {
+            setOldCaptureMode("module");
+          } else if (formData.oldSystemId.trim().length > 0) {
+            setOldCaptureMode("summary");
+          }
+        };
+        
+        const handleOldModuleIdChange = (text: string) => {
+          setFormData(prev => ({ ...prev, oldModuleId: text }));
+        };
+        
+        const handleOldModuleIdBlur = () => {
+          if (formData.oldModuleId.trim().length > 0) {
+            setOldCaptureMode("summary");
+          }
+        };
+        
+        const oldCurrentCapturing = oldCaptureMode === "system" ? "Old System ID" : oldCaptureMode === "module" ? "Old Module ID" : null;
+        const isCapturingOldSystem = oldCaptureMode === "system" && hasOldSystem;
+        const isCapturingOldModule = oldCaptureMode === "module" && hasOldModule;
+        
+        return (
+          <View>
+            <View style={styles.iconHeader}>
+              <Icon name="hash" size={48} color={theme.primary} />
+            </View>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
+              {oldIdHelpText}
+            </ThemedText>
+
+            {hasOldSystem && formData.oldSystemId.trim().length > 0 && !isCapturingOldSystem ? (
+              <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.md, marginBottom: Spacing.md }]}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>Old System ID</ThemedText>
+                    <ThemedText type="h4" style={{ fontWeight: "600" }}>{formData.oldSystemId}</ThemedText>
+                  </View>
+                  <Button
+                    onPress={() => clearOldCapturedId("system")}
+                    style={{ backgroundColor: theme.backgroundDefault, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm }}
+                  >
+                    <ThemedText type="small">Clear</ThemedText>
+                  </Button>
+                </View>
+              </View>
+            ) : null}
+
+            {hasOldModule && formData.oldModuleId.trim().length > 0 && !isCapturingOldModule ? (
+              <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.md, marginBottom: Spacing.md }]}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>Old Module ID</ThemedText>
+                    <ThemedText type="h4" style={{ fontWeight: "600" }}>{formData.oldModuleId}</ThemedText>
+                  </View>
+                  <Button
+                    onPress={() => clearOldCapturedId("module")}
+                    style={{ backgroundColor: theme.backgroundDefault, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm }}
+                  >
+                    <ThemedText type="small">Clear</ThemedText>
+                  </Button>
+                </View>
+              </View>
+            ) : null}
+
+            {(isCapturingOldSystem || isCapturingOldModule) && oldCurrentCapturing ? (
+              <View>
+                <View style={[{ backgroundColor: theme.primary, padding: Spacing.md, borderRadius: 8, marginBottom: Spacing.lg }]}>
+                  <ThemedText type="body" style={{ color: "#FFFFFF", textAlign: "center", fontWeight: "600" }}>
+                    Capturing: {oldCurrentCapturing}
+                  </ThemedText>
+                </View>
+
+                <View style={styles.scanButtonsRow}>
+                  <Pressable
+                    style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                    onPress={() => openOldScannerFor(isCapturingOldSystem ? "oldSystem" : "oldModule", "barcode")}
+                  >
+                    <Icon name="maximize" size={28} color={theme.primary} />
+                    <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>Barcode</ThemedText>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                    onPress={() => openOldScannerFor(isCapturingOldSystem ? "oldSystem" : "oldModule", "qr")}
+                  >
+                    <Icon name="grid" size={28} color={theme.primary} />
+                    <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>QR Code</ThemedText>
+                  </Pressable>
+                </View>
+
+                <ThemedText type="body" style={{ color: theme.textSecondary, marginVertical: Spacing.lg, textAlign: "center" }}>
+                  or enter manually
+                </ThemedText>
+
+                <TextInput
+                  value={isCapturingOldSystem ? formData.oldSystemId : formData.oldModuleId}
+                  onChangeText={isCapturingOldSystem ? handleOldSystemIdChange : handleOldModuleIdChange}
+                  onBlur={isCapturingOldSystem ? handleOldSystemIdBlur : handleOldModuleIdBlur}
+                  placeholder="Type or use HID scanner"
+                  autoCapitalize="characters"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+                <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm, textAlign: "center" }}>
+                  Tap field and scan with Bluetooth/USB barcode gun
+                </ThemedText>
+              </View>
+            ) : null}
+          </View>
+        );
+      }
 
       case "canChange":
         return (
@@ -971,40 +1190,148 @@ export default function NewWorkOrderWizardScreen() {
           </View>
         );
 
-      case "newIds":
+      case "newIds": {
+        const newIdHelpText = hasNewSystem && hasNewModule 
+          ? "Capture the new system and module IDs by scanning or entering manually."
+          : hasNewSystem
+          ? "Capture the new system ID by scanning or entering manually."
+          : "Capture the new module ID by scanning or entering manually.";
+          
+        const openNewScannerFor = (target: "newSystem" | "newModule", type: "barcode" | "qr") => {
+          setScannerTarget(target);
+          setScannerType(type);
+          setDetectedBarcode(null);
+          setShowScanner(true);
+        };
+        
+        const clearNewCapturedId = (target: "system" | "module") => {
+          if (target === "system") {
+            setFormData(prev => ({ ...prev, newSystemId: "" }));
+            setNewCaptureMode("system");
+          } else {
+            setFormData(prev => ({ ...prev, newModuleId: "" }));
+            if (!formData.newSystemId.trim() && hasNewSystem) {
+              setNewCaptureMode("system");
+            } else {
+              setNewCaptureMode("module");
+            }
+          }
+        };
+        
+        const handleNewSystemIdChange = (text: string) => {
+          setFormData(prev => ({ ...prev, newSystemId: text }));
+        };
+        
+        const handleNewSystemIdBlur = () => {
+          if (formData.newSystemId.trim().length > 0 && hasNewModule) {
+            setNewCaptureMode("module");
+          } else if (formData.newSystemId.trim().length > 0) {
+            setNewCaptureMode("summary");
+          }
+        };
+        
+        const handleNewModuleIdChange = (text: string) => {
+          setFormData(prev => ({ ...prev, newModuleId: text }));
+        };
+        
+        const handleNewModuleIdBlur = () => {
+          if (formData.newModuleId.trim().length > 0) {
+            setNewCaptureMode("summary");
+          }
+        };
+        
+        const newCurrentCapturing = newCaptureMode === "system" ? "New System ID" : newCaptureMode === "module" ? "New Module ID" : null;
+        const isCapturingNewSystem = newCaptureMode === "system" && hasNewSystem;
+        const isCapturingNewModule = newCaptureMode === "module" && hasNewModule;
+        
         return (
           <View>
-            {renderIdInput("newSystem")}
-            <View style={{ marginTop: Spacing.xl }}>
-              <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
-                New Module ID (Optional)
-              </ThemedText>
-              <View style={styles.scanButtonRow}>
-                <Pressable
-                  style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
-                  onPress={() => { setScannerTarget("newModule"); setScannerType("barcode"); setDetectedBarcode(null); setShowScanner(true); }}
-                >
-                  <Icon name="maximize" size={24} color={theme.primary} />
-                  <ThemedText type="caption" style={{ marginTop: Spacing.xs }}>Barcode</ThemedText>
-                </Pressable>
-                <Pressable
-                  style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
-                  onPress={() => { setScannerTarget("newModule"); setScannerType("qr"); setDetectedBarcode(null); setShowScanner(true); }}
-                >
-                  <Icon name="grid" size={24} color={theme.primary} />
-                  <ThemedText type="caption" style={{ marginTop: Spacing.xs }}>QR Code</ThemedText>
-                </Pressable>
-              </View>
-              <TextInput
-                value={formData.newModuleId}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, newModuleId: text }))}
-                placeholder="Enter module ID (or leave blank)"
-                autoCapitalize="characters"
-                style={{ marginTop: Spacing.sm }}
-              />
+            <View style={styles.iconHeader}>
+              <Icon name="hash" size={48} color={theme.primary} />
             </View>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
+              {newIdHelpText}
+            </ThemedText>
+
+            {hasNewSystem && formData.newSystemId.trim().length > 0 && !isCapturingNewSystem ? (
+              <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.md, marginBottom: Spacing.md }]}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>New System ID</ThemedText>
+                    <ThemedText type="h4" style={{ fontWeight: "600" }}>{formData.newSystemId}</ThemedText>
+                  </View>
+                  <Button
+                    onPress={() => clearNewCapturedId("system")}
+                    style={{ backgroundColor: theme.backgroundDefault, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm }}
+                  >
+                    <ThemedText type="small">Clear</ThemedText>
+                  </Button>
+                </View>
+              </View>
+            ) : null}
+
+            {hasNewModule && formData.newModuleId.trim().length > 0 && !isCapturingNewModule ? (
+              <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.md, marginBottom: Spacing.md }]}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>New Module ID</ThemedText>
+                    <ThemedText type="h4" style={{ fontWeight: "600" }}>{formData.newModuleId}</ThemedText>
+                  </View>
+                  <Button
+                    onPress={() => clearNewCapturedId("module")}
+                    style={{ backgroundColor: theme.backgroundDefault, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm }}
+                  >
+                    <ThemedText type="small">Clear</ThemedText>
+                  </Button>
+                </View>
+              </View>
+            ) : null}
+
+            {(isCapturingNewSystem || isCapturingNewModule) && newCurrentCapturing ? (
+              <View>
+                <View style={[{ backgroundColor: theme.primary, padding: Spacing.md, borderRadius: 8, marginBottom: Spacing.lg }]}>
+                  <ThemedText type="body" style={{ color: "#FFFFFF", textAlign: "center", fontWeight: "600" }}>
+                    Capturing: {newCurrentCapturing}
+                  </ThemedText>
+                </View>
+
+                <View style={styles.scanButtonsRow}>
+                  <Pressable
+                    style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                    onPress={() => openNewScannerFor(isCapturingNewSystem ? "newSystem" : "newModule", "barcode")}
+                  >
+                    <Icon name="maximize" size={28} color={theme.primary} />
+                    <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>Barcode</ThemedText>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                    onPress={() => openNewScannerFor(isCapturingNewSystem ? "newSystem" : "newModule", "qr")}
+                  >
+                    <Icon name="grid" size={28} color={theme.primary} />
+                    <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>QR Code</ThemedText>
+                  </Pressable>
+                </View>
+
+                <ThemedText type="body" style={{ color: theme.textSecondary, marginVertical: Spacing.lg, textAlign: "center" }}>
+                  or enter manually
+                </ThemedText>
+
+                <TextInput
+                  value={isCapturingNewSystem ? formData.newSystemId : formData.newModuleId}
+                  onChangeText={isCapturingNewSystem ? handleNewSystemIdChange : handleNewModuleIdChange}
+                  onBlur={isCapturingNewSystem ? handleNewSystemIdBlur : handleNewModuleIdBlur}
+                  placeholder="Type or use HID scanner"
+                  autoCapitalize="characters"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+                <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm, textAlign: "center" }}>
+                  Tap field and scan with Bluetooth/USB barcode gun
+                </ThemedText>
+              </View>
+            ) : null}
           </View>
         );
+      }
 
       case "newReading":
         return (
@@ -1265,7 +1592,7 @@ export default function NewWorkOrderWizardScreen() {
             </ThemedText>
             <SelectInput
               value={formData.troubleCode}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, troubleCode: value }))}
+              onSelect={(value: string) => setFormData(prev => ({ ...prev, troubleCode: value }))}
               options={troubleCodeDisplayStrings}
               placeholder="Select a trouble code"
             />
