@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, StyleSheet, Alert, Platform, ActivityIndicator, Pressable, Image, ScrollView } from "react-native";
+import { View, StyleSheet, Alert, Platform, ActivityIndicator, Pressable, Image, ScrollView, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -87,7 +87,7 @@ const TROUBLE_STEPS: WizardStep[] = [
 ];
 
 const STEP_TITLES: Record<WizardStep, string> = {
-  canChange: "Can System Be Changed?",
+  canChange: "Can The Changeout Proceed?",
   oldReading: "Old System Final Reading",
   beforePhotos: "Before Photos",
   physicalChange: "Perform Physical Changeout",
@@ -127,6 +127,7 @@ export default function WorkflowWizardScreen() {
   const [scannerType, setScannerType] = useState<"barcode" | "qr">("barcode");
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [isCapturingGps, setIsCapturingGps] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
   
   useEffect(() => {
     if (showScanner && !cameraPermission) {
@@ -926,12 +927,39 @@ export default function WorkflowWizardScreen() {
                 <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID</ThemedText>
                 <ThemedText type="h4" style={{ fontWeight: "600", color: theme.primary }}>{workOrder.oldSystemId || "N/A"}</ThemedText>
               </View>
+              {workOrder.oldModuleId ? (
+                <View style={[styles.detailRow, { marginTop: Spacing.md }]}>
+                  <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Module ID</ThemedText>
+                  <ThemedText type="h4" style={{ fontWeight: "600", color: theme.primary }}>{workOrder.oldModuleId}</ThemedText>
+                </View>
+              ) : null}
               <View style={[styles.detailRow, { marginTop: Spacing.md }]}>
                 <ThemedText type="body" style={{ color: theme.textSecondary }}>Current Status</ThemedText>
                 <ThemedText type="body" style={{ color: workOrder.status === "Trouble" ? theme.warning : theme.text, fontWeight: "500" }}>
                   {workOrder.status}
                 </ThemedText>
               </View>
+              {workOrder.notes?.trim() ? (
+                <Pressable 
+                  onPress={() => setShowNotesModal(true)}
+                  style={({ pressed }) => [
+                    { 
+                      marginTop: Spacing.lg, 
+                      paddingVertical: Spacing.sm, 
+                      paddingHorizontal: Spacing.md, 
+                      backgroundColor: theme.backgroundDefault, 
+                      borderRadius: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      alignSelf: "flex-start",
+                      opacity: pressed ? 0.7 : 1,
+                    }
+                  ]}
+                >
+                  <Icon name="file-text" size={16} color={theme.primary} style={{ marginRight: Spacing.sm }} />
+                  <ThemedText type="body" style={{ color: theme.primary, fontWeight: "500" }}>Notes</ThemedText>
+                </Pressable>
+              ) : null}
             </View>
             
             <View style={styles.decisionButtons}>
@@ -1615,6 +1643,40 @@ export default function WorkflowWizardScreen() {
         onClose={() => setViewingPhoto(null)}
         onDelete={handleDeleteViewingPhoto}
       />
+
+      <Modal
+        visible={showNotesModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNotesModal(false)}
+      >
+        <Pressable 
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: Spacing.lg }}
+          onPress={() => setShowNotesModal(false)}
+        >
+          <Pressable 
+            onPress={(e) => e.stopPropagation()}
+            style={{ backgroundColor: theme.backgroundRoot, borderRadius: BorderRadius.lg, maxHeight: "70%" }}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+              <ThemedText type="h4">Notes</ThemedText>
+              <Pressable onPress={() => setShowNotesModal(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Icon name="x" size={24} color={theme.textSecondary} />
+              </Pressable>
+            </View>
+            <ScrollView style={{ padding: Spacing.lg }}>
+              <ThemedText type="body" style={{ lineHeight: 22 }}>
+                {workOrder.notes || "No notes available."}
+              </ThemedText>
+            </ScrollView>
+            <View style={{ padding: Spacing.lg, borderTopWidth: 1, borderTopColor: theme.border }}>
+              <Button onPress={() => setShowNotesModal(false)} style={{ backgroundColor: theme.backgroundSecondary }}>
+                <ThemedText>Close</ThemedText>
+              </Button>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
