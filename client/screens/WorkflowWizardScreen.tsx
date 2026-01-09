@@ -88,7 +88,7 @@ const TROUBLE_STEPS: WizardStep[] = [
 
 const STEP_TITLES: Record<WizardStep, string> = {
   canChange: "Can The Changeout Proceed?",
-  oldReading: "Old System Final Reading",
+  oldReading: "Capture Old Reading",
   beforePhotos: "Before Photos",
   physicalChange: "Perform Physical Changeout",
   newSystemId: "New System ID",
@@ -999,6 +999,12 @@ export default function WorkflowWizardScreen() {
         );
 
       case "oldReading":
+        const hasOldSystemId = Boolean(workOrder.oldSystemId);
+        const hasOldSystemType = Boolean(workOrder.oldSystemType || (workOrder as any).old_system_type);
+        const hasOldModuleId = Boolean(workOrder.oldModuleId);
+        const hasOldModuleType = Boolean(workOrder.oldModuleType || (workOrder as any).old_module_type);
+        const hasAnyOldInfo = hasOldSystemId || hasOldSystemType || hasOldModuleId || hasOldModuleType;
+        
         return (
           <View>
             <View style={styles.iconHeader}>
@@ -1015,14 +1021,32 @@ export default function WorkflowWizardScreen() {
               style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg, minHeight: 60 }}
             />
             
-            {(workOrder.oldSystemType || (workOrder as any).old_system_type) ? (
-              <View style={{ marginTop: Spacing.xl, padding: Spacing.lg, backgroundColor: theme.backgroundSecondary, borderRadius: 12 }}>
-                <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
-                  Verify Old System Type
-                </ThemedText>
-                <ThemedText type="h4" style={{ fontWeight: "600" }}>
-                  {workOrder.oldSystemType || (workOrder as any).old_system_type}
-                </ThemedText>
+            {hasAnyOldInfo ? (
+              <View style={{ marginTop: Spacing.xl, padding: Spacing.md, backgroundColor: theme.backgroundSecondary, borderRadius: 12 }}>
+                {hasOldSystemId ? (
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: hasOldSystemType || hasOldModuleId || hasOldModuleType ? Spacing.sm : 0 }}>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>Old System ID</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemId}</ThemedText>
+                  </View>
+                ) : null}
+                {hasOldSystemType ? (
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: hasOldModuleId || hasOldModuleType ? Spacing.sm : 0 }}>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>Old System Type</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemType || (workOrder as any).old_system_type}</ThemedText>
+                  </View>
+                ) : null}
+                {hasOldModuleId ? (
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: hasOldModuleType ? Spacing.sm : 0 }}>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>Old Module ID</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldModuleId}</ThemedText>
+                  </View>
+                ) : null}
+                {hasOldModuleType ? (
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <ThemedText type="small" style={{ color: theme.textSecondary }}>Old Module Type</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldModuleType || (workOrder as any).old_module_type}</ThemedText>
+                  </View>
+                ) : null}
               </View>
             ) : null}
           </View>
