@@ -28,6 +28,7 @@ Preferred communication style: Simple, everyday language.
 - **Workflow Wizard**: Supports trouble code display with labels, photo uploads (base64 conversion with compression), and signature capture (base64 PNG). Uses camelCase for mobile API payloads.
 - **Search Functionality**: Unified multi-field search across system ID, work order ID, and service address, searching local cache first then the server. Displays status for found/not found, and handles already completed work orders.
 - **Terminology Migration**: Adapts to backend changes from "meter" to "system" terminology, with backward compatibility and local data migration.
+- **Offline Lookup Key Consistency**: All identifiers (system ID, module ID) are normalized by trimming whitespace at both storage and sync time. Pending actions store a `lookupKey` field to ensure consistent matching during sync. Startup migrations clean up legacy data with mismatched or missing lookup keys.
 - **Android Auto-Update System**: Integrates with GitHub releases for automatic APK updates on Android, configurable by the server and user preferences.
 
 ### Key Design Patterns

@@ -13,6 +13,7 @@ interface PendingAction {
   timestamp: number;
   photoCount?: number;
   completionMode?: "complete" | "trouble";
+  lookupKey?: string; // For offlineWorkOrder: the key used for offline storage (system ID or module ID)
 }
 
 interface SyncHistoryEntry {
@@ -28,7 +29,12 @@ interface SyncHistoryEntry {
 }
 
 interface SyncedOfflineWorkOrder {
-  oldSystemId: string;
+  lookupKey: string; // The key used for offline storage (system ID or module ID)
+  oldSystemId?: string;
+  oldModuleId?: string;
+  newModuleId?: string;
+  oldModuleRead?: string;
+  newModuleRead?: string;
   serverWorkOrderId: number;
   customerWoId?: string;
   status?: string;
@@ -160,31 +166,73 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
           }
           
           // Migrate legacy "offlineWorkOrder" actions from meter to system terminology
+          // and normalize identifiers by trimming
           if (action.type === "offlineWorkOrder") {
             const data = action.data;
+            let migratedData = { ...data };
+            let actionNeedsMigration = false;
+            
+            // Migrate meter to system terminology
             if (data.oldMeterId !== undefined && data.oldSystemId === undefined) {
+              actionNeedsMigration = true;
+              migratedData.oldSystemId = data.oldMeterId;
+              migratedData.newSystemId = data.newMeterId;
+              migratedData.oldSystemReading = data.oldMeterReading;
+              migratedData.newSystemReading = data.newMeterReading;
+            }
+            
+            // Normalize identifiers by trimming
+            const oldSystemId = (migratedData.oldSystemId || "").trim();
+            const oldModuleId = (migratedData.oldModuleId || "").trim();
+            const newSystemId = (migratedData.newSystemId || "").trim();
+            const newModuleId = (migratedData.newModuleId || "").trim();
+            
+            // Backfill lookupKey if missing
+            const computedLookupKey = oldSystemId || oldModuleId;
+            if (!action.lookupKey && computedLookupKey) {
+              actionNeedsMigration = true;
+            }
+            
+            if (actionNeedsMigration) {
               needsMigration = true;
-              const migratedData = {
-                ...data,
-                oldSystemId: data.oldMeterId,
-                newSystemId: data.newMeterId,
-                oldSystemReading: data.oldMeterReading,
-                newSystemReading: data.newMeterReading,
+              migratedData.oldSystemId = oldSystemId || undefined;
+              migratedData.oldModuleId = oldModuleId || undefined;
+              migratedData.newSystemId = newSystemId || undefined;
+              migratedData.newModuleId = newModuleId || undefined;
+              console.log(`[OfflineContext] Migrated offlineWorkOrder action, lookupKey: ${computedLookupKey}`);
+              return { 
+                ...action, 
+                data: migratedData,
+                lookupKey: action.lookupKey?.trim() || computedLookupKey,
               };
-              console.log(`[OfflineContext] Migrated offlineWorkOrder action from meter to system terminology`);
-              return { ...action, data: migratedData };
             }
           }
           
           return action;
         });
         
+        // Filter out invalid legacy offlineWorkOrder actions with no usable identifiers
+        const validActions = actions.filter(action => {
+          if (action.type === "offlineWorkOrder") {
+            const data = action.data;
+            const oldSystemId = (data.oldSystemId || data.oldMeterId || "").trim();
+            const oldModuleId = (data.oldModuleId || "").trim();
+            const lookupKey = action.lookupKey?.trim() || oldSystemId || oldModuleId;
+            if (!lookupKey) {
+              console.warn(`[OfflineContext] Filtering out invalid legacy offlineWorkOrder action ${action.id} - no usable identifiers`);
+              needsMigration = true;
+              return false;
+            }
+          }
+          return true;
+        });
+        
         if (needsMigration) {
-          await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(actions));
+          await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(validActions));
           console.log("[OfflineContext] Migrated legacy pending actions to new format");
         }
         
-        setPendingActions(actions);
+        setPendingActions(validActions);
       }
       
       const storedHistory = await AsyncStorage.getItem(STORAGE_KEYS.SYNC_HISTORY);
@@ -304,22 +352,47 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             successfulActionIds.push(action.id);
           } else if (action.type === "offlineWorkOrder") {
             const offlineData = action.data;
-            // Handle legacy data with meter terminology
-            const oldSystemId = offlineData.oldSystemId || offlineData.oldMeterId;
-            const newSystemId = offlineData.newSystemId || offlineData.newMeterId;
+            // Handle legacy data with meter terminology and normalize by trimming
+            const oldSystemId = (offlineData.oldSystemId || offlineData.oldMeterId || "").trim();
+            const newSystemId = (offlineData.newSystemId || offlineData.newMeterId || "").trim();
+            const oldModuleId = (offlineData.oldModuleId || "").trim();
+            const newModuleId = (offlineData.newModuleId || "").trim();
             
-            if (!oldSystemId) {
-              console.warn(`[syncPendingActions] Skipping offlineWorkOrder action - missing oldSystemId`);
+            // Check for valid lookup key - prefer stored key, fall back to computed
+            const computedLookupKey = oldSystemId || oldModuleId;
+            const effectiveLookupKey = action.lookupKey?.trim() || computedLookupKey;
+            
+            // Skip and remove legacy actions without valid identifiers
+            if (!effectiveLookupKey) {
+              console.warn(`[syncPendingActions] Removing invalid legacy offlineWorkOrder action ${action.id} - missing identifiers`);
+              // Add to success to remove from queue (it's unrecoverable, not a retry-able failure)
+              successfulActionIds.push(action.id);
               continue;
             }
             
-            console.log(`[syncPendingActions] Syncing offline work order for old system: ${oldSystemId}, new system: ${newSystemId}`);
+            console.log(`[syncPendingActions] Syncing offline work order for old system: ${oldSystemId || 'none'}, old module: ${oldModuleId || 'none'}, new system: ${newSystemId || 'none'}, new module: ${newModuleId || 'none'}`);
             
             let eligibleWorkOrder: any = null;
             
             const searchByOldSystem = async () => {
+              if (!oldSystemId) return [];
               const response = await fetch(
                 `${serverUrl}/api/projects/${projectId}/work-orders/search?systemId=${encodeURIComponent(oldSystemId)}`,
+                { 
+                  method: "GET", 
+                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
+                  credentials: "include" 
+                }
+              );
+              if (!response.ok) return [];
+              const data = await response.json();
+              return data.workOrders || data || [];
+            };
+            
+            const searchByOldModule = async () => {
+              if (!oldModuleId) return [];
+              const response = await fetch(
+                `${serverUrl}/api/projects/${projectId}/work-orders/search?moduleId=${encodeURIComponent(oldModuleId)}`,
                 { 
                   method: "GET", 
                   headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
@@ -346,6 +419,21 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               return data.workOrders || data || [];
             };
             
+            const searchByNewModule = async () => {
+              if (!newModuleId) return [];
+              const response = await fetch(
+                `${serverUrl}/api/projects/${projectId}/work-orders/search?moduleId=${encodeURIComponent(newModuleId)}`,
+                { 
+                  method: "GET", 
+                  headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
+                  credentials: "include" 
+                }
+              );
+              if (!response.ok) return [];
+              const data = await response.json();
+              return data.workOrders || data || [];
+            };
+            
             const findEligible = (workOrders: any[]) => {
               return workOrders.find((wo: any) => {
                 const status = (wo.status || "").toLowerCase();
@@ -353,17 +441,32 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               });
             };
             
-            const oldSystemResults = await searchByOldSystem();
-            eligibleWorkOrder = findEligible(oldSystemResults);
+            // Search order: old system ID -> old module ID -> new system ID -> new module ID
+            if (oldSystemId) {
+              const oldSystemResults = await searchByOldSystem();
+              eligibleWorkOrder = findEligible(oldSystemResults);
+            }
             
-            if (!eligibleWorkOrder) {
-              console.log(`[syncPendingActions] No match by old system ID, searching by new system ID: ${newSystemId}`);
+            if (!eligibleWorkOrder && oldModuleId) {
+              console.log(`[syncPendingActions] No match by old system ID, searching by old module ID: ${oldModuleId}`);
+              const oldModuleResults = await searchByOldModule();
+              eligibleWorkOrder = findEligible(oldModuleResults);
+            }
+            
+            if (!eligibleWorkOrder && newSystemId) {
+              console.log(`[syncPendingActions] No match by old IDs, searching by new system ID: ${newSystemId}`);
               const newSystemResults = await searchByNewSystem();
               eligibleWorkOrder = findEligible(newSystemResults);
             }
             
+            if (!eligibleWorkOrder && newModuleId) {
+              console.log(`[syncPendingActions] No match by system IDs, searching by new module ID: ${newModuleId}`);
+              const newModuleResults = await searchByNewModule();
+              eligibleWorkOrder = findEligible(newModuleResults);
+            }
+            
             if (!eligibleWorkOrder) {
-              console.log(`[syncPendingActions] No eligible work order found for old system ${oldSystemId} or new system ${newSystemId}, keeping in queue for retry`);
+              console.log(`[syncPendingActions] No eligible work order found for system ${oldSystemId || newSystemId || 'none'} or module ${oldModuleId || newModuleId || 'none'}, keeping in queue for retry`);
               continue;
             }
             
@@ -469,8 +572,14 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             offlineToServerIdMap.set(action.id, serverWorkOrderId);
             
             const serverWo = serverResponseData?.workOrder || serverResponseData;
+            // Use the effectiveLookupKey computed at the start of this action processing
             syncedOfflineWorkOrders.push({
+              lookupKey: effectiveLookupKey,
               oldSystemId: offlineData.oldSystemId,
+              oldModuleId: offlineData.oldModuleId,
+              newModuleId: offlineData.newModuleId,
+              oldModuleRead: offlineData.oldModuleRead,
+              newModuleRead: offlineData.newModuleRead,
               serverWorkOrderId: serverWo?.id || serverWorkOrderId,
               customerWoId: serverWo?.customer_wo_id || serverWo?.customerWoId || eligibleWorkOrder.customer_wo_id || eligibleWorkOrder.customerWoId,
               status: serverWo?.status || "Completed",
@@ -547,6 +656,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         }
       }
       
+      // Remove successful (including legacy removals) and conflicted actions; failed actions retry
       const remainingActions = pendingActions.filter(a => 
         !successfulActionIds.includes(a.id) && !conflictedActionIds.includes(a.id)
       );

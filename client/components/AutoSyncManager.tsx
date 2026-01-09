@@ -55,14 +55,22 @@ export function AutoSyncManager() {
           if (syncedOfflineWorkOrders.length > 0) {
             console.log("[AutoSyncManager] Transforming synced offline work orders:", syncedOfflineWorkOrders.length);
             for (const syncedWo of syncedOfflineWorkOrders) {
-              await transformOfflineToServerWorkOrder(syncedWo.oldSystemId, {
-                id: syncedWo.serverWorkOrderId,
-                customerWoId: syncedWo.customerWoId,
-                status: syncedWo.status,
-                serviceAddress: syncedWo.serviceAddress,
-                oldGps: syncedWo.oldGps,
-                newGps: syncedWo.newGps,
-              });
+              // Pass the lookupKey directly - it's the exact key used for offline storage
+              await transformOfflineToServerWorkOrder(
+                syncedWo.lookupKey,
+                {
+                  id: syncedWo.serverWorkOrderId,
+                  customerWoId: syncedWo.customerWoId,
+                  status: syncedWo.status,
+                  serviceAddress: syncedWo.serviceAddress,
+                  oldGps: syncedWo.oldGps,
+                  newGps: syncedWo.newGps,
+                  oldModuleId: syncedWo.oldModuleId,
+                  newModuleId: syncedWo.newModuleId,
+                  oldModuleRead: syncedWo.oldModuleRead,
+                  newModuleRead: syncedWo.newModuleRead,
+                }
+              );
             }
           }
           

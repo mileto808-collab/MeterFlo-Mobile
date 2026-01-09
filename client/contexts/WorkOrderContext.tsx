@@ -425,14 +425,18 @@ interface WorkOrderContextType {
   searchWorkOrdersByMeterIdOnServer: (meterId: string) => Promise<WorkOrder[]>;
   clearAllData: () => Promise<void>;
   addOfflineWorkOrder: (data: OfflineWorkOrderData) => Promise<void>;
-  removeOfflineWorkOrder: (oldSystemId: string) => Promise<void>;
-  transformOfflineToServerWorkOrder: (oldSystemId: string, serverData: {
+  removeOfflineWorkOrder: (lookupId: string) => Promise<void>;
+  transformOfflineToServerWorkOrder: (lookupKey: string, serverData: {
     id: number;
     customerWoId?: string;
     status?: string;
     serviceAddress?: string;
     oldGps?: string;
     newGps?: string;
+    oldModuleId?: string;
+    newModuleId?: string;
+    oldModuleRead?: string;
+    newModuleRead?: string;
   }) => Promise<void>;
 }
 
@@ -489,8 +493,66 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
       if (storedOrders) {
         const parsedOrders = JSON.parse(storedOrders);
-        const normalizedOrders = parsedOrders.map(normalizeStoredWorkOrder);
-        setWorkOrdersState(normalizedOrders);
+        let normalizedOrders = parsedOrders.map(normalizeStoredWorkOrder);
+        
+        // Migrate offline work orders to normalize customerWoId with trimmed identifiers
+        let needsMigration = false;
+        normalizedOrders = normalizedOrders.map((wo: WorkOrder) => {
+          if (wo.customerWoId?.startsWith("OFFLINE-")) {
+            // Extract the lookup key after OFFLINE-
+            const currentLookupPart = wo.customerWoId.substring(8);
+            const trimmedLookupPart = currentLookupPart.trim();
+            
+            // Also normalize the identifier fields
+            const trimmedOldSystemId = wo.oldSystemId?.trim() || "";
+            const trimmedOldModuleId = wo.oldModuleId?.trim() || "";
+            const trimmedNewSystemId = wo.newSystemId?.trim() || "";
+            const trimmedNewModuleId = wo.newModuleId?.trim() || "";
+            
+            // Compute what the canonical lookup key should be
+            const canonicalLookupKey = trimmedOldSystemId || trimmedOldModuleId;
+            
+            // Check if migration is needed
+            const customerWoIdNeedsUpdate = currentLookupPart !== trimmedLookupPart;
+            const fieldsNeedUpdate = 
+              wo.oldSystemId !== (trimmedOldSystemId || undefined) ||
+              wo.oldModuleId !== (trimmedOldModuleId || undefined) ||
+              wo.newSystemId !== (trimmedNewSystemId || undefined) ||
+              wo.newModuleId !== (trimmedNewModuleId || undefined);
+            
+            if (customerWoIdNeedsUpdate || fieldsNeedUpdate) {
+              needsMigration = true;
+              const finalLookupKey = canonicalLookupKey || trimmedLookupPart;
+              console.log(`[WorkOrderContext] Migrating offline WO customerWoId from ${wo.customerWoId} to OFFLINE-${finalLookupKey}`);
+              return {
+                ...wo,
+                customerWoId: `OFFLINE-${finalLookupKey}`,
+                oldSystemId: trimmedOldSystemId || undefined,
+                oldModuleId: trimmedOldModuleId || undefined,
+                newSystemId: trimmedNewSystemId || undefined,
+                newModuleId: trimmedNewModuleId || undefined,
+              };
+            }
+          }
+          return wo;
+        });
+        
+        // Filter out offline work orders with empty lookup keys (unrecoverable legacy data)
+        const filteredOrders = normalizedOrders.filter((wo: WorkOrder) => {
+          if (wo.customerWoId === "OFFLINE-" || wo.customerWoId === "OFFLINE-undefined" || wo.customerWoId === "OFFLINE-null") {
+            console.warn(`[WorkOrderContext] Removing unrecoverable offline work order with invalid customerWoId: ${wo.customerWoId}`);
+            needsMigration = true;
+            return false;
+          }
+          return true;
+        });
+        
+        if (needsMigration) {
+          await AsyncStorage.setItem(STORAGE_KEYS.WORK_ORDERS, JSON.stringify(filteredOrders));
+          console.log("[WorkOrderContext] Migrated offline work orders to normalized format");
+        }
+        
+        setWorkOrdersState(filteredOrders);
       }
       if (storedRefData) {
         const parsedRefData = JSON.parse(storedRefData);
@@ -871,14 +933,27 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   const addOfflineWorkOrder = useCallback(async (data: OfflineWorkOrderData) => {
     console.log("[addOfflineWorkOrder] Creating new offline work order:", data.id);
     
+    // Normalize identifiers by trimming whitespace for consistent lookup keys
+    const normalizedSystemId = data.oldSystemId?.trim() || "";
+    const normalizedModuleId = data.oldModuleId?.trim() || "";
+    
+    // Use normalized system ID if available, otherwise use normalized module ID
+    const lookupId = normalizedSystemId || normalizedModuleId;
+    
+    // Guard against missing identifiers - require at least one
+    if (!lookupId) {
+      console.error("[addOfflineWorkOrder] Cannot create offline work order - missing both oldSystemId and oldModuleId");
+      throw new Error("Cannot create offline work order without system ID or module ID");
+    }
+    
     const newWorkOrder: WorkOrder = {
       id: Date.now(),
-      customerWoId: `OFFLINE-${data.oldSystemId}`,
+      customerWoId: `OFFLINE-${lookupId}`,
       status: data.status,
-      oldSystemId: data.oldSystemId,
-      newSystemId: data.newSystemId,
-      oldModuleId: data.oldModuleId || undefined,
-      newModuleId: data.newModuleId || undefined,
+      oldSystemId: normalizedSystemId || undefined,
+      newSystemId: data.newSystemId?.trim() || undefined,
+      oldModuleId: normalizedModuleId || undefined,
+      newModuleId: data.newModuleId?.trim() || undefined,
       oldSystemReading: data.oldSystemReading != null ? String(data.oldSystemReading) : undefined,
       newSystemReading: data.newSystemReading != null ? String(data.newSystemReading) : undefined,
       oldModuleRead: data.oldModuleReading != null ? String(data.oldModuleReading) : undefined,
@@ -908,9 +983,9 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     console.log("[addOfflineWorkOrder] Work order added successfully");
   }, []);
 
-  const removeOfflineWorkOrder = useCallback(async (oldSystemId: string) => {
-    console.log("[removeOfflineWorkOrder] Removing offline work order for system:", oldSystemId);
-    const customerWoId = `OFFLINE-${oldSystemId}`;
+  const removeOfflineWorkOrder = useCallback(async (lookupId: string) => {
+    console.log("[removeOfflineWorkOrder] Removing offline work order for lookup ID:", lookupId);
+    const customerWoId = `OFFLINE-${lookupId}`;
     
     setWorkOrdersState(prev => {
       const updated = prev.filter(wo => wo.customerWoId !== customerWoId);
@@ -922,16 +997,20 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const transformOfflineToServerWorkOrder = useCallback(async (oldSystemId: string, serverData: {
+  const transformOfflineToServerWorkOrder = useCallback(async (lookupKey: string, serverData: {
     id: number;
     customerWoId?: string;
     status?: string;
     serviceAddress?: string;
     oldGps?: string;
     newGps?: string;
+    oldModuleId?: string;
+    newModuleId?: string;
+    oldModuleRead?: string;
+    newModuleRead?: string;
   }) => {
-    console.log("[transformOfflineToServerWorkOrder] Transforming offline WO for system:", oldSystemId, "to server ID:", serverData.id);
-    const offlineCustomerWoId = `OFFLINE-${oldSystemId}`;
+    console.log("[transformOfflineToServerWorkOrder] Transforming offline WO for lookupKey:", lookupKey, "to server ID:", serverData.id);
+    const offlineCustomerWoId = `OFFLINE-${lookupKey}`;
     
     setWorkOrdersState(prev => {
       const updated = prev.map(wo => {
@@ -945,6 +1024,10 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
             serviceAddress: serverData.serviceAddress || wo.serviceAddress,
             oldGps: serverData.oldGps || wo.oldGps,
             newGps: serverData.newGps || wo.newGps,
+            oldModuleId: serverData.oldModuleId || wo.oldModuleId,
+            newModuleId: serverData.newModuleId || wo.newModuleId,
+            oldModuleRead: serverData.oldModuleRead || wo.oldModuleRead,
+            newModuleRead: serverData.newModuleRead || wo.newModuleRead,
             syncPending: false,
             localUpdatedAt: new Date().toISOString(),
           };

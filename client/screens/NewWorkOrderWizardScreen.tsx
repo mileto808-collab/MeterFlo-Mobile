@@ -600,12 +600,21 @@ export default function NewWorkOrderWizardScreen() {
         ? beforePhotosBase64.length + afterPhotosBase64.length
         : troublePhotosBase64.length;
       
+      // Use system ID if available, otherwise use module ID as the lookup key for offline storage
+      const offlineLookupKey = (formData.oldSystemId?.trim() || formData.oldModuleId?.trim() || "");
+      
+      // Validate lookup key before creating pending action
+      if (!offlineLookupKey) {
+        throw new Error("Cannot save offline work order without a system ID or module ID");
+      }
+      
       await addPendingAction({
         type: "offlineWorkOrder",
         workOrderId: offlineWorkOrderId,
-        workOrderTitle: canChange ? `New WO: ${formData.oldSystemId}` : `Trouble: ${formData.oldSystemId}`,
+        workOrderTitle: canChange ? `New WO: ${offlineLookupKey}` : `Trouble: ${offlineLookupKey}`,
         data: offlineWorkOrderData,
         photoCount: photoCount,
+        lookupKey: offlineLookupKey,
       });
 
       navigation.reset({
