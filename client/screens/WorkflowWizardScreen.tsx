@@ -1308,8 +1308,14 @@ export default function WorkflowWizardScreen() {
             setScannerTargetField("system");
           } else {
             setFormData(prev => ({ ...prev, newModuleId: "" }));
-            setCaptureMode("module");
-            setScannerTargetField("module");
+            // When clearing module, check if system is also empty - reset to system capture if system data exists
+            if (!formData.newSystemId.trim() && newIdHasSystem) {
+              setCaptureMode("system");
+              setScannerTargetField("system");
+            } else {
+              setCaptureMode("module");
+              setScannerTargetField("module");
+            }
           }
         };
 
