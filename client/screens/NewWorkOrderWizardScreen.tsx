@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, StyleSheet, Alert, Platform, ActivityIndicator, Pressable, Image, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -937,26 +937,62 @@ export default function NewWorkOrderWizardScreen() {
           }
         };
         
+        const advanceOldSystemIdCapture = (value: string) => {
+          setIsIdInputFocused(false);
+          if (value.length > 0 && hasOldModule) {
+            setOldCaptureMode("module");
+          } else if (value.length > 0) {
+            setOldCaptureMode("summary");
+          }
+        };
+        
+        const advanceOldModuleIdCapture = (value: string) => {
+          setIsIdInputFocused(false);
+          if (value.length > 0) {
+            setOldCaptureMode("summary");
+          }
+        };
+
         const handleOldSystemIdChange = (text: string) => {
+          // Detect barcode scanner input (contains newline from Enter key)
+          if (text.includes('\n') || text.includes('\r')) {
+            const cleanedText = text.replace(/[\n\r]/g, '');
+            setFormData(prev => ({ ...prev, oldSystemId: cleanedText }));
+            // Advance immediately after scanner input
+            advanceOldSystemIdCapture(cleanedText);
+            return;
+          }
           setFormData(prev => ({ ...prev, oldSystemId: text }));
         };
         
         const handleOldSystemIdBlur = () => {
-          if (formData.oldSystemId.trim().length > 0 && hasOldModule) {
-            setOldCaptureMode("module");
-          } else if (formData.oldSystemId.trim().length > 0) {
-            setOldCaptureMode("summary");
-          }
+          advanceOldSystemIdCapture(formData.oldSystemId.trim());
+        };
+        
+        const handleOldSystemIdSubmit = () => {
+          // Called when user presses Enter/Done on keyboard
+          advanceOldSystemIdCapture(formData.oldSystemId.trim());
         };
         
         const handleOldModuleIdChange = (text: string) => {
+          // Detect barcode scanner input (contains newline from Enter key)
+          if (text.includes('\n') || text.includes('\r')) {
+            const cleanedText = text.replace(/[\n\r]/g, '');
+            setFormData(prev => ({ ...prev, oldModuleId: cleanedText }));
+            // Advance immediately after scanner input
+            advanceOldModuleIdCapture(cleanedText);
+            return;
+          }
           setFormData(prev => ({ ...prev, oldModuleId: text }));
         };
         
         const handleOldModuleIdBlur = () => {
-          if (formData.oldModuleId.trim().length > 0) {
-            setOldCaptureMode("summary");
-          }
+          advanceOldModuleIdCapture(formData.oldModuleId.trim());
+        };
+        
+        const handleOldModuleIdSubmit = () => {
+          // Called when user presses Enter/Done on keyboard
+          advanceOldModuleIdCapture(formData.oldModuleId.trim());
         };
         
         const oldCurrentCapturing = oldCaptureMode === "system" ? "Old System ID" : oldCaptureMode === "module" ? "Old Module ID" : null;
@@ -1039,16 +1075,12 @@ export default function NewWorkOrderWizardScreen() {
                   value={isCapturingOldSystem ? formData.oldSystemId : formData.oldModuleId}
                   onChangeText={isCapturingOldSystem ? handleOldSystemIdChange : handleOldModuleIdChange}
                   onFocus={() => setIsIdInputFocused(true)}
-                  onBlur={() => {
-                    setIsIdInputFocused(false);
-                    if (isCapturingOldSystem) {
-                      handleOldSystemIdBlur();
-                    } else {
-                      handleOldModuleIdBlur();
-                    }
-                  }}
+                  onBlur={isCapturingOldSystem ? handleOldSystemIdBlur : handleOldModuleIdBlur}
+                  onSubmitEditing={isCapturingOldSystem ? handleOldSystemIdSubmit : handleOldModuleIdSubmit}
                   placeholder="Type or use HID scanner"
                   autoCapitalize="characters"
+                  returnKeyType="done"
+                  blurOnSubmit={true}
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
                 <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm, textAlign: "center" }}>

@@ -1351,29 +1351,63 @@ export default function WorkflowWizardScreen() {
           }
         };
 
+        const advanceSystemIdCapture = (value: string) => {
+          setIsIdInputFocused(false);
+          if (value.length > 0 && newIdHasModule) {
+            setCaptureMode("module");
+            setScannerTargetField("module");
+          } else if (value.length > 0) {
+            setCaptureMode("summary");
+          }
+        };
+        
+        const advanceModuleIdCapture = (value: string) => {
+          setIsIdInputFocused(false);
+          if (value.length > 0) {
+            setCaptureMode("summary");
+          }
+        };
+
         const handleSystemIdChange = (text: string) => {
+          // Detect barcode scanner input (contains newline from Enter key)
+          if (text.includes('\n') || text.includes('\r')) {
+            const cleanedText = text.replace(/[\n\r]/g, '');
+            setFormData(prev => ({ ...prev, newSystemId: cleanedText }));
+            // Advance immediately after scanner input
+            advanceSystemIdCapture(cleanedText);
+            return;
+          }
           setFormData(prev => ({ ...prev, newSystemId: text }));
         };
 
         const handleSystemIdBlur = () => {
-          setIsIdInputFocused(false);
-          if (formData.newSystemId.trim().length > 0 && newIdHasModule) {
-            setCaptureMode("module");
-            setScannerTargetField("module");
-          } else if (formData.newSystemId.trim().length > 0) {
-            setCaptureMode("summary");
-          }
+          advanceSystemIdCapture(formData.newSystemId.trim());
+        };
+        
+        const handleSystemIdSubmit = () => {
+          // Called when user presses Enter/Done on keyboard
+          advanceSystemIdCapture(formData.newSystemId.trim());
         };
 
         const handleModuleIdChange = (text: string) => {
+          // Detect barcode scanner input (contains newline from Enter key)
+          if (text.includes('\n') || text.includes('\r')) {
+            const cleanedText = text.replace(/[\n\r]/g, '');
+            setFormData(prev => ({ ...prev, newModuleId: cleanedText }));
+            // Advance immediately after scanner input
+            advanceModuleIdCapture(cleanedText);
+            return;
+          }
           setFormData(prev => ({ ...prev, newModuleId: text }));
         };
 
         const handleModuleIdBlur = () => {
-          setIsIdInputFocused(false);
-          if (formData.newModuleId.trim().length > 0) {
-            setCaptureMode("summary");
-          }
+          advanceModuleIdCapture(formData.newModuleId.trim());
+        };
+        
+        const handleModuleIdSubmit = () => {
+          // Called when user presses Enter/Done on keyboard
+          advanceModuleIdCapture(formData.newModuleId.trim());
         };
 
         const currentCapturing = captureMode === "system" ? "New System ID" : captureMode === "module" ? "New Module ID" : null;
@@ -1457,8 +1491,11 @@ export default function WorkflowWizardScreen() {
                   onChangeText={isCapturingSystem ? handleSystemIdChange : handleModuleIdChange}
                   onFocus={() => setIsIdInputFocused(true)}
                   onBlur={isCapturingSystem ? handleSystemIdBlur : handleModuleIdBlur}
+                  onSubmitEditing={isCapturingSystem ? handleSystemIdSubmit : handleModuleIdSubmit}
                   placeholder="Type or use HID scanner"
                   autoCapitalize="characters"
+                  returnKeyType="done"
+                  blurOnSubmit={true}
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
                 <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm, textAlign: "center" }}>
