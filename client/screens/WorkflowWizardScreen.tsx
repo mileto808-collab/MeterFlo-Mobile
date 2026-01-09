@@ -128,6 +128,8 @@ export default function WorkflowWizardScreen() {
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [isCapturingGps, setIsCapturingGps] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
+  const [oldSystemReadingTouched, setOldSystemReadingTouched] = useState(false);
+  const [oldModuleReadingTouched, setOldModuleReadingTouched] = useState(false);
   
   useEffect(() => {
     if (showScanner && !cameraPermission) {
@@ -477,13 +479,9 @@ export default function WorkflowWizardScreen() {
       case "canChange": 
         return formData.canChange !== null;
       case "oldReading": {
-        const systemReadingValid = formData.oldSystemReading.trim().length > 0 && 
-          formData.oldSystemReading.trim() !== (workOrder.oldSystemReading || "").trim();
+        const systemReadingValid = formData.oldSystemReading.trim().length > 0 && oldSystemReadingTouched;
         const hasModule = Boolean(workOrder.oldModuleId);
-        const moduleReadingValid = !hasModule || (
-          formData.oldModuleRead.trim().length > 0 && 
-          formData.oldModuleRead.trim() !== (workOrder.oldModuleRead || "").trim()
-        );
+        const moduleReadingValid = !hasModule || (formData.oldModuleRead.trim().length > 0 && oldModuleReadingTouched);
         return systemReadingValid && moduleReadingValid;
       }
       case "beforePhotos":
@@ -1025,15 +1023,21 @@ export default function WorkflowWizardScreen() {
             </ThemedText>
             <TextInput
               value={formData.oldSystemReading}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, oldSystemReading: text }))}
-              onFocus={() => setFormData(prev => ({ ...prev, oldSystemReading: "" }))}
+              onChangeText={(text) => {
+                setFormData(prev => ({ ...prev, oldSystemReading: text }));
+                setOldSystemReadingTouched(true);
+              }}
+              onFocus={() => {
+                setFormData(prev => ({ ...prev, oldSystemReading: "" }));
+                setOldSystemReadingTouched(false);
+              }}
               placeholder="Enter reading (e.g., 12345)"
               keyboardType="numeric"
               style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
             />
-            {formData.oldSystemReading.trim() === (workOrder.oldSystemReading || "").trim() && formData.oldSystemReading.trim().length > 0 ? (
-              <ThemedText type="small" style={{ color: theme.error, marginTop: Spacing.xs }}>
-                Please enter a different reading than the existing value
+            {!oldSystemReadingTouched && formData.oldSystemReading.trim().length > 0 ? (
+              <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
+                Tap to clear and re-enter the reading
               </ThemedText>
             ) : null}
             
@@ -1044,15 +1048,21 @@ export default function WorkflowWizardScreen() {
                 </ThemedText>
                 <TextInput
                   value={formData.oldModuleRead}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, oldModuleRead: text }))}
-                  onFocus={() => setFormData(prev => ({ ...prev, oldModuleRead: "" }))}
+                  onChangeText={(text) => {
+                    setFormData(prev => ({ ...prev, oldModuleRead: text }));
+                    setOldModuleReadingTouched(true);
+                  }}
+                  onFocus={() => {
+                    setFormData(prev => ({ ...prev, oldModuleRead: "" }));
+                    setOldModuleReadingTouched(false);
+                  }}
                   placeholder="Enter module reading"
                   keyboardType="numeric"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
-                {formData.oldModuleRead.trim() === (workOrder.oldModuleRead || "").trim() && formData.oldModuleRead.trim().length > 0 ? (
-                  <ThemedText type="small" style={{ color: theme.error, marginTop: Spacing.xs }}>
-                    Please enter a different reading than the existing value
+                {!oldModuleReadingTouched && formData.oldModuleRead.trim().length > 0 ? (
+                  <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
+                    Tap to clear and re-enter the reading
                   </ThemedText>
                 ) : null}
               </View>
