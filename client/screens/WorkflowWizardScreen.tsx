@@ -1467,7 +1467,7 @@ export default function WorkflowWizardScreen() {
                 setFormData(prev => ({ ...prev, newSystemReading: "" }));
                 setNewSystemReadingTouched(false);
               }}
-              placeholder="Enter reading (usually 0)"
+              placeholder="Enter system reading (usually 0)"
               keyboardType="numeric"
               style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
             />
