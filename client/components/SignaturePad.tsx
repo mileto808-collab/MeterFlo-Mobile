@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Image } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
@@ -13,12 +13,14 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 interface SignaturePadProps {
   onSignatureChange: (signatureData: string) => void;
   height?: number;
+  initialValue?: string;
 }
 
-export function SignaturePad({ onSignatureChange, height = 200 }: SignaturePadProps) {
+export function SignaturePad({ onSignatureChange, height = 200, initialValue }: SignaturePadProps) {
   const { theme } = useTheme();
   const [paths, setPaths] = useState<string[]>([]);
   const [currentPath, setCurrentPath] = useState<string>("");
+  const [showExisting, setShowExisting] = useState(Boolean(initialValue));
   const onSignatureChangeRef = useRef(onSignatureChange);
   const viewRef = useRef<View>(null);
   const captureTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -79,6 +81,7 @@ export function SignaturePad({ onSignatureChange, height = 200 }: SignaturePadPr
   const clearSignature = useCallback(() => {
     setPaths([]);
     setCurrentPath("");
+    setShowExisting(false);
     onSignatureChangeRef.current("");
   }, []);
 
@@ -94,62 +97,82 @@ export function SignaturePad({ onSignatureChange, height = 200 }: SignaturePadPr
     });
 
   const hasSignature = paths.length > 0 || currentPath.length > 0;
+  const displayExisting = showExisting && initialValue;
 
   return (
     <View style={styles.container}>
-      <GestureDetector gesture={panGesture}>
+      {displayExisting ? (
         <View
-          ref={viewRef}
-          collapsable={false}
           style={[
             styles.signatureArea,
             { 
               height,
               backgroundColor: "#FFFFFF",
-              borderColor: hasSignature ? theme.primary : theme.border,
+              borderColor: theme.primary,
             }
           ]}
         >
-          <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
-            {paths.map((path, index) => (
-              <Path
-                key={index}
-                d={path}
-                stroke="#000000"
-                strokeWidth={2}
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ))}
-            {currentPath ? (
-              <Path
-                d={currentPath}
-                stroke="#000000"
-                strokeWidth={2}
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ) : null}
-          </Svg>
-          
-          {!hasSignature ? (
-            <View style={styles.placeholder}>
-              <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-                Sign here
-              </ThemedText>
-            </View>
-          ) : null}
+          <Image
+            source={{ uri: initialValue }}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="contain"
+          />
         </View>
-      </GestureDetector>
+      ) : (
+        <GestureDetector gesture={panGesture}>
+          <View
+            ref={viewRef}
+            collapsable={false}
+            style={[
+              styles.signatureArea,
+              { 
+                height,
+                backgroundColor: "#FFFFFF",
+                borderColor: hasSignature ? theme.primary : theme.border,
+              }
+            ]}
+          >
+            <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+              {paths.map((path, index) => (
+                <Path
+                  key={index}
+                  d={path}
+                  stroke="#000000"
+                  strokeWidth={2}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ))}
+              {currentPath ? (
+                <Path
+                  d={currentPath}
+                  stroke="#000000"
+                  strokeWidth={2}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ) : null}
+            </Svg>
+            
+            {!hasSignature ? (
+              <View style={styles.placeholder}>
+                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                  Sign here
+                </ThemedText>
+              </View>
+            ) : null}
+          </View>
+        </GestureDetector>
+      )}
       
-      {hasSignature ? (
+      {(hasSignature || displayExisting) ? (
         <Button
           onPress={clearSignature}
           style={{ backgroundColor: theme.backgroundSecondary, marginTop: Spacing.sm }}
         >
-          <ThemedText>Clear Signature</ThemedText>
+          <ThemedText>{displayExisting ? "Re-sign" : "Clear Signature"}</ThemedText>
         </Button>
       ) : null}
     </View>

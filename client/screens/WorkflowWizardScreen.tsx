@@ -1600,6 +1600,7 @@ export default function WorkflowWizardScreen() {
             <SignaturePad
               onSignatureChange={(data) => setFormData(prev => ({ ...prev, signatureData: data }))}
               height={180}
+              initialValue={formData.signatureData}
             />
             
             <View style={{ marginTop: Spacing.lg }}>
@@ -1635,7 +1636,10 @@ export default function WorkflowWizardScreen() {
           </View>
         );
 
-      case "confirm":
+      case "confirm": {
+        const confirmHasOldModule = Boolean(workOrder.oldModuleId);
+        const confirmHasNewModule = Boolean(formData.newModuleId.trim());
+        
         return (
           <View>
             <View style={styles.iconHeader}>
@@ -1646,20 +1650,38 @@ export default function WorkflowWizardScreen() {
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.summaryRow}>
                 <Icon name="activity" size={20} color={theme.primary} />
-                <ThemedText type="body">Old Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
+                <ThemedText type="body">Old System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
               </View>
+              {confirmHasOldModule && formData.oldModuleRead ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="activity" size={20} color={theme.primary} />
+                  <ThemedText type="body">Old Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleRead}</ThemedText></ThemedText>
+                </View>
+              ) : null}
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="camera" size={20} color={theme.primary} />
                 <ThemedText type="body">{formData.beforePhotos.length} Before Photo(s)</ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="hash" size={20} color={theme.primary} />
-                <ThemedText type="body">New System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemId}</ThemedText></ThemedText>
+                <ThemedText type="body">New System ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemId}</ThemedText></ThemedText>
               </View>
+              {confirmHasNewModule ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="hash" size={20} color={theme.primary} />
+                  <ThemedText type="body">New Module ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newModuleId}</ThemedText></ThemedText>
+                </View>
+              ) : null}
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="activity" size={20} color={theme.primary} />
-                <ThemedText type="body">New Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
+                <ThemedText type="body">New System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
               </View>
+              {confirmHasNewModule && formData.newModuleRead ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="activity" size={20} color={theme.primary} />
+                  <ThemedText type="body">New Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newModuleRead}</ThemedText></ThemedText>
+                </View>
+              ) : null}
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="camera" size={20} color={theme.primary} />
                 <ThemedText type="body">{formData.afterPhotos.length} After Photo(s)</ThemedText>
@@ -1681,6 +1703,7 @@ export default function WorkflowWizardScreen() {
             </View>
           </View>
         );
+      }
 
       case "troubleCapture":
         return (
