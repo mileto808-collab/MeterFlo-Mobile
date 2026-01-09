@@ -7,7 +7,7 @@ export interface WorkOrder {
   customerWoId: string;
   customerId?: string;
   status: string;
-  oldSystemId: string;
+  oldSystemId?: string;
   newSystemId?: string;
   oldSystemReading?: string;
   newSystemReading?: string;
@@ -466,6 +466,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const lastSyncTimeRef = useRef<string | null>(null);
+  const previousProjectIdRef = useRef<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -475,6 +476,27 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     lastSyncTimeRef.current = lastSyncTime;
   }, [lastSyncTime]);
+
+  useEffect(() => {
+    const prevProjectId = previousProjectIdRef.current;
+    
+    if (prevProjectId !== null && projectId !== null && prevProjectId !== projectId) {
+      console.log(`[WorkOrderContext] Project changed from ${prevProjectId} to ${projectId}, clearing cached work orders`);
+      AsyncStorage.multiRemove([
+        STORAGE_KEYS.WORK_ORDERS,
+        STORAGE_KEYS.REFERENCE_DATA,
+        STORAGE_KEYS.LAST_SYNC,
+      ]).then(() => {
+        lastSyncTimeRef.current = null;
+        setLastSyncTime(null);
+        setReferenceData(null);
+        setWorkOrdersState([]);
+        console.log("[WorkOrderContext] Cache cleared for project switch");
+      });
+    }
+    
+    previousProjectIdRef.current = projectId;
+  }, [projectId]);
 
   useEffect(() => {
     if (isAuthenticated && serverUrl && projectId) {

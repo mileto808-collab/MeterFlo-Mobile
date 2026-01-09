@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode } from "react";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,6 +14,7 @@ interface PendingAction {
   photoCount?: number;
   completionMode?: "complete" | "trouble";
   lookupKey?: string; // For offlineWorkOrder: the key used for offline storage (system ID or module ID)
+  projectId?: number; // The project this action belongs to - actions only sync when matching current project
 }
 
 interface SyncHistoryEntry {
@@ -65,12 +66,15 @@ function isClaimConflictError(status: number, errorText: string): boolean {
 interface OfflineContextType {
   isOnline: boolean;
   pendingActions: PendingAction[];
+  pendingActionsForCurrentProject: PendingAction[];
+  pendingActionsForOtherProjects: PendingAction[];
   syncHistory: SyncHistoryEntry[];
   isSyncing: boolean;
   addPendingAction: (action: Omit<PendingAction, "id" | "timestamp">) => Promise<void>;
   removePendingAction: (id: string) => Promise<void>;
   syncPendingActions: () => Promise<SyncResult>;
   clearAllPending: () => Promise<void>;
+  clearPendingForCurrentProject: () => Promise<void>;
   clearSyncHistory: () => Promise<void>;
   addDirectSubmissionHistory: (entry: Omit<SyncHistoryEntry, "id" | "timestamp">) => Promise<void>;
 }
@@ -255,12 +259,13 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       ...action,
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       timestamp: Date.now(),
+      projectId: projectId || undefined,
     };
 
     const updatedActions = [...pendingActions, newAction];
     setPendingActions(updatedActions);
     await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(updatedActions));
-  }, [pendingActions]);
+  }, [pendingActions, projectId]);
 
   const removePendingAction = useCallback(async (id: string) => {
     const updatedActions = pendingActions.filter(a => a.id !== id);
@@ -273,10 +278,23 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       return { syncedWorkOrderIds: [], syncedOfflineWorkOrders: [], conflictedWorkOrderIds: [] };
     }
 
+    // Filter pending actions to only sync those belonging to the current project
+    // Actions without a projectId (legacy) or matching the current projectId will be synced
+    const projectScopedActions = pendingActions.filter(action => 
+      action.projectId === undefined || action.projectId === projectId
+    );
+    
+    if (projectScopedActions.length === 0) {
+      console.log(`[syncPendingActions] No pending actions for current project ${projectId}`);
+      return { syncedWorkOrderIds: [], syncedOfflineWorkOrders: [], conflictedWorkOrderIds: [] };
+    }
+    
+    console.log(`[syncPendingActions] Syncing ${projectScopedActions.length} of ${pendingActions.length} actions for project ${projectId}`);
+
     setIsSyncing(true);
-    const workOrderIds = pendingActions.map(a => a.workOrderId);
-    const workOrderTitles = pendingActions.map(a => a.workOrderTitle);
-    const totalPhotoCount = pendingActions.reduce((sum, a) => sum + (a.photoCount || 0), 0);
+    const workOrderIds = projectScopedActions.map(a => a.workOrderId);
+    const workOrderTitles = projectScopedActions.map(a => a.workOrderTitle);
+    const totalPhotoCount = projectScopedActions.reduce((sum, a) => sum + (a.photoCount || 0), 0);
     
     const successfulActionIds: string[] = [];
     const failedActionIds: string[] = [];
@@ -287,7 +305,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     let lastError: string | undefined;
     
     try {
-      for (const action of pendingActions) {
+      for (const action of projectScopedActions) {
         try {
           if (action.type === "complete" && action.completionMode) {
             // Pre-flight check using shared helper
@@ -684,6 +702,27 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.removeItem(STORAGE_KEYS.PENDING_ACTIONS);
   }, []);
   
+  const clearPendingForCurrentProject = useCallback(async () => {
+    if (!projectId) {
+      await clearAllPending();
+      return;
+    }
+    
+    const remainingActions = pendingActions.filter(action => 
+      action.projectId !== undefined && action.projectId !== projectId
+    );
+    
+    if (remainingActions.length === 0) {
+      setPendingActions([]);
+      await AsyncStorage.removeItem(STORAGE_KEYS.PENDING_ACTIONS);
+    } else {
+      setPendingActions(remainingActions);
+      await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(remainingActions));
+    }
+    
+    console.log(`[OfflineContext] Cleared pending actions for project ${projectId}, ${remainingActions.length} actions remain for other projects`);
+  }, [pendingActions, projectId, clearAllPending]);
+  
   const clearSyncHistory = useCallback(async () => {
     setSyncHistory([]);
     await AsyncStorage.removeItem(STORAGE_KEYS.SYNC_HISTORY);
@@ -698,17 +737,34 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     await addSyncHistoryEntry(fullEntry);
   }, [addSyncHistoryEntry]);
 
+  const pendingActionsForCurrentProject = useMemo(() => {
+    if (!projectId) return pendingActions;
+    return pendingActions.filter(action => 
+      action.projectId === undefined || action.projectId === projectId
+    );
+  }, [pendingActions, projectId]);
+  
+  const pendingActionsForOtherProjects = useMemo(() => {
+    if (!projectId) return [];
+    return pendingActions.filter(action => 
+      action.projectId !== undefined && action.projectId !== projectId
+    );
+  }, [pendingActions, projectId]);
+
   return (
     <OfflineContext.Provider
       value={{
         isOnline,
         pendingActions,
+        pendingActionsForCurrentProject,
+        pendingActionsForOtherProjects,
         syncHistory,
         isSyncing,
         addPendingAction,
         removePendingAction,
         syncPendingActions,
         clearAllPending,
+        clearPendingForCurrentProject,
         clearSyncHistory,
         addDirectSubmissionHistory,
       }}

@@ -4,7 +4,7 @@ import { useWorkOrders } from "@/contexts/WorkOrderContext";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function AutoSyncManager() {
-  const { isOnline, pendingActions, isSyncing, syncPendingActions } = useOffline();
+  const { isOnline, pendingActionsForCurrentProject, isSyncing, syncPendingActions } = useOffline();
   const { updateWorkOrder, transformOfflineToServerWorkOrder, deleteLocalWorkOrder } = useWorkOrders();
   const { serverUrl, projectId, isOfflineSession, revalidateSession } = useAuth();
   const wasOfflineRef = useRef(false);
@@ -36,7 +36,7 @@ export function AutoSyncManager() {
           }
         }
         
-        if (pendingActions.length === 0 || isSyncing || !serverUrl || !projectId) {
+        if (pendingActionsForCurrentProject.length === 0 || isSyncing || !serverUrl || !projectId) {
           return;
         }
         
@@ -92,7 +92,7 @@ export function AutoSyncManager() {
         clearTimeout(autoSyncTimeoutRef.current);
       }
     };
-  }, [isOnline, pendingActions.length, isSyncing, serverUrl, projectId, isOfflineSession, syncPendingActions, updateWorkOrder, transformOfflineToServerWorkOrder, deleteLocalWorkOrder, revalidateSession]);
+  }, [isOnline, pendingActionsForCurrentProject.length, isSyncing, serverUrl, projectId, isOfflineSession, syncPendingActions, updateWorkOrder, transformOfflineToServerWorkOrder, deleteLocalWorkOrder, revalidateSession]);
 
   return null;
 }

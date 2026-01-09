@@ -18,7 +18,7 @@ export default function SyncScreen() {
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
-  const { isOnline, pendingActions, syncHistory, isSyncing, syncPendingActions, clearAllPending, clearSyncHistory, removePendingAction } = useOffline();
+  const { isOnline, pendingActionsForCurrentProject, pendingActionsForOtherProjects, syncHistory, isSyncing, syncPendingActions, clearAllPending, clearPendingForCurrentProject, clearSyncHistory, removePendingAction } = useOffline();
   const { lastSyncTime, isLoading, refreshWorkOrders, clearAllData, workOrders, updateWorkOrder, deleteLocalWorkOrder } = useWorkOrders();
   const [isClearing, setIsClearing] = useState(false);
   const [backupProgress, setBackupProgress] = useState<BackupProgress | null>(null);
@@ -78,7 +78,7 @@ export default function SyncScreen() {
 
   const handleSync = async () => {
     await refreshWorkOrders(true);
-    if (pendingActions.length > 0) {
+    if (pendingActionsForCurrentProject.length > 0) {
       const { syncedWorkOrderIds, conflictedWorkOrderIds } = await syncPendingActions();
       for (const workOrderId of syncedWorkOrderIds) {
         updateWorkOrder(workOrderId, { syncPending: false });
@@ -338,16 +338,16 @@ export default function SyncScreen() {
       <View style={[styles.section, { backgroundColor: theme.backgroundDefault }]}>
         <View style={styles.sectionHeader}>
           <ThemedText type="h4">Pending Actions</ThemedText>
-          <View style={[styles.countBadge, { backgroundColor: pendingActions.length > 0 ? theme.syncPending : theme.backgroundSecondary }]}>
-            <ThemedText type="small" style={{ color: pendingActions.length > 0 ? "#FFFFFF" : theme.textSecondary }}>
-              {pendingActions.length}
+          <View style={[styles.countBadge, { backgroundColor: pendingActionsForCurrentProject.length > 0 ? theme.syncPending : theme.backgroundSecondary }]}>
+            <ThemedText type="small" style={{ color: pendingActionsForCurrentProject.length > 0 ? "#FFFFFF" : theme.textSecondary }}>
+              {pendingActionsForCurrentProject.length}
             </ThemedText>
           </View>
         </View>
 
-        {pendingActions.length > 0 ? (
+        {pendingActionsForCurrentProject.length > 0 ? (
           <View style={styles.pendingList}>
-            {pendingActions.map(action => (
+            {pendingActionsForCurrentProject.map(action => (
               <View key={action.id} style={[styles.pendingItem, { borderColor: theme.border }]}>
                 <View style={styles.pendingItemContent}>
                   <View style={[styles.actionTypeBadge, { backgroundColor: theme.syncPending }]}>
@@ -388,6 +388,15 @@ export default function SyncScreen() {
             </ThemedText>
           </View>
         )}
+        
+        {pendingActionsForOtherProjects.length > 0 && (
+          <View style={[styles.otherProjectsWarning, { backgroundColor: theme.warning + "20", borderColor: theme.warning }]}>
+            <Icon name="alert-triangle" size={16} color={theme.warning} />
+            <ThemedText type="small" style={{ color: theme.text, marginLeft: Spacing.sm, flex: 1 }}>
+              {pendingActionsForOtherProjects.length} pending action{pendingActionsForOtherProjects.length !== 1 ? "s" : ""} for other projects. Switch projects to sync them.
+            </ThemedText>
+          </View>
+        )}
       </View>
 
       <View style={styles.actions}>
@@ -406,9 +415,9 @@ export default function SyncScreen() {
           )}
         </Button>
 
-        {pendingActions.length > 0 ? (
+        {pendingActionsForCurrentProject.length > 0 ? (
           <Pressable
-            onPress={clearAllPending}
+            onPress={clearPendingForCurrentProject}
             style={({ pressed }) => [
               styles.clearButton,
               { opacity: pressed ? 0.7 : 1 },
@@ -416,7 +425,7 @@ export default function SyncScreen() {
           >
             <Icon name="trash-2" size={16} color={theme.error} />
             <ThemedText type="small" style={{ color: theme.error }}>
-              Clear All Pending
+              Clear Pending
             </ThemedText>
           </Pressable>
         ) : null}
@@ -652,6 +661,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: Spacing.xl,
     gap: Spacing.md,
+  },
+  otherProjectsWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    marginTop: Spacing.md,
   },
   actions: {
     gap: Spacing.lg,
