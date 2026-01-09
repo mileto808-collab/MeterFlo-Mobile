@@ -128,8 +128,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             const migratedPayload = isComplete ? {
               projectId: data.projectId || 0,
               oldSystemReading: data.old_system_reading ?? data.old_meter_reading ?? data.oldSystemReading ?? data.oldMeterReading,
+              oldModuleRead: data.old_module_read ?? data.oldModuleRead,
               newSystemId: data.new_system_id ?? data.new_meter_id ?? data.newSystemId ?? data.newMeterId,
               newSystemReading: data.new_system_reading ?? data.new_meter_reading ?? data.newSystemReading ?? data.newMeterReading ?? 0,
+              newModuleId: data.new_module_id ?? data.newModuleId ?? null,
+              newModuleRead: data.new_module_read ?? data.newModuleRead,
               gpsCoordinates: data.new_gps ?? data.gpsCoordinates ?? null,
               signatureData: data.signature_data ?? data.signatureData ?? null,
               signatureName: data.signature_name ?? data.signatureName,
@@ -142,6 +145,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               troubleCode: data.trouble ?? data.troubleCode,
               notes: data.notes ?? null,
               oldSystemReading: data.old_system_reading ?? data.old_meter_reading ?? data.oldSystemReading ?? data.oldMeterReading,
+              oldModuleRead: data.old_module_read ?? data.oldModuleRead,
               photos: formatLegacyPhotos(data.trouble_photos ?? data.photos ?? [], 'trouble'),
             };
             
@@ -407,12 +411,17 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             const oldSystemReading = offlineData.oldSystemReading ?? offlineData.oldMeterReading;
             const newSystemReading = offlineData.newSystemReading ?? offlineData.newMeterReading;
+            const oldModuleRead = offlineData.oldModuleRead;
+            const newModuleRead = offlineData.newModuleRead;
             
             const completePayload = {
               projectId: Number(projectId),
               oldSystemReading: oldSystemReading,
+              oldModuleRead: oldModuleRead,
               newSystemId: newSystemId,
               newSystemReading: newSystemReading,
+              newModuleId: offlineData.newModuleId || null,
+              newModuleRead: newModuleRead,
               oldGps: offlineData.oldGps || null,
               gpsCoordinates: offlineData.newGps || null,
               signatureData: offlineData.signatureData || null,

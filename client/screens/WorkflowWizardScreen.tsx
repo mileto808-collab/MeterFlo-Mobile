@@ -53,9 +53,12 @@ interface SystemChangeoutData {
   troubleNote: string;
   troublePhotos: PhotoAsset[];
   oldSystemReading: string;
+  oldModuleRead: string;
   beforePhotos: PhotoAsset[];
   newSystemId: string;
   newSystemReading: string;
+  newModuleId: string;
+  newModuleRead: string;
   afterPhotos: PhotoAsset[];
   gpsCoordinates: string;
   signatureData: string;
@@ -152,9 +155,12 @@ export default function WorkflowWizardScreen() {
       troubleNote: hasUnsyncedDraft ? (workOrder.notes || workOrder.troubleNote || "") : "",
       troublePhotos: isEditingStatus ? convertStoredPhotosToAssets(workOrder.troublePhotos) : [],
       oldSystemReading: workOrder.oldSystemReading || "",
+      oldModuleRead: workOrder.oldModuleRead || "",
       beforePhotos: isEditingStatus ? convertStoredPhotosToAssets(workOrder.beforePhotos) : [],
       newSystemId: workOrder.newSystemId || "",
       newSystemReading: workOrder.newSystemReading || "",
+      newModuleId: workOrder.newModuleId || "",
+      newModuleRead: workOrder.newModuleRead || "",
       afterPhotos: isEditingStatus ? convertStoredPhotosToAssets(workOrder.afterPhotos) : [],
       gpsCoordinates: workOrder.newGps || "",
       signatureData: workOrder.signatureData || "",
@@ -625,6 +631,9 @@ export default function WorkflowWizardScreen() {
         old_system_reading: parseReading(formData.oldSystemReading) ?? 0,
         new_system_reading: parseReading(formData.newSystemReading) ?? 0,
         new_system_id: formData.newSystemId,
+        old_module_read: parseReading(formData.oldModuleRead),
+        new_module_id: formData.newModuleId || null,
+        new_module_read: parseReading(formData.newModuleRead),
         new_gps: formData.gpsCoordinates || null,
         signature_data: formData.signatureData || null,
         signature_name: formData.signatureName,
@@ -638,6 +647,7 @@ export default function WorkflowWizardScreen() {
       } : {
         status: "Trouble",
         old_system_reading: parseReading(formData.oldSystemReading),
+        old_module_read: parseReading(formData.oldModuleRead),
         trouble: getTroubleCodeFromDisplay(formData.troubleCode),
         notes: formData.troubleNote || null,
         completed_at: completedAt,
@@ -663,8 +673,11 @@ export default function WorkflowWizardScreen() {
         const mobilePayload = canChange ? {
           projectId: Number(projectId),
           oldSystemReading: parseReading(formData.oldSystemReading),
+          oldModuleRead: parseReading(formData.oldModuleRead),
           newSystemId: formData.newSystemId,
           newSystemReading: parseReading(formData.newSystemReading) ?? 0,
+          newModuleId: formData.newModuleId || null,
+          newModuleRead: parseReading(formData.newModuleRead),
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
@@ -677,6 +690,7 @@ export default function WorkflowWizardScreen() {
           troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
           notes: formData.troubleNote || null,
           oldSystemReading: parseReading(formData.oldSystemReading),
+          oldModuleRead: parseReading(formData.oldModuleRead),
           photos: formatPhotosForServer(troublePhotosBase64, 'trouble'),
         };
         
@@ -730,6 +744,7 @@ export default function WorkflowWizardScreen() {
         updateWorkOrder(workOrder.id, {
           status: result.workOrder?.status || (canChange ? "Completed" : "Trouble"),
           oldSystemReading: formData.oldSystemReading,
+          oldModuleRead: formData.oldModuleRead,
           completedAt: completedAt,
           completedBy: user?.id,
           completedByUsername: user?.displayName || user?.username,
@@ -737,6 +752,8 @@ export default function WorkflowWizardScreen() {
           ...(canChange ? {
             newSystemId: formData.newSystemId,
             newSystemReading: formData.newSystemReading,
+            newModuleId: formData.newModuleId,
+            newModuleRead: formData.newModuleRead,
             newGps: formData.gpsCoordinates,
             notes: formData.notes,
             beforePhotos: onlineFormatPhotos(beforePhotosBase64, 'before'),
@@ -761,8 +778,11 @@ export default function WorkflowWizardScreen() {
         const offlineMobilePayload = canChange ? {
           projectId: Number(projectId),
           oldSystemReading: parseReading(formData.oldSystemReading),
+          oldModuleRead: parseReading(formData.oldModuleRead),
           newSystemId: formData.newSystemId,
           newSystemReading: parseReading(formData.newSystemReading) ?? 0,
+          newModuleId: formData.newModuleId || null,
+          newModuleRead: parseReading(formData.newModuleRead),
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
@@ -775,6 +795,7 @@ export default function WorkflowWizardScreen() {
           troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
           notes: formData.troubleNote || null,
           oldSystemReading: parseReading(formData.oldSystemReading),
+          oldModuleRead: parseReading(formData.oldModuleRead),
           photos: formatPhotosForOffline(troublePhotosBase64, 'trouble'),
         };
         
@@ -791,12 +812,15 @@ export default function WorkflowWizardScreen() {
           status: canChange ? "Completed" : "Trouble",
           syncPending: true,
           oldSystemReading: formData.oldSystemReading,
+          oldModuleRead: formData.oldModuleRead,
           completedAt: completedAt,
           completedBy: user?.id,
           completedByUsername: user?.displayName || user?.username,
           ...(canChange ? {
             newSystemId: formData.newSystemId,
             newSystemReading: formData.newSystemReading,
+            newModuleId: formData.newModuleId,
+            newModuleRead: formData.newModuleRead,
             newGps: formData.gpsCoordinates,
             notes: formData.notes,
             beforePhotos: formatPhotosForOffline(beforePhotosBase64, 'before'),
