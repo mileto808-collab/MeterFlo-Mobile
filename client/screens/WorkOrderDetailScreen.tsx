@@ -379,7 +379,7 @@ export default function WorkOrderDetailScreen() {
           </View>
         </Accordion>
 
-        <Accordion title="System Details" icon="cpu">
+        <Accordion title="System | Module Details" icon="cpu">
           <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
             <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
               Old System
@@ -392,6 +392,18 @@ export default function WorkOrderDetailScreen() {
               <GridItem label="Type" value={workOrder.oldSystemType || workOrder.systemType} />
               <GridItem label="GPS" value={workOrder.oldGps} />
             </View>
+            {workOrder.oldModuleId || workOrder.oldModuleRead || workOrder.oldModuleType ? (
+              <>
+                <View style={styles.gridRow}>
+                  <GridItem label="Module ID" value={workOrder.oldModuleId} />
+                  <GridItem label="Module Reading" value={workOrder.oldModuleRead} />
+                </View>
+                <View style={styles.gridRow}>
+                  <GridItem label="Module Type" value={workOrder.oldModuleType} />
+                  <GridItem label="" value="" />
+                </View>
+              </>
+            ) : null}
           </View>
 
           {workOrder.newSystemId || workOrder.newSystemReading || workOrder.newSystemType || workOrder.newGps ? (
@@ -407,6 +419,18 @@ export default function WorkOrderDetailScreen() {
                 <GridItem label="Type" value={workOrder.newSystemType} />
                 <GridItem label="GPS" value={workOrder.newGps} />
               </View>
+              {workOrder.newModuleId || workOrder.newModuleRead || workOrder.newModuleType ? (
+                <>
+                  <View style={styles.gridRow}>
+                    <GridItem label="Module ID" value={workOrder.newModuleId} />
+                    <GridItem label="Module Reading" value={workOrder.newModuleRead} />
+                  </View>
+                  <View style={styles.gridRow}>
+                    <GridItem label="Module Type" value={workOrder.newModuleType} />
+                    <GridItem label="" value="" />
+                  </View>
+                </>
+              ) : null}
             </View>
           ) : null}
 
