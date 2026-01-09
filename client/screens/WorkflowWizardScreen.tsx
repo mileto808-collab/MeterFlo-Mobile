@@ -92,7 +92,7 @@ const STEP_TITLES: Record<WizardStep, string> = {
   beforePhotos: "Before Photos",
   physicalChange: "Perform Physical Changeout",
   newSystemId: "New System ID",
-  newReading: "New System Reading",
+  newReading: "Capture New Reading",
   afterPhotos: "After Photos",
   gps: "Capture GPS",
   signature: "Signature",
@@ -130,6 +130,8 @@ export default function WorkflowWizardScreen() {
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [oldSystemReadingTouched, setOldSystemReadingTouched] = useState(false);
   const [oldModuleReadingTouched, setOldModuleReadingTouched] = useState(false);
+  const [newSystemReadingTouched, setNewSystemReadingTouched] = useState(false);
+  const [newModuleReadingTouched, setNewModuleReadingTouched] = useState(false);
   const [scannerTargetField, setScannerTargetField] = useState<"system" | "module">("system");
   const [captureMode, setCaptureMode] = useState<"system" | "module" | "summary">("system");
   
@@ -524,8 +526,12 @@ export default function WorkflowWizardScreen() {
         const moduleValid = !valHasModule || formData.newModuleId.trim().length > 0;
         return systemValid && moduleValid;
       }
-      case "newReading": 
-        return formData.newSystemReading.trim().length > 0;
+      case "newReading": {
+        const newSystemValid = formData.newSystemReading.trim().length > 0 && newSystemReadingTouched;
+        const hasNewModule = Boolean(formData.newModuleId.trim());
+        const newModuleValid = !hasNewModule || (formData.newModuleRead.trim().length > 0 && newModuleReadingTouched);
+        return newSystemValid && newModuleValid;
+      }
       case "afterPhotos":
         return formData.afterPhotos.length >= 1;
       case "gps":
@@ -1435,30 +1441,86 @@ export default function WorkflowWizardScreen() {
         );
 
       case "newReading":
+        const hasNewModuleId = Boolean(formData.newModuleId.trim());
+        const newSystemType = workOrder.newSystemType || (workOrder as any).new_system_type;
+        const newModuleType = workOrder.newModuleType || (workOrder as any).new_module_type;
+        
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Icon name="activity" size={48} color={theme.primary} />
+              <Icon name="tool" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Enter the initial reading from the new system (usually 0)
+              Record the initial readings from the new system{hasNewModuleId ? " and module" : ""} after installation.
+            </ThemedText>
+            
+            <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
+              New System Initial Reading
             </ThemedText>
             <TextInput
               value={formData.newSystemReading}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: text }))}
+              onChangeText={(text) => {
+                setFormData(prev => ({ ...prev, newSystemReading: text }));
+                setNewSystemReadingTouched(true);
+              }}
+              onFocus={() => {
+                setFormData(prev => ({ ...prev, newSystemReading: "" }));
+                setNewSystemReadingTouched(false);
+              }}
               placeholder="Enter reading (usually 0)"
               keyboardType="numeric"
-              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg, minHeight: 60 }}
+              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
             />
+            {!newSystemReadingTouched && formData.newSystemReading.trim().length > 0 ? (
+              <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
+                Tap to clear and re-enter the reading
+              </ThemedText>
+            ) : null}
             
-            {(workOrder.newSystemType || (workOrder as any).new_system_type) ? (
-              <View style={{ marginTop: Spacing.xl, padding: Spacing.lg, backgroundColor: theme.backgroundSecondary, borderRadius: 12 }}>
-                <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
-                  Verify New System Type
+            {hasNewModuleId ? (
+              <View style={{ marginTop: Spacing.lg }}>
+                <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
+                  New Module Initial Reading
                 </ThemedText>
-                <ThemedText type="h4" style={{ fontWeight: "600" }}>
-                  {workOrder.newSystemType || (workOrder as any).new_system_type}
-                </ThemedText>
+                <TextInput
+                  value={formData.newModuleRead}
+                  onChangeText={(text) => {
+                    setFormData(prev => ({ ...prev, newModuleRead: text }));
+                    setNewModuleReadingTouched(true);
+                  }}
+                  onFocus={() => {
+                    setFormData(prev => ({ ...prev, newModuleRead: "" }));
+                    setNewModuleReadingTouched(false);
+                  }}
+                  placeholder="Enter module reading (usually 0)"
+                  keyboardType="numeric"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+                {!newModuleReadingTouched && formData.newModuleRead.trim().length > 0 ? (
+                  <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
+                    Tap to clear and re-enter the reading
+                  </ThemedText>
+                ) : null}
+              </View>
+            ) : null}
+            
+            {newSystemType ? (
+              <View style={{ marginTop: Spacing.lg, padding: Spacing.md, backgroundColor: theme.backgroundSecondary, borderRadius: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing.sm }}>
+                  <Icon name="check-circle" size={18} color={theme.success} />
+                  <ThemedText type="small" style={{ color: theme.textSecondary }}>Verify New System Type</ThemedText>
+                </View>
+                <ThemedText type="h4" style={{ fontWeight: "600", marginTop: Spacing.xs }}>{newSystemType}</ThemedText>
+              </View>
+            ) : null}
+            
+            {newModuleType ? (
+              <View style={{ marginTop: Spacing.md, padding: Spacing.md, backgroundColor: theme.backgroundSecondary, borderRadius: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing.sm }}>
+                  <Icon name="check-circle" size={18} color={theme.success} />
+                  <ThemedText type="small" style={{ color: theme.textSecondary }}>Verify New Module Type</ThemedText>
+                </View>
+                <ThemedText type="h4" style={{ fontWeight: "600", marginTop: Spacing.xs }}>{newModuleType}</ThemedText>
               </View>
             ) : null}
           </View>
