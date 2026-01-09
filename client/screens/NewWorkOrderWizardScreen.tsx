@@ -141,6 +141,9 @@ export default function NewWorkOrderWizardScreen() {
   const [oldCaptureMode, setOldCaptureMode] = useState<"system" | "module" | "summary">("system");
   const [newCaptureMode, setNewCaptureMode] = useState<"system" | "module" | "summary">("system");
   
+  // Track if ID input is actively focused (prevents Next until Done is pressed)
+  const [isIdInputFocused, setIsIdInputFocused] = useState(false);
+  
   // Reset capture modes when captureType changes
   useEffect(() => {
     if (captureType === "module") {
@@ -412,6 +415,8 @@ export default function NewWorkOrderWizardScreen() {
         return true;
       case "oldIds": 
         // System ID required if capturing system or both, module ID required if capturing module or both
+        // Also prevent Next while actively typing (input is focused)
+        if (isIdInputFocused) return false;
         if (hasOldSystem && !formData.oldSystemId.trim()) return false;
         if (hasOldModule && !formData.oldModuleId.trim()) return false;
         return true;
@@ -427,6 +432,8 @@ export default function NewWorkOrderWizardScreen() {
         return true;
       case "newIds": 
         // System ID required if capturing system or both, module ID required if capturing module or both
+        // Also prevent Next while actively typing (input is focused)
+        if (isIdInputFocused) return false;
         if (hasNewSystem && !formData.newSystemId.trim()) return false;
         if (hasNewModule && !formData.newModuleId.trim()) return false;
         return true;
@@ -851,7 +858,7 @@ export default function NewWorkOrderWizardScreen() {
               ]}
               onPress={() => setCaptureType("system")}
             >
-              <Icon name="hard-drive" size={24} color={captureType === "system" ? "#FFFFFF" : theme.text} />
+              <Icon name="disc" size={24} color={captureType === "system" ? "#FFFFFF" : theme.text} />
               <ThemedText type="body" style={{ marginLeft: Spacing.md, fontWeight: "600", color: captureType === "system" ? "#FFFFFF" : theme.text }}>
                 System Only
               </ThemedText>
@@ -885,7 +892,7 @@ export default function NewWorkOrderWizardScreen() {
               ]}
               onPress={() => setCaptureType("both")}
             >
-              <Icon name="server" size={24} color={captureType === "both" ? "#FFFFFF" : theme.text} />
+              <Icon name="grid" size={24} color={captureType === "both" ? "#FFFFFF" : theme.text} />
               <ThemedText type="body" style={{ marginLeft: Spacing.md, fontWeight: "600", color: captureType === "both" ? "#FFFFFF" : theme.text }}>
                 System and Module
               </ThemedText>
@@ -1022,7 +1029,15 @@ export default function NewWorkOrderWizardScreen() {
                 <TextInput
                   value={isCapturingOldSystem ? formData.oldSystemId : formData.oldModuleId}
                   onChangeText={isCapturingOldSystem ? handleOldSystemIdChange : handleOldModuleIdChange}
-                  onBlur={isCapturingOldSystem ? handleOldSystemIdBlur : handleOldModuleIdBlur}
+                  onFocus={() => setIsIdInputFocused(true)}
+                  onBlur={() => {
+                    setIsIdInputFocused(false);
+                    if (isCapturingOldSystem) {
+                      handleOldSystemIdBlur();
+                    } else {
+                      handleOldModuleIdBlur();
+                    }
+                  }}
                   placeholder="Type or use HID scanner"
                   autoCapitalize="characters"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
@@ -1319,7 +1334,15 @@ export default function NewWorkOrderWizardScreen() {
                 <TextInput
                   value={isCapturingNewSystem ? formData.newSystemId : formData.newModuleId}
                   onChangeText={isCapturingNewSystem ? handleNewSystemIdChange : handleNewModuleIdChange}
-                  onBlur={isCapturingNewSystem ? handleNewSystemIdBlur : handleNewModuleIdBlur}
+                  onFocus={() => setIsIdInputFocused(true)}
+                  onBlur={() => {
+                    setIsIdInputFocused(false);
+                    if (isCapturingNewSystem) {
+                      handleNewSystemIdBlur();
+                    } else {
+                      handleNewModuleIdBlur();
+                    }
+                  }}
                   placeholder="Type or use HID scanner"
                   autoCapitalize="characters"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
