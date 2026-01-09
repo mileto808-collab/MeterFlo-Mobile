@@ -1639,6 +1639,10 @@ export default function WorkflowWizardScreen() {
       case "confirm": {
         const confirmHasOldModule = Boolean(workOrder.oldModuleId);
         const confirmHasNewModule = Boolean(formData.newModuleId.trim());
+        const confirmOldSystemType = workOrder.oldSystemType || (workOrder as any).old_system_type;
+        const confirmOldModuleType = workOrder.oldModuleType || (workOrder as any).old_module_type;
+        const confirmNewSystemType = workOrder.newSystemType || (workOrder as any).new_system_type;
+        const confirmNewModuleType = workOrder.newModuleType || (workOrder as any).new_module_type;
         
         return (
           <View>
@@ -1649,57 +1653,103 @@ export default function WorkflowWizardScreen() {
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.summaryRow}>
-                <Icon name="activity" size={20} color={theme.primary} />
-                <ThemedText type="body">Old System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
+                <Icon name="clipboard" size={20} color={theme.primary} />
+                <ThemedText type="body">Work Order: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.customerWoId}</ThemedText></ThemedText>
               </View>
-              {confirmHasOldModule && formData.oldModuleRead ? (
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Icon name="home" size={20} color={theme.primary} />
+                <ThemedText type="body" numberOfLines={2}>Address: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.serviceAddress}</ThemedText></ThemedText>
+              </View>
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Icon name="hash" size={20} color={theme.primary} />
+                <ThemedText type="body">Old System ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemId}</ThemedText></ThemedText>
+              </View>
+              {confirmOldSystemType ? (
                 <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                  <Icon name="activity" size={20} color={theme.primary} />
-                  <ThemedText type="body">Old Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleRead}</ThemedText></ThemedText>
+                  <Icon name="cpu" size={20} color={theme.primary} />
+                  <ThemedText type="body">Old System Type: <ThemedText type="body" style={{ fontWeight: "600" }}>{confirmOldSystemType}</ThemedText></ThemedText>
                 </View>
               ) : null}
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="camera" size={20} color={theme.primary} />
-                <ThemedText type="body">{formData.beforePhotos.length} Before Photo(s)</ThemedText>
+                <Icon name="activity" size={20} color={theme.primary} />
+                <ThemedText type="body">Old System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
               </View>
+              {confirmHasOldModule ? (
+                <>
+                  <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="hash" size={20} color={theme.primary} />
+                    <ThemedText type="body">Old Module ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldModuleId}</ThemedText></ThemedText>
+                  </View>
+                  {confirmOldModuleType ? (
+                    <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                      <Icon name="cpu" size={20} color={theme.primary} />
+                      <ThemedText type="body">Old Module Type: <ThemedText type="body" style={{ fontWeight: "600" }}>{confirmOldModuleType}</ThemedText></ThemedText>
+                    </View>
+                  ) : null}
+                  {formData.oldModuleRead ? (
+                    <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                      <Icon name="activity" size={20} color={theme.primary} />
+                      <ThemedText type="body">Old Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleRead}</ThemedText></ThemedText>
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="hash" size={20} color={theme.primary} />
                 <ThemedText type="body">New System ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemId}</ThemedText></ThemedText>
               </View>
-              {confirmHasNewModule ? (
+              {confirmNewSystemType ? (
                 <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                  <Icon name="hash" size={20} color={theme.primary} />
-                  <ThemedText type="body">New Module ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newModuleId}</ThemedText></ThemedText>
+                  <Icon name="cpu" size={20} color={theme.primary} />
+                  <ThemedText type="body">New System Type: <ThemedText type="body" style={{ fontWeight: "600" }}>{confirmNewSystemType}</ThemedText></ThemedText>
                 </View>
               ) : null}
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="activity" size={20} color={theme.primary} />
                 <ThemedText type="body">New System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
               </View>
-              {confirmHasNewModule && formData.newModuleRead ? (
-                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                  <Icon name="activity" size={20} color={theme.primary} />
-                  <ThemedText type="body">New Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newModuleRead}</ThemedText></ThemedText>
-                </View>
+              {confirmHasNewModule ? (
+                <>
+                  <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="hash" size={20} color={theme.primary} />
+                    <ThemedText type="body">New Module ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newModuleId}</ThemedText></ThemedText>
+                  </View>
+                  {confirmNewModuleType ? (
+                    <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                      <Icon name="cpu" size={20} color={theme.primary} />
+                      <ThemedText type="body">New Module Type: <ThemedText type="body" style={{ fontWeight: "600" }}>{confirmNewModuleType}</ThemedText></ThemedText>
+                    </View>
+                  ) : null}
+                  {formData.newModuleRead ? (
+                    <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                      <Icon name="activity" size={20} color={theme.primary} />
+                      <ThemedText type="body">New Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newModuleRead}</ThemedText></ThemedText>
+                    </View>
+                  ) : null}
+                </>
               ) : null}
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="camera" size={20} color={theme.primary} />
-                <ThemedText type="body">{formData.afterPhotos.length} After Photo(s)</ThemedText>
-              </View>
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="map-pin" size={20} color={theme.primary} />
-                <ThemedText type="body" numberOfLines={1}>GPS: {formData.gpsCoordinates}</ThemedText>
+                <ThemedText type="body" numberOfLines={1}>GPS: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.gpsCoordinates}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="user" size={20} color={theme.primary} />
-                <ThemedText type="body">Signed By: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.signatureName}</ThemedText></ThemedText>
+                <Icon name="camera" size={20} color={theme.primary} />
+                <ThemedText type="body">Before Photos: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.beforePhotos.length}</ThemedText></ThemedText>
+              </View>
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Icon name="camera" size={20} color={theme.primary} />
+                <ThemedText type="body">After Photos: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.afterPhotos.length}</ThemedText></ThemedText>
               </View>
               {formData.notes ? (
                 <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                   <Icon name="file-text" size={20} color={theme.primary} />
-                  <ThemedText type="body" numberOfLines={2}>Notes: {formData.notes}</ThemedText>
+                  <ThemedText type="body" numberOfLines={2}>Notes: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.notes}</ThemedText></ThemedText>
                 </View>
               ) : null}
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Icon name="user" size={20} color={theme.primary} />
+                <ThemedText type="body">Signed By: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.signatureName}</ThemedText></ThemedText>
+              </View>
             </View>
           </View>
         );
