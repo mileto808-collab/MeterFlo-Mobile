@@ -134,6 +134,7 @@ export default function WorkflowWizardScreen() {
   const [newModuleReadingTouched, setNewModuleReadingTouched] = useState(false);
   const [scannerTargetField, setScannerTargetField] = useState<"system" | "module">("system");
   const [captureMode, setCaptureMode] = useState<"system" | "module" | "summary">("system");
+  const [isIdInputFocused, setIsIdInputFocused] = useState(false);
   
   useEffect(() => {
     if (showScanner && !cameraPermission) {
@@ -199,6 +200,13 @@ export default function WorkflowWizardScreen() {
       }
     }
   }, [currentStep]);
+
+  // Reset focus state when capture mode changes or scanner opens (input may unmount without blur)
+  useEffect(() => {
+    if (captureMode === "summary" || showScanner) {
+      setIsIdInputFocused(false);
+    }
+  }, [captureMode, showScanner]);
 
   const troubleCodeOptions = referenceData?.troubleCodes || [
     { code: "ACCESS_DENIED", label: "Access Denied", description: "" },
@@ -520,6 +528,7 @@ export default function WorkflowWizardScreen() {
       case "physicalChange":
         return true;
       case "newSystemId": {
+        if (isIdInputFocused) return false;
         const valHasSystem = Boolean(workOrder.oldSystemId);
         const valHasModule = Boolean(workOrder.oldModuleId);
         const systemValid = !valHasSystem || formData.newSystemId.trim().length > 0;
@@ -1330,6 +1339,7 @@ export default function WorkflowWizardScreen() {
         };
 
         const handleSystemIdBlur = () => {
+          setIsIdInputFocused(false);
           if (formData.newSystemId.trim().length > 0 && newIdHasModule) {
             setCaptureMode("module");
             setScannerTargetField("module");
@@ -1343,6 +1353,7 @@ export default function WorkflowWizardScreen() {
         };
 
         const handleModuleIdBlur = () => {
+          setIsIdInputFocused(false);
           if (formData.newModuleId.trim().length > 0) {
             setCaptureMode("summary");
           }
@@ -1427,6 +1438,7 @@ export default function WorkflowWizardScreen() {
                 <TextInput
                   value={isCapturingSystem ? formData.newSystemId : formData.newModuleId}
                   onChangeText={isCapturingSystem ? handleSystemIdChange : handleModuleIdChange}
+                  onFocus={() => setIsIdInputFocused(true)}
                   onBlur={isCapturingSystem ? handleSystemIdBlur : handleModuleIdBlur}
                   placeholder="Type or use HID scanner"
                   autoCapitalize="characters"
