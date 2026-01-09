@@ -18,7 +18,7 @@ export default function SyncScreen() {
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
-  const { isOnline, pendingActions, syncHistory, isSyncing, syncPendingActions, clearAllPending, clearSyncHistory } = useOffline();
+  const { isOnline, pendingActions, syncHistory, isSyncing, syncPendingActions, clearAllPending, clearSyncHistory, removePendingAction } = useOffline();
   const { lastSyncTime, isLoading, refreshWorkOrders, clearAllData, workOrders, updateWorkOrder, deleteLocalWorkOrder } = useWorkOrders();
   const [isClearing, setIsClearing] = useState(false);
   const [backupProgress, setBackupProgress] = useState<BackupProgress | null>(null);
@@ -95,6 +95,28 @@ export default function SyncScreen() {
           );
         }
       }
+    }
+  };
+
+  const handleRemovePendingAction = (actionId: string, title: string) => {
+    if (Platform.OS === "web") {
+      const confirmed = typeof window !== "undefined" && window.confirm(`Remove "${title}" from pending actions? This cannot be undone.`);
+      if (confirmed) {
+        removePendingAction(actionId);
+      }
+    } else {
+      Alert.alert(
+        "Remove Pending Action",
+        `Remove "${title}" from pending actions? This cannot be undone.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Remove", 
+            style: "destructive",
+            onPress: () => removePendingAction(actionId)
+          }
+        ]
+      );
     }
   };
 
@@ -337,12 +359,24 @@ export default function SyncScreen() {
                     {action.workOrderTitle}
                   </ThemedText>
                 </View>
-                <ThemedText type="caption" style={{ color: theme.textSecondary }}>
-                  {new Date(action.timestamp).toLocaleTimeString(undefined, {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </ThemedText>
+                <View style={styles.pendingItemActions}>
+                  <ThemedText type="caption" style={{ color: theme.textSecondary }}>
+                    {new Date(action.timestamp).toLocaleTimeString(undefined, {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </ThemedText>
+                  <Pressable
+                    onPress={() => handleRemovePendingAction(action.id, action.workOrderTitle)}
+                    style={({ pressed }) => [
+                      styles.removeActionButton,
+                      { opacity: pressed ? 0.6 : 1 }
+                    ]}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Icon name="x" size={16} color={theme.error} />
+                  </Pressable>
+                </View>
               </View>
             ))}
           </View>
@@ -605,6 +639,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: BorderRadius.xs,
+  },
+  pendingItemActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  removeActionButton: {
+    padding: Spacing.xs,
   },
   emptyState: {
     alignItems: "center",
