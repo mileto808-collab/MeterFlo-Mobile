@@ -84,11 +84,14 @@ export default function TapToCaptureScanScreen() {
     
     const normalizedValue = detectedValue.trim().toUpperCase();
     
-    // First, search locally
+    // First, search locally by system IDs and module IDs
     const foundWorkOrders = workOrders.filter(wo => {
       const oldSystemId = (wo.oldSystemId || "").trim().toUpperCase();
       const newSystemId = (wo.newSystemId || "").trim().toUpperCase();
-      return oldSystemId === normalizedValue || newSystemId === normalizedValue;
+      const oldModuleId = (wo.oldModuleId || "").trim().toUpperCase();
+      const newModuleId = (wo.newModuleId || "").trim().toUpperCase();
+      return oldSystemId === normalizedValue || newSystemId === normalizedValue ||
+             oldModuleId === normalizedValue || newModuleId === normalizedValue;
     });
     
     if (foundWorkOrders.length > 0) {

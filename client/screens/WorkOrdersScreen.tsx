@@ -61,6 +61,13 @@ export default function WorkOrdersScreen() {
         return true;
       }
       
+      // Exact match on module IDs
+      const oldModuleId = wo.oldModuleId?.trim().toLowerCase() || "";
+      const newModuleId = wo.newModuleId?.trim().toLowerCase() || "";
+      if (oldModuleId === normalizedTerm || newModuleId === normalizedTerm) {
+        return true;
+      }
+      
       // Exact match on work order ID: check customerWoId first, fall back to internal id if customerWoId is empty
       const customerWoId = wo.customerWoId?.trim().toLowerCase() || "";
       if (customerWoId) {
