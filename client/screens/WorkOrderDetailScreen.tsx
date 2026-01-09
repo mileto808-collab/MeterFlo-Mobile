@@ -174,10 +174,11 @@ export default function WorkOrderDetailScreen() {
   };
 
   const handleProcess = () => {
-    if (!workOrder.customerWoId || !workOrder.oldSystemId) {
+    const hasSystemOrModule = workOrder.oldSystemId || workOrder.oldModuleId;
+    if (!workOrder.customerWoId || !hasSystemOrModule) {
       const missing: string[] = [];
       if (!workOrder.customerWoId) missing.push("Customer WO ID");
-      if (!workOrder.oldSystemId) missing.push("Old System ID");
+      if (!hasSystemOrModule) missing.push("Old System ID or Module ID");
       
       if (Platform.OS === "web") {
         alert(`Cannot start workflow. Missing required fields: ${missing.join(", ")}`);
