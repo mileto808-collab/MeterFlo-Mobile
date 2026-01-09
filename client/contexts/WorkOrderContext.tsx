@@ -662,6 +662,27 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       
       if (forceFullSync || !currentLastSyncTime) {
         console.log("[refreshWorkOrders] Full sync - replacing work orders, preserveLocal:", preserveLocal);
+        
+        // Load pending actions to check if syncPending work orders have actual pending actions
+        const pendingActionsStr = await AsyncStorage.getItem("meterflo_pending_actions");
+        const pendingActions: { workOrderId?: number; data?: { oldSystemId?: string; oldMeterId?: string; oldModuleId?: string } }[] = pendingActionsStr ? JSON.parse(pendingActionsStr) : [];
+        // Build set of work order IDs that have actual pending actions
+        const workOrderIdsWithPendingActions = new Set(
+          pendingActions
+            .filter(a => a.workOrderId != null)
+            .map(a => a.workOrderId)
+        );
+        // Also track lookup keys for offline work orders (which don't have a workOrderId yet)
+        const offlineLookupKeys = new Set(
+          pendingActions
+            .filter(a => a.workOrderId == null && a.data)
+            .map(a => {
+              const d = a.data!;
+              return (d.oldSystemId || d.oldMeterId || d.oldModuleId || "").trim();
+            })
+            .filter(k => k)
+        );
+        
         setWorkOrdersState(prev => {
           const prevById = new Map(prev.map(wo => [wo.id, wo]));
           const serverWorkOrderIds = new Set(newWorkOrders.map(wo => wo.id));
@@ -680,7 +701,24 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
               return mergeLocalCompletionData(serverWo, localWo);
             });
           
-          const pendingNotOnServer = prev.filter(wo => wo.syncPending && !serverWorkOrderIds.has(wo.id));
+          // Only preserve syncPending work orders if they have an actual pending action
+          const pendingNotOnServer = prev.filter(wo => {
+            if (!wo.syncPending) return false;
+            if (serverWorkOrderIds.has(wo.id)) return false;
+            
+            // Check if there's an actual pending action for this work order
+            if (wo.id && workOrderIdsWithPendingActions.has(wo.id)) {
+              return true; // Has pending action by work order ID
+            }
+            // For offline work orders, check by lookup key
+            const lookupKey = (wo.oldSystemId || wo.oldModuleId || "").trim();
+            if (lookupKey && offlineLookupKeys.has(lookupKey)) {
+              return true; // Has pending action by lookup key
+            }
+            // No pending action found - this is a stale syncPending flag
+            console.log(`[refreshWorkOrders] Removing stale syncPending work order ${wo.id || wo.customerWoId} - no pending action found`);
+            return false;
+          });
           const pendingIds = new Set(pendingNotOnServer.map(wo => wo.id));
           
           // When preserveLocal=true (pull-down refresh):
@@ -704,9 +742,11 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
             : [];
           
           const removedWorkOrders = prev.filter(wo => {
-            if (wo.syncPending) return false; // Never remove pending
             if (serverWorkOrderIds.has(wo.id)) return false; // Still on server
-            if (pendingIds.has(wo.id)) return false; // Pending
+            if (pendingIds.has(wo.id)) return false; // Preserved as pending with actual action
+            
+            // Count stale syncPending work orders as removed (no actual pending action)
+            if (wo.syncPending && !pendingIds.has(wo.id)) return true;
             
             if (preserveLocal) {
               // Only remove Open work orders not processed by user
