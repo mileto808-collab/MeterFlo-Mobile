@@ -255,11 +255,16 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   }, [syncHistory]);
 
   const addPendingAction = useCallback(async (action: Omit<PendingAction, "id" | "timestamp">) => {
+    if (!projectId) {
+      console.error("[OfflineContext] Cannot add pending action without projectId - action will be rejected");
+      throw new Error("Cannot queue offline action: no project selected");
+    }
+    
     const newAction: PendingAction = {
       ...action,
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       timestamp: Date.now(),
-      projectId: projectId || undefined,
+      projectId: projectId,
     };
 
     const updatedActions = [...pendingActions, newAction];
