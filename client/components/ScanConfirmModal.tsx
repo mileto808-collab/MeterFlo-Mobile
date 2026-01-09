@@ -199,7 +199,7 @@ export function ScanConfirmModal({
                     style={{ backgroundColor: theme.primary, flex: 1 }}
                   >
                     <Icon name="arrow-right" size={18} color="#FFFFFF" />
-                    Start System Changeout
+                    Start Changeout
                   </Button>
                 ) : null}
                 {!isManualSearch ? (

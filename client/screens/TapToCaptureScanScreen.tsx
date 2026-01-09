@@ -481,7 +481,7 @@ export default function TapToCaptureScanScreen() {
                     style={{ backgroundColor: theme.primary }}
                   >
                     <Icon name="arrow-right" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
-                    <ThemedText style={{ color: "#FFFFFF", fontWeight: "600" }}>Start System Changeout</ThemedText>
+                    <ThemedText style={{ color: "#FFFFFF", fontWeight: "600" }}>Start Changeout</ThemedText>
                   </Button>
                 )}
                 
