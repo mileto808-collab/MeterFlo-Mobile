@@ -81,7 +81,7 @@ export function ManualSearchModal({ visible, value, onClose, onChangeText, onFin
               ref={inputRef}
               value={localValue}
               onChangeText={setLocalValue}
-              placeholder="Search by address, meter ID, etc..."
+              placeholder="Search by system ID, module ID, address..."
               placeholderTextColor={theme.textSecondary}
               style={[styles.input, { color: theme.text }]}
               autoFocus

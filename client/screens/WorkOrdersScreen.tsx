@@ -310,7 +310,7 @@ export default function WorkOrdersScreen() {
         <SearchBar
           value={filters.searchQuery}
           onChangeText={handleSearchChange}
-          placeholder="Scan System ID..."
+          placeholder="Scan System or Module ID..."
           onSearchPress={() => setShowSearchOptions(true)}
         />
         <View style={styles.actionButtons}>

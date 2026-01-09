@@ -106,7 +106,7 @@ export function HIDScannerModal({ visible, onClose, onScan }: HIDScannerModalPro
           </View>
 
           <ThemedText type="body" style={[styles.instructions, { color: theme.textSecondary }]}>
-            Point your external barcode scanner at a meter barcode. The scanned value will appear below.
+            Point your external barcode scanner at a system or module barcode. The scanned value will appear below.
           </ThemedText>
 
           <View style={[styles.inputContainer, { backgroundColor: theme.backgroundSecondary }]}>
