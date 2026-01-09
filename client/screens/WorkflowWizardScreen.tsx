@@ -95,7 +95,7 @@ const STEP_TITLES: Record<WizardStep, string> = {
   newReading: "Capture New Reading",
   afterPhotos: "After Photos",
   gps: "Capture GPS",
-  signature: "Signature",
+  signature: "Capture Signature",
   notes: "Notes",
   confirm: "Confirm & Submit",
   troubleCapture: "Report Issue",
@@ -537,7 +537,7 @@ export default function WorkflowWizardScreen() {
       case "gps":
         return formData.gpsCoordinates.trim().length > 0;
       case "signature": 
-        return formData.signatureName.trim().length > 0;
+        return formData.signatureData.length > 0 && formData.signatureName.trim().length > 0;
       case "notes":
         return true;
       case "confirm":
