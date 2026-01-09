@@ -130,6 +130,7 @@ export default function WorkflowWizardScreen() {
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [oldSystemReadingTouched, setOldSystemReadingTouched] = useState(false);
   const [oldModuleReadingTouched, setOldModuleReadingTouched] = useState(false);
+  const [scannerTargetField, setScannerTargetField] = useState<"system" | "module">("system");
   
   useEffect(() => {
     if (showScanner && !cameraPermission) {
@@ -203,10 +204,11 @@ export default function WorkflowWizardScreen() {
   };
 
   useEffect(() => {
-    if (!workOrder.customerWoId || !workOrder.oldSystemId) {
+    const hasSystemOrModule = workOrder.oldSystemId || workOrder.oldModuleId;
+    if (!workOrder.customerWoId || !hasSystemOrModule) {
       const missing: string[] = [];
       if (!workOrder.customerWoId) missing.push("Customer WO ID");
-      if (!workOrder.oldSystemId) missing.push("Old System ID");
+      if (!hasSystemOrModule) missing.push("Old System ID or Module ID");
       
       if (Platform.OS === "web") {
         alert(`Cannot start workflow. Missing required fields: ${missing.join(", ")}`);
@@ -412,7 +414,11 @@ export default function WorkflowWizardScreen() {
   
   const handleCaptureBarcode = () => {
     if (detectedBarcode) {
-      setFormData(prev => ({ ...prev, newSystemId: detectedBarcode }));
+      if (scannerTargetField === "module") {
+        setFormData(prev => ({ ...prev, newModuleId: detectedBarcode }));
+      } else {
+        setFormData(prev => ({ ...prev, newSystemId: detectedBarcode }));
+      }
       setShowScanner(false);
       setDetectedBarcode(null);
     }
@@ -488,8 +494,13 @@ export default function WorkflowWizardScreen() {
         return formData.beforePhotos.length >= 1;
       case "physicalChange":
         return true;
-      case "newSystemId": 
-        return formData.newSystemId.trim().length > 0;
+      case "newSystemId": {
+        const valHasSystem = Boolean(workOrder.oldSystemId);
+        const valHasModule = Boolean(workOrder.oldModuleId);
+        const systemValid = !valHasSystem || formData.newSystemId.trim().length > 0;
+        const moduleValid = !valHasModule || formData.newModuleId.trim().length > 0;
+        return systemValid && moduleValid;
+      }
       case "newReading": 
         return formData.newSystemReading.trim().length > 0;
       case "afterPhotos":
@@ -1216,7 +1227,7 @@ export default function WorkflowWizardScreen() {
                     </ThemedText>
                   </View>
                   <ThemedText type="body" style={{ textAlign: "center", marginTop: Spacing.md }}>
-                    Is this the correct system ID?
+                    Capture as {scannerTargetField === "module" ? "New Module ID" : "New System ID"}?
                   </ThemedText>
                   <View style={styles.scannerButtonRow}>
                     <Button
@@ -1256,48 +1267,93 @@ export default function WorkflowWizardScreen() {
           );
         }
 
+        const newIdHasSystem = Boolean(workOrder.oldSystemId);
+        const newIdHasModule = Boolean(workOrder.oldModuleId);
+        const newIdHelpText = newIdHasSystem && newIdHasModule
+          ? "Scan or enter the new system ID and module ID"
+          : newIdHasModule && !newIdHasSystem
+            ? "Scan or enter the new module ID"
+            : "Scan or enter the new system ID";
+
+        const openScannerFor = (target: "system" | "module", type: "barcode" | "qr") => {
+          setScannerTargetField(target);
+          setScannerType(type);
+          setDetectedBarcode(null);
+          setShowScanner(true);
+        };
+        
         return (
           <View>
             <View style={styles.iconHeader}>
               <Icon name="hash" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Scan or enter the new system ID
+              {newIdHelpText}
             </ThemedText>
             
-            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
-              Scan with camera:
-            </ThemedText>
-            <View style={styles.scanButtonsRow}>
-              <Pressable
-                style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
-                onPress={() => { setScannerType("barcode"); setDetectedBarcode(null); setShowScanner(true); }}
-              >
-                <Icon name="maximize" size={32} color={theme.primary} />
-                <ThemedText type="body" style={{ marginTop: Spacing.sm, fontWeight: "500" }}>Scan Barcode</ThemedText>
-              </Pressable>
-              
-              <Pressable
-                style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
-                onPress={() => { setScannerType("qr"); setDetectedBarcode(null); setShowScanner(true); }}
-              >
-                <Icon name="grid" size={32} color={theme.primary} />
-                <ThemedText type="body" style={{ marginTop: Spacing.sm, fontWeight: "500" }}>Scan QR Code</ThemedText>
-              </Pressable>
-            </View>
+            {newIdHasSystem ? (
+              <View style={{ marginBottom: newIdHasModule ? Spacing.xl : 0 }}>
+                <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.sm }}>
+                  New System ID
+                </ThemedText>
+                <View style={styles.scanButtonsRow}>
+                  <Pressable
+                    style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                    onPress={() => openScannerFor("system", "barcode")}
+                  >
+                    <Icon name="maximize" size={28} color={theme.primary} />
+                    <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>Barcode</ThemedText>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                    onPress={() => openScannerFor("system", "qr")}
+                  >
+                    <Icon name="grid" size={28} color={theme.primary} />
+                    <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>QR Code</ThemedText>
+                  </Pressable>
+                </View>
+                <TextInput
+                  value={formData.newSystemId}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemId: text }))}
+                  placeholder="Type or use HID scanner"
+                  autoCapitalize="characters"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50, marginTop: Spacing.sm }}
+                />
+              </View>
+            ) : null}
             
-            <ThemedText type="body" style={{ color: theme.textSecondary, marginVertical: Spacing.lg, textAlign: "center" }}>
-              or enter manually
-            </ThemedText>
+            {newIdHasModule ? (
+              <View>
+                <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.sm }}>
+                  New Module ID
+                </ThemedText>
+                <View style={styles.scanButtonsRow}>
+                  <Pressable
+                    style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                    onPress={() => openScannerFor("module", "barcode")}
+                  >
+                    <Icon name="maximize" size={28} color={theme.primary} />
+                    <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>Barcode</ThemedText>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                    onPress={() => openScannerFor("module", "qr")}
+                  >
+                    <Icon name="grid" size={28} color={theme.primary} />
+                    <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>QR Code</ThemedText>
+                  </Pressable>
+                </View>
+                <TextInput
+                  value={formData.newModuleId}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, newModuleId: text }))}
+                  placeholder="Type or use HID scanner"
+                  autoCapitalize="characters"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50, marginTop: Spacing.sm }}
+                />
+              </View>
+            ) : null}
             
-            <TextInput
-              value={formData.newSystemId}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemId: text }))}
-              placeholder="Type or use HID scanner"
-              autoCapitalize="characters"
-              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg, minHeight: 60 }}
-            />
-            <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm, textAlign: "center" }}>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.lg, textAlign: "center" }}>
               Tap field and scan with Bluetooth/USB barcode gun
             </ThemedText>
           </View>
@@ -1608,6 +1664,20 @@ export default function WorkflowWizardScreen() {
     );
   }
 
+  const getStepTitle = (): string => {
+    if (currentStep === "newSystemId") {
+      const hasSystem = Boolean(workOrder.oldSystemId);
+      const hasModule = Boolean(workOrder.oldModuleId);
+      if (hasSystem && hasModule) {
+        return "Capture New System ID and Module ID";
+      } else if (hasModule && !hasSystem) {
+        return "Capture New Module ID";
+      }
+      return "Capture New System ID";
+    }
+    return STEP_TITLES[currentStep];
+  };
+
   const getStepRequiredLabel = () => {
     switch (currentStep) {
       case "physicalChange":
@@ -1661,7 +1731,7 @@ export default function WorkflowWizardScreen() {
         ]}
       >
         <View style={[styles.stepCard, { backgroundColor: theme.backgroundDefault }]}>
-          <ThemedText type="h3" style={styles.stepTitle}>{STEP_TITLES[currentStep]}</ThemedText>
+          <ThemedText type="h3" style={styles.stepTitle}>{getStepTitle()}</ThemedText>
           {getStepRequiredLabel()}
           
           <View style={styles.inputContainer}>
