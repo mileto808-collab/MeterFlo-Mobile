@@ -978,10 +978,12 @@ export default function WorkflowWizardScreen() {
                 <ThemedText type="small" style={{ color: theme.textSecondary }}>Address</ThemedText>
                 <ThemedText type="body" style={{ fontWeight: "600", flex: 1, textAlign: "right" }} numberOfLines={2}>{workOrder.serviceAddress}</ThemedText>
               </View>
-              <View style={[styles.detailRow, { flexDirection: "row", justifyContent: "space-between", marginTop: Spacing.sm }]}>
-                <ThemedText type="small" style={{ color: theme.textSecondary }}>Old System ID</ThemedText>
-                <ThemedText type="body" style={{ fontWeight: "600", color: theme.primary }}>{workOrder.oldSystemId || "N/A"}</ThemedText>
-              </View>
+              {workOrder.oldSystemId ? (
+                <View style={[styles.detailRow, { flexDirection: "row", justifyContent: "space-between", marginTop: Spacing.sm }]}>
+                  <ThemedText type="small" style={{ color: theme.textSecondary }}>Old System ID</ThemedText>
+                  <ThemedText type="body" style={{ fontWeight: "600", color: theme.primary }}>{workOrder.oldSystemId}</ThemedText>
+                </View>
+              ) : null}
               {workOrder.oldModuleId ? (
                 <View style={[styles.detailRow, { flexDirection: "row", justifyContent: "space-between", marginTop: Spacing.sm }]}>
                   <ThemedText type="small" style={{ color: theme.textSecondary }}>Old Module ID</ThemedText>
