@@ -476,8 +476,16 @@ export default function WorkflowWizardScreen() {
     switch (currentStep) {
       case "canChange": 
         return formData.canChange !== null;
-      case "oldReading": 
-        return formData.oldSystemReading.trim().length > 0;
+      case "oldReading": {
+        const systemReadingValid = formData.oldSystemReading.trim().length > 0 && 
+          formData.oldSystemReading.trim() !== (workOrder.oldSystemReading || "").trim();
+        const hasModule = Boolean(workOrder.oldModuleId);
+        const moduleReadingValid = !hasModule || (
+          formData.oldModuleRead.trim().length > 0 && 
+          formData.oldModuleRead.trim() !== (workOrder.oldModuleRead || "").trim()
+        );
+        return systemReadingValid && moduleReadingValid;
+      }
       case "beforePhotos":
         return formData.beforePhotos.length >= 1;
       case "physicalChange":
@@ -1018,10 +1026,16 @@ export default function WorkflowWizardScreen() {
             <TextInput
               value={formData.oldSystemReading}
               onChangeText={(text) => setFormData(prev => ({ ...prev, oldSystemReading: text }))}
+              onFocus={() => setFormData(prev => ({ ...prev, oldSystemReading: "" }))}
               placeholder="Enter reading (e.g., 12345)"
               keyboardType="numeric"
               style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
             />
+            {formData.oldSystemReading.trim() === (workOrder.oldSystemReading || "").trim() && formData.oldSystemReading.trim().length > 0 ? (
+              <ThemedText type="small" style={{ color: theme.error, marginTop: Spacing.xs }}>
+                Please enter a different reading than the existing value
+              </ThemedText>
+            ) : null}
             
             {hasOldModuleId ? (
               <View style={{ marginTop: Spacing.lg }}>
@@ -1031,10 +1045,16 @@ export default function WorkflowWizardScreen() {
                 <TextInput
                   value={formData.oldModuleRead}
                   onChangeText={(text) => setFormData(prev => ({ ...prev, oldModuleRead: text }))}
+                  onFocus={() => setFormData(prev => ({ ...prev, oldModuleRead: "" }))}
                   placeholder="Enter module reading"
                   keyboardType="numeric"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
+                {formData.oldModuleRead.trim() === (workOrder.oldModuleRead || "").trim() && formData.oldModuleRead.trim().length > 0 ? (
+                  <ThemedText type="small" style={{ color: theme.error, marginTop: Spacing.xs }}>
+                    Please enter a different reading than the existing value
+                  </ThemedText>
+                ) : null}
               </View>
             ) : null}
             
