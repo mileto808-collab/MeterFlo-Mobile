@@ -1117,6 +1117,7 @@ export default function WorkflowWizardScreen() {
         );
 
       case "physicalChange":
+        const physicalHasModule = Boolean(workOrder.oldModuleId) && formData.oldModuleRead.trim().length > 0;
         return (
           <View>
             <View style={styles.iconHeader}>
@@ -1131,6 +1132,12 @@ export default function WorkflowWizardScreen() {
                 <Icon name="check-circle" size={24} color={theme.success} />
                 <ThemedText type="body" style={{ fontWeight: "500" }}>Old System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
               </View>
+              {physicalHasModule ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="check-circle" size={24} color={theme.success} />
+                  <ThemedText type="body" style={{ fontWeight: "500" }}>Old Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleRead}</ThemedText></ThemedText>
+                </View>
+              ) : null}
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="check-circle" size={24} color={theme.success} />
                 <ThemedText type="body" style={{ fontWeight: "500" }}>{formData.beforePhotos.length} Before Photo(s) Captured</ThemedText>
