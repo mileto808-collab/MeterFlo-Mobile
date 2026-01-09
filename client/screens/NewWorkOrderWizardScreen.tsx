@@ -184,6 +184,21 @@ export default function NewWorkOrderWizardScreen() {
   const totalSteps = steps.length;
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;
+  
+  // Reset step index when captureType changes and user is past the first step
+  // This prevents the wizard from landing on an invalid step
+  useEffect(() => {
+    // Only reset if we're past the captureType step and steps have changed
+    if (currentStepIndex > 0) {
+      const newSteps = getStepsForCaptureType(captureType);
+      // Check if current step exists in the new step sequence
+      const currentStepName = steps[currentStepIndex];
+      if (!newSteps.includes(currentStepName)) {
+        // Reset to the captureType step (index 0)
+        setCurrentStepIndex(0);
+      }
+    }
+  }, [captureType]);
 
   const openSettings = async () => {
     if (Platform.OS !== "web") {
@@ -386,9 +401,9 @@ export default function NewWorkOrderWizardScreen() {
         if (captureType === "system") {
           return formData.oldSystemReading.trim().length > 0;
         } else if (captureType === "module") {
-          return formData.oldModuleRead.trim().length > 0;
+          return formData.oldModuleReading.trim().length > 0;
         } else {
-          return formData.oldSystemReading.trim().length > 0 && formData.oldModuleRead.trim().length > 0;
+          return formData.oldSystemReading.trim().length > 0 && formData.oldModuleReading.trim().length > 0;
         }
       case "oldGps":
         return formData.oldGps.trim().length > 0;
@@ -404,9 +419,9 @@ export default function NewWorkOrderWizardScreen() {
         if (captureType === "system") {
           return formData.newSystemReading.trim().length > 0;
         } else if (captureType === "module") {
-          return formData.newModuleRead.trim().length > 0;
+          return formData.newModuleReading.trim().length > 0;
         } else {
-          return formData.newSystemReading.trim().length > 0 && formData.newModuleRead.trim().length > 0;
+          return formData.newSystemReading.trim().length > 0 && formData.newModuleReading.trim().length > 0;
         }
       case "afterPhotos":
         return formData.afterPhotos.length >= 1;
@@ -510,12 +525,12 @@ export default function NewWorkOrderWizardScreen() {
         oldSystemId: formData.oldSystemId,
         oldSystemReading: parseReading(formData.oldSystemReading),
         oldModuleId: formData.oldModuleId || null,
-        oldModuleReading: parseReading(formData.oldModuleRead),
+        oldModuleReading: parseReading(formData.oldModuleReading),
         oldGps: formData.oldGps,
         newSystemId: formData.newSystemId,
         newSystemReading: parseReading(formData.newSystemReading) ?? 0,
         newModuleId: formData.newModuleId || null,
-        newModuleReading: parseReading(formData.newModuleRead),
+        newModuleReading: parseReading(formData.newModuleReading),
         newGps: formData.newGps,
         signatureData: formData.signatureData || null,
         signatureName: formData.signatureName,
