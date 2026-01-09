@@ -513,6 +513,14 @@ export default function WorkflowWizardScreen() {
     }
   };
 
+  const isValidNumeric = (value: string): boolean => {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    // Use same logic as parseReading - if parseFloat returns a valid number, accept it
+    const parsed = parseFloat(trimmed);
+    return !Number.isNaN(parsed) && Number.isFinite(parsed);
+  };
+
   const isCurrentStepValid = (): boolean => {
     switch (currentStep) {
       case "canChange": 
@@ -520,8 +528,9 @@ export default function WorkflowWizardScreen() {
       case "oldReading": {
         const hasSystem = Boolean(workOrder.oldSystemId);
         const hasModule = Boolean(workOrder.oldModuleId);
-        const systemReadingValid = !hasSystem || (formData.oldSystemReading.trim().length > 0 && oldSystemReadingTouched);
-        const moduleReadingValid = !hasModule || (formData.oldModuleRead.trim().length > 0 && oldModuleReadingTouched);
+        // Simply require valid numeric values for required fields
+        const systemReadingValid = !hasSystem || isValidNumeric(formData.oldSystemReading);
+        const moduleReadingValid = !hasModule || isValidNumeric(formData.oldModuleRead);
         return systemReadingValid && moduleReadingValid;
       }
       case "beforePhotos":
@@ -539,8 +548,9 @@ export default function WorkflowWizardScreen() {
       case "newReading": {
         const hasNewSystem = Boolean(formData.newSystemId.trim());
         const hasNewModule = Boolean(formData.newModuleId.trim());
-        const newSystemValid = !hasNewSystem || (formData.newSystemReading.trim().length > 0 && newSystemReadingTouched);
-        const newModuleValid = !hasNewModule || (formData.newModuleRead.trim().length > 0 && newModuleReadingTouched);
+        // Simply require valid numeric values for required fields
+        const newSystemValid = !hasNewSystem || isValidNumeric(formData.newSystemReading);
+        const newModuleValid = !hasNewModule || isValidNumeric(formData.newModuleRead);
         return newSystemValid && newModuleValid;
       }
       case "afterPhotos":
@@ -732,13 +742,13 @@ export default function WorkflowWizardScreen() {
         
         const mobilePayload = canChange ? {
           projectId: Number(projectId),
-          oldSystemReading: parseReading(formData.oldSystemReading),
+          oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: parseReading(formData.oldModuleRead),
+          oldModuleReading: workOrder.oldModuleId ? (parseReading(formData.oldModuleRead) ?? 0) : null,
           newSystemId: formData.newSystemId,
           newSystemReading: parseReading(formData.newSystemReading) ?? 0,
           newModuleId: formData.newModuleId || null,
-          newModuleReading: parseReading(formData.newModuleRead),
+          newModuleReading: formData.newModuleId ? (parseReading(formData.newModuleRead) ?? 0) : null,
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
@@ -750,9 +760,9 @@ export default function WorkflowWizardScreen() {
           projectId: Number(projectId),
           troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
           notes: formData.troubleNote || null,
-          oldSystemReading: parseReading(formData.oldSystemReading),
+          oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: parseReading(formData.oldModuleRead),
+          oldModuleReading: workOrder.oldModuleId ? (parseReading(formData.oldModuleRead) ?? 0) : null,
           photos: formatPhotosForServer(troublePhotosBase64, 'trouble'),
         };
         
@@ -839,13 +849,13 @@ export default function WorkflowWizardScreen() {
         
         const offlineMobilePayload = canChange ? {
           projectId: Number(projectId),
-          oldSystemReading: parseReading(formData.oldSystemReading),
+          oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: parseReading(formData.oldModuleRead),
+          oldModuleReading: workOrder.oldModuleId ? (parseReading(formData.oldModuleRead) ?? 0) : null,
           newSystemId: formData.newSystemId,
           newSystemReading: parseReading(formData.newSystemReading) ?? 0,
           newModuleId: formData.newModuleId || null,
-          newModuleReading: parseReading(formData.newModuleRead),
+          newModuleReading: formData.newModuleId ? (parseReading(formData.newModuleRead) ?? 0) : null,
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
@@ -857,9 +867,9 @@ export default function WorkflowWizardScreen() {
           projectId: Number(projectId),
           troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
           notes: formData.troubleNote || null,
-          oldSystemReading: parseReading(formData.oldSystemReading),
+          oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: parseReading(formData.oldModuleRead),
+          oldModuleReading: workOrder.oldModuleId ? (parseReading(formData.oldModuleRead) ?? 0) : null,
           photos: formatPhotosForOffline(troublePhotosBase64, 'trouble'),
         };
         

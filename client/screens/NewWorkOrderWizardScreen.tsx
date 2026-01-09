@@ -408,6 +408,14 @@ export default function NewWorkOrderWizardScreen() {
     const match = displayValue.match(/^([A-Z0-9]+)\s*-/);
     return match ? match[1] : displayValue;
   };
+
+  const isValidNumeric = (value: string): boolean => {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    // Use same logic as parseReading - if parseFloat returns a valid number, accept it
+    const parsed = parseFloat(trimmed);
+    return !Number.isNaN(parsed) && Number.isFinite(parsed);
+  };
   
   const isCurrentStepValid = (): boolean => {
     switch (currentStep) {
@@ -423,8 +431,8 @@ export default function NewWorkOrderWizardScreen() {
       case "canChange":
         return formData.canChange !== null;
       case "oldReading": 
-        const oldSysValid = !hasOldSystem || formData.oldSystemReading.trim().length > 0;
-        const oldModValid = !hasOldModule || formData.oldModuleReading.trim().length > 0;
+        const oldSysValid = !hasOldSystem || isValidNumeric(formData.oldSystemReading);
+        const oldModValid = !hasOldModule || isValidNumeric(formData.oldModuleReading);
         return oldSysValid && oldModValid;
       case "beforePhotos":
         return formData.beforePhotos.length >= 1;
@@ -438,8 +446,8 @@ export default function NewWorkOrderWizardScreen() {
         if (hasNewModule && !formData.newModuleId.trim()) return false;
         return true;
       case "newReading": 
-        const newSysValid = !hasNewSystem || formData.newSystemReading.trim().length > 0;
-        const newModValid = !hasNewModule || formData.newModuleReading.trim().length > 0;
+        const newSysValid = !hasNewSystem || isValidNumeric(formData.newSystemReading);
+        const newModValid = !hasNewModule || isValidNumeric(formData.newModuleReading);
         return newSysValid && newModValid;
       case "afterPhotos":
         return formData.afterPhotos.length >= 1;
@@ -557,13 +565,13 @@ export default function NewWorkOrderWizardScreen() {
         id: offlineWorkOrderId,
         projectId: Number(projectId),
         oldSystemId: formData.oldSystemId,
-        oldSystemReading: parseReading(formData.oldSystemReading),
+        oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
         oldModuleId: formData.oldModuleId || null,
-        oldModuleReading: parseReading(formData.oldModuleReading),
+        oldModuleReading: formData.oldModuleId ? (parseReading(formData.oldModuleReading) ?? 0) : null,
         newSystemId: formData.newSystemId,
         newSystemReading: parseReading(formData.newSystemReading) ?? 0,
         newModuleId: formData.newModuleId || null,
-        newModuleReading: parseReading(formData.newModuleReading),
+        newModuleReading: formData.newModuleId ? (parseReading(formData.newModuleReading) ?? 0) : null,
         gpsCoordinates: formData.gpsCoordinates || null,
         signatureData: formData.signatureData || null,
         signatureName: formData.signatureName,
@@ -580,9 +588,9 @@ export default function NewWorkOrderWizardScreen() {
         id: offlineWorkOrderId,
         projectId: Number(projectId),
         oldSystemId: formData.oldSystemId,
-        oldSystemReading: parseReading(formData.oldSystemReading),
+        oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
         oldModuleId: formData.oldModuleId || null,
-        oldModuleReading: parseReading(formData.oldModuleReading),
+        oldModuleReading: formData.oldModuleId ? (parseReading(formData.oldModuleReading) ?? 0) : null,
         troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
         notes: formData.troubleNote || null,
         troublePhotos: formatPhotosForStorage(troublePhotosBase64, 'trouble'),
