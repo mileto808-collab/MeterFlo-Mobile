@@ -1894,6 +1894,7 @@ export default function WorkflowWizardScreen() {
   const getStepRequiredLabel = () => {
     switch (currentStep) {
       case "physicalChange":
+      case "notes":
         return null;
       default:
         return (
