@@ -389,9 +389,6 @@ export default function WorkOrderDetailScreen() {
               <GridItem label="Reading" value={workOrder.oldSystemReading} />
               <GridItem label="Type" value={workOrder.oldSystemType || workOrder.systemType} />
             </View>
-            <View style={styles.gridRow}>
-              <GridItem label="GPS Coordinates" value={workOrder.oldGps} />
-            </View>
           </View>
 
           {workOrder.oldModuleId || workOrder.oldModuleRead || workOrder.oldModuleType ? (
@@ -407,7 +404,17 @@ export default function WorkOrderDetailScreen() {
             </View>
           ) : null}
 
-          {workOrder.newSystemId || workOrder.newSystemReading || workOrder.newSystemType || workOrder.newGps ? (
+          <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
+            <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
+              GPS Coordinates
+            </ThemedText>
+            <View style={styles.gridRow}>
+              <GridItem label="Old GPS" value={workOrder.oldGps} />
+              <GridItem label="New GPS" value={workOrder.newGps} />
+            </View>
+          </View>
+
+          {workOrder.newSystemId || workOrder.newSystemReading || workOrder.newSystemType ? (
             <View style={[styles.meterSection, { borderLeftColor: theme.success }]}>
               <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.success }]}>
                 New System
@@ -416,9 +423,6 @@ export default function WorkOrderDetailScreen() {
                 <GridItem label="System ID" value={workOrder.newSystemId} />
                 <GridItem label="Reading" value={workOrder.newSystemReading} />
                 <GridItem label="Type" value={workOrder.newSystemType} />
-              </View>
-              <View style={styles.gridRow}>
-                <GridItem label="GPS Coordinates" value={workOrder.newGps} />
               </View>
             </View>
           ) : null}
