@@ -1649,12 +1649,14 @@ export default function WorkflowWizardScreen() {
         );
 
       case "confirm": {
-        const confirmHasOldModule = Boolean(workOrder.oldModuleId);
-        const confirmHasNewModule = Boolean(formData.newModuleId.trim());
         const confirmOldSystemType = workOrder.oldSystemType || (workOrder as any).old_system_type;
         const confirmOldModuleType = workOrder.oldModuleType || (workOrder as any).old_module_type;
         const confirmNewSystemType = workOrder.newSystemType || (workOrder as any).new_system_type;
         const confirmNewModuleType = workOrder.newModuleType || (workOrder as any).new_module_type;
+        const confirmHasOldSystem = Boolean(workOrder.oldSystemId || formData.oldSystemReading || confirmOldSystemType || workOrder.oldGps);
+        const confirmHasOldModule = Boolean(workOrder.oldModuleId || formData.oldModuleRead || confirmOldModuleType);
+        const confirmHasNewSystem = Boolean(formData.newSystemId.trim() || formData.newSystemReading || confirmNewSystemType);
+        const confirmHasNewModule = Boolean(formData.newModuleId.trim() || formData.newModuleRead || confirmNewModuleType);
         
         return (
           <View>
@@ -1672,20 +1674,26 @@ export default function WorkflowWizardScreen() {
                 <Icon name="home" size={20} color={theme.primary} />
                 <ThemedText type="body" numberOfLines={2}>Address: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.serviceAddress}</ThemedText></ThemedText>
               </View>
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="hash" size={20} color={theme.primary} />
-                <ThemedText type="body">Old System ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemId}</ThemedText></ThemedText>
-              </View>
-              {confirmOldSystemType ? (
-                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                  <Icon name="cpu" size={20} color={theme.primary} />
-                  <ThemedText type="body">Old System Type: <ThemedText type="body" style={{ fontWeight: "600" }}>{confirmOldSystemType}</ThemedText></ThemedText>
-                </View>
+              {confirmHasOldSystem ? (
+                <>
+                  <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="hash" size={20} color={theme.primary} />
+                    <ThemedText type="body">Old System ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemId}</ThemedText></ThemedText>
+                  </View>
+                  {confirmOldSystemType ? (
+                    <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                      <Icon name="cpu" size={20} color={theme.primary} />
+                      <ThemedText type="body">Old System Type: <ThemedText type="body" style={{ fontWeight: "600" }}>{confirmOldSystemType}</ThemedText></ThemedText>
+                    </View>
+                  ) : null}
+                  {formData.oldSystemReading ? (
+                    <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                      <Icon name="activity" size={20} color={theme.primary} />
+                      <ThemedText type="body">Old System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
+                    </View>
+                  ) : null}
+                </>
               ) : null}
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="activity" size={20} color={theme.primary} />
-                <ThemedText type="body">Old System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
-              </View>
               {confirmHasOldModule ? (
                 <>
                   <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
@@ -1706,20 +1714,26 @@ export default function WorkflowWizardScreen() {
                   ) : null}
                 </>
               ) : null}
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="hash" size={20} color={theme.primary} />
-                <ThemedText type="body">New System ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemId}</ThemedText></ThemedText>
-              </View>
-              {confirmNewSystemType ? (
-                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                  <Icon name="cpu" size={20} color={theme.primary} />
-                  <ThemedText type="body">New System Type: <ThemedText type="body" style={{ fontWeight: "600" }}>{confirmNewSystemType}</ThemedText></ThemedText>
-                </View>
+              {confirmHasNewSystem ? (
+                <>
+                  <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="hash" size={20} color={theme.primary} />
+                    <ThemedText type="body">New System ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemId}</ThemedText></ThemedText>
+                  </View>
+                  {confirmNewSystemType ? (
+                    <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                      <Icon name="cpu" size={20} color={theme.primary} />
+                      <ThemedText type="body">New System Type: <ThemedText type="body" style={{ fontWeight: "600" }}>{confirmNewSystemType}</ThemedText></ThemedText>
+                    </View>
+                  ) : null}
+                  {formData.newSystemReading ? (
+                    <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                      <Icon name="activity" size={20} color={theme.primary} />
+                      <ThemedText type="body">New System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
+                    </View>
+                  ) : null}
+                </>
               ) : null}
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="activity" size={20} color={theme.primary} />
-                <ThemedText type="body">New System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
-              </View>
               {confirmHasNewModule ? (
                 <>
                   <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>

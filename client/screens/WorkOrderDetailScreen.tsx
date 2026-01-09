@@ -401,7 +401,7 @@ export default function WorkOrderDetailScreen() {
         </Accordion>
 
         <Accordion title="System | Module Details" icon="cpu">
-          {workOrder.oldSystemId || workOrder.oldSystemReading || workOrder.oldSystemType || workOrder.systemType ? (
+          {workOrder.oldSystemId || workOrder.oldSystemReading || workOrder.oldSystemType || workOrder.systemType || workOrder.oldGps ? (
             <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
               <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
                 Old System
