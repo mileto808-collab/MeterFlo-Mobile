@@ -401,16 +401,18 @@ export default function WorkOrderDetailScreen() {
         </Accordion>
 
         <Accordion title="System | Module Details" icon="cpu">
-          <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
-            <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
-              Old System
-            </ThemedText>
-            <View style={styles.gridRow}>
-              <GridItem label="System ID" value={workOrder.oldSystemId} />
-              <GridItem label="Reading" value={workOrder.oldSystemReading} />
-              <GridItem label="Type" value={workOrder.oldSystemType || workOrder.systemType} />
+          {workOrder.oldSystemId || workOrder.oldSystemReading || workOrder.oldSystemType || workOrder.systemType ? (
+            <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
+              <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
+                Old System
+              </ThemedText>
+              <View style={styles.gridRow}>
+                <GridItem label="System ID" value={workOrder.oldSystemId} />
+                <GridItem label="Reading" value={workOrder.oldSystemReading} />
+                <GridItem label="Type" value={workOrder.oldSystemType || workOrder.systemType} />
+              </View>
             </View>
-          </View>
+          ) : null}
 
           {workOrder.oldModuleId || workOrder.oldModuleRead || workOrder.oldModuleType ? (
             <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
