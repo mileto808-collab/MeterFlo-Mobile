@@ -75,8 +75,8 @@ const SUCCESS_STEPS: WizardStep[] = [
   "newReading",
   "afterPhotos",
   "gps",
-  "signature",
   "notes",
+  "signature",
   "confirm",
 ];
 
