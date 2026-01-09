@@ -999,54 +999,62 @@ export default function WorkflowWizardScreen() {
         );
 
       case "oldReading":
-        const hasOldSystemId = Boolean(workOrder.oldSystemId);
-        const hasOldSystemType = Boolean(workOrder.oldSystemType || (workOrder as any).old_system_type);
         const hasOldModuleId = Boolean(workOrder.oldModuleId);
-        const hasOldModuleType = Boolean(workOrder.oldModuleType || (workOrder as any).old_module_type);
-        const hasAnyOldInfo = hasOldSystemId || hasOldSystemType || hasOldModuleId || hasOldModuleType;
+        const oldSystemType = workOrder.oldSystemType || (workOrder as any).old_system_type;
+        const oldModuleType = workOrder.oldModuleType || (workOrder as any).old_module_type;
         
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Icon name="activity" size={48} color={theme.primary} />
+              <Icon name="tool" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Enter the final reading from the old system
+              Record the final readings from the old system{hasOldModuleId ? " and module" : ""} before removal.
+            </ThemedText>
+            
+            <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
+              Old System Final Reading
             </ThemedText>
             <TextInput
               value={formData.oldSystemReading}
               onChangeText={(text) => setFormData(prev => ({ ...prev, oldSystemReading: text }))}
               placeholder="Enter reading (e.g., 12345)"
               keyboardType="numeric"
-              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.lg, minHeight: 60 }}
+              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
             />
             
-            {hasAnyOldInfo ? (
-              <View style={{ marginTop: Spacing.xl, padding: Spacing.md, backgroundColor: theme.backgroundSecondary, borderRadius: 12 }}>
-                {hasOldSystemId ? (
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: hasOldSystemType || hasOldModuleId || hasOldModuleType ? Spacing.sm : 0 }}>
-                    <ThemedText type="small" style={{ color: theme.textSecondary }}>Old System ID</ThemedText>
-                    <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemId}</ThemedText>
-                  </View>
-                ) : null}
-                {hasOldSystemType ? (
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: hasOldModuleId || hasOldModuleType ? Spacing.sm : 0 }}>
-                    <ThemedText type="small" style={{ color: theme.textSecondary }}>Old System Type</ThemedText>
-                    <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemType || (workOrder as any).old_system_type}</ThemedText>
-                  </View>
-                ) : null}
-                {hasOldModuleId ? (
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: hasOldModuleType ? Spacing.sm : 0 }}>
-                    <ThemedText type="small" style={{ color: theme.textSecondary }}>Old Module ID</ThemedText>
-                    <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldModuleId}</ThemedText>
-                  </View>
-                ) : null}
-                {hasOldModuleType ? (
-                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <ThemedText type="small" style={{ color: theme.textSecondary }}>Old Module Type</ThemedText>
-                    <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldModuleType || (workOrder as any).old_module_type}</ThemedText>
-                  </View>
-                ) : null}
+            {hasOldModuleId ? (
+              <View style={{ marginTop: Spacing.lg }}>
+                <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
+                  Old Module Final Reading
+                </ThemedText>
+                <TextInput
+                  value={formData.oldModuleRead}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, oldModuleRead: text }))}
+                  placeholder="Enter module reading"
+                  keyboardType="numeric"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+              </View>
+            ) : null}
+            
+            {oldSystemType ? (
+              <View style={{ marginTop: Spacing.lg, padding: Spacing.md, backgroundColor: theme.backgroundSecondary, borderRadius: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing.sm }}>
+                  <Icon name="check-circle" size={18} color={theme.success} />
+                  <ThemedText type="small" style={{ color: theme.textSecondary }}>Verify Old System Type</ThemedText>
+                </View>
+                <ThemedText type="h4" style={{ fontWeight: "600", marginTop: Spacing.xs }}>{oldSystemType}</ThemedText>
+              </View>
+            ) : null}
+            
+            {oldModuleType ? (
+              <View style={{ marginTop: Spacing.md, padding: Spacing.md, backgroundColor: theme.backgroundSecondary, borderRadius: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing.sm }}>
+                  <Icon name="check-circle" size={18} color={theme.success} />
+                  <ThemedText type="small" style={{ color: theme.textSecondary }}>Verify Old Module Type</ThemedText>
+                </View>
+                <ThemedText type="h4" style={{ fontWeight: "600", marginTop: Spacing.xs }}>{oldModuleType}</ThemedText>
               </View>
             ) : null}
           </View>
