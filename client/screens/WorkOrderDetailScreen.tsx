@@ -427,23 +427,29 @@ export default function WorkOrderDetailScreen() {
             </View>
           ) : null}
 
-          <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
-            <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
-              GPS Coordinates
-            </ThemedText>
-            <View style={styles.gridRow}>
-              <GridItem 
-                label="Old GPS" 
-                value={workOrder.oldGps} 
-                onPress={workOrder.oldGps ? () => handleOpenGps(workOrder.oldGps!) : undefined}
-              />
-              <GridItem 
-                label="New GPS" 
-                value={workOrder.newGps} 
-                onPress={workOrder.newGps ? () => handleOpenGps(workOrder.newGps!) : undefined}
-              />
+          {(workOrder.oldGps || workOrder.newGps) ? (
+            <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
+              <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
+                GPS Coordinates
+              </ThemedText>
+              <View style={styles.gridRow}>
+                {workOrder.oldGps ? (
+                  <GridItem 
+                    label="Old GPS" 
+                    value={workOrder.oldGps} 
+                    onPress={() => handleOpenGps(workOrder.oldGps!)}
+                  />
+                ) : null}
+                {workOrder.newGps ? (
+                  <GridItem 
+                    label="New GPS" 
+                    value={workOrder.newGps} 
+                    onPress={() => handleOpenGps(workOrder.newGps!)}
+                  />
+                ) : null}
+              </View>
             </View>
-          </View>
+          ) : null}
 
           {workOrder.newSystemId || workOrder.newSystemReading || workOrder.newSystemType ? (
             <View style={[styles.meterSection, { borderLeftColor: theme.success }]}>
