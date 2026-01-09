@@ -1583,15 +1583,6 @@ export default function WorkflowWizardScreen() {
                 <ThemedText type="body" style={{ marginLeft: Spacing.sm }}>{formData.gpsCoordinates}</ThemedText>
               </View>
             ) : null}
-            
-            <ThemedText type="caption" style={{ color: theme.textSecondary, marginTop: Spacing.lg, marginBottom: Spacing.sm }}>
-              Or enter manually (lat,lng)
-            </ThemedText>
-            <TextInput
-              value={formData.gpsCoordinates}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, gpsCoordinates: text }))}
-              placeholder="e.g., 37.7749,-122.4194"
-            />
           </View>
         );
 
