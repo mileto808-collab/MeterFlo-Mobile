@@ -13,6 +13,12 @@ export interface WorkOrder {
   newSystemReading?: string;
   oldSystemType?: string;
   newSystemType?: string;
+  oldModuleId?: string;
+  newModuleId?: string;
+  oldModuleRead?: string;
+  newModuleRead?: string;
+  oldModuleType?: string;
+  newModuleType?: string;
   oldGps?: string;
   newGps?: string;
   serviceAddress: string;
@@ -85,6 +91,12 @@ interface ServerWorkOrder {
   new_meter_type?: string;
   old_meter_reading?: number | string;
   new_meter_reading?: number | string;
+  old_module_id?: string;
+  new_module_id?: string;
+  old_module_read?: number | string;
+  new_module_read?: number | string;
+  old_module_type?: string;
+  new_module_type?: string;
   old_gps?: string;
   new_gps?: string;
   gps?: string;
@@ -175,6 +187,12 @@ function mapServerWorkOrder(serverWo: ServerWorkOrder): WorkOrder {
     newSystemReading: (serverWo.new_system_reading ?? serverWo.new_meter_reading) != null ? String(serverWo.new_system_reading ?? serverWo.new_meter_reading) : undefined,
     oldSystemType: serverWo.old_system_type || serverWo.old_meter_type || undefined,
     newSystemType: serverWo.new_system_type || serverWo.new_meter_type || undefined,
+    oldModuleId: serverWo.old_module_id || undefined,
+    newModuleId: serverWo.new_module_id || undefined,
+    oldModuleRead: serverWo.old_module_read != null ? String(serverWo.old_module_read) : undefined,
+    newModuleRead: serverWo.new_module_read != null ? String(serverWo.new_module_read) : undefined,
+    oldModuleType: serverWo.old_module_type || undefined,
+    newModuleType: serverWo.new_module_type || undefined,
     oldGps: serverWo.old_gps || serverWo.gps || serverWo.location || serverWo.meter_gps || serverWo.meter_location || undefined,
     newGps: serverWo.new_gps || undefined,
     serviceAddress: serverWo.address || "",
