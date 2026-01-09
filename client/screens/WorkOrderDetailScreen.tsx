@@ -387,24 +387,25 @@ export default function WorkOrderDetailScreen() {
             <View style={styles.gridRow}>
               <GridItem label="System ID" value={workOrder.oldSystemId} />
               <GridItem label="Reading" value={workOrder.oldSystemReading} />
+              <GridItem label="Type" value={workOrder.oldSystemType || workOrder.systemType} />
             </View>
             <View style={styles.gridRow}>
-              <GridItem label="Type" value={workOrder.oldSystemType || workOrder.systemType} />
-              <GridItem label="GPS" value={workOrder.oldGps} />
+              <GridItem label="GPS Coordinates" value={workOrder.oldGps} />
             </View>
-            {workOrder.oldModuleId || workOrder.oldModuleRead || workOrder.oldModuleType ? (
-              <>
-                <View style={styles.gridRow}>
-                  <GridItem label="Module ID" value={workOrder.oldModuleId} />
-                  <GridItem label="Module Reading" value={workOrder.oldModuleRead} />
-                </View>
-                <View style={styles.gridRow}>
-                  <GridItem label="Module Type" value={workOrder.oldModuleType} />
-                  <GridItem label="" value="" />
-                </View>
-              </>
-            ) : null}
           </View>
+
+          {workOrder.oldModuleId || workOrder.oldModuleRead || workOrder.oldModuleType ? (
+            <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
+              <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
+                Old Module
+              </ThemedText>
+              <View style={styles.gridRow}>
+                <GridItem label="Module ID" value={workOrder.oldModuleId} />
+                <GridItem label="Reading" value={workOrder.oldModuleRead} />
+                <GridItem label="Type" value={workOrder.oldModuleType} />
+              </View>
+            </View>
+          ) : null}
 
           {workOrder.newSystemId || workOrder.newSystemReading || workOrder.newSystemType || workOrder.newGps ? (
             <View style={[styles.meterSection, { borderLeftColor: theme.success }]}>
@@ -414,23 +415,24 @@ export default function WorkOrderDetailScreen() {
               <View style={styles.gridRow}>
                 <GridItem label="System ID" value={workOrder.newSystemId} />
                 <GridItem label="Reading" value={workOrder.newSystemReading} />
+                <GridItem label="Type" value={workOrder.newSystemType} />
               </View>
               <View style={styles.gridRow}>
-                <GridItem label="Type" value={workOrder.newSystemType} />
-                <GridItem label="GPS" value={workOrder.newGps} />
+                <GridItem label="GPS Coordinates" value={workOrder.newGps} />
               </View>
-              {workOrder.newModuleId || workOrder.newModuleRead || workOrder.newModuleType ? (
-                <>
-                  <View style={styles.gridRow}>
-                    <GridItem label="Module ID" value={workOrder.newModuleId} />
-                    <GridItem label="Module Reading" value={workOrder.newModuleRead} />
-                  </View>
-                  <View style={styles.gridRow}>
-                    <GridItem label="Module Type" value={workOrder.newModuleType} />
-                    <GridItem label="" value="" />
-                  </View>
-                </>
-              ) : null}
+            </View>
+          ) : null}
+
+          {workOrder.newModuleId || workOrder.newModuleRead || workOrder.newModuleType ? (
+            <View style={[styles.meterSection, { borderLeftColor: theme.success }]}>
+              <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.success }]}>
+                New Module
+              </ThemedText>
+              <View style={styles.gridRow}>
+                <GridItem label="Module ID" value={workOrder.newModuleId} />
+                <GridItem label="Reading" value={workOrder.newModuleRead} />
+                <GridItem label="Type" value={workOrder.newModuleType} />
+              </View>
             </View>
           ) : null}
 
