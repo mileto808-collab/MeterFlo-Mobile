@@ -914,27 +914,27 @@ export default function WorkflowWizardScreen() {
       case "canChange":
         return (
           <View style={styles.decisionContainer}>
-            <View style={[styles.woDetailsCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
-              <View style={styles.detailRow}>
-                <ThemedText type="body" style={{ color: theme.textSecondary }}>Work Order</ThemedText>
+            <View style={[styles.woDetailsCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.md }]}>
+              <View style={[styles.detailRow, { flexDirection: "row", justifyContent: "space-between" }]}>
+                <ThemedText type="small" style={{ color: theme.textSecondary }}>Work Order</ThemedText>
                 <ThemedText type="body" style={{ fontWeight: "500" }}>{workOrder.customerWoId}</ThemedText>
               </View>
-              <View style={[styles.detailRow, { marginTop: Spacing.md }]}>
-                <ThemedText type="body" style={{ color: theme.textSecondary }}>Address</ThemedText>
-                <ThemedText type="h4" style={{ fontWeight: "600" }}>{workOrder.serviceAddress}</ThemedText>
+              <View style={[styles.detailRow, { flexDirection: "row", justifyContent: "space-between", marginTop: Spacing.sm }]}>
+                <ThemedText type="small" style={{ color: theme.textSecondary }}>Address</ThemedText>
+                <ThemedText type="body" style={{ fontWeight: "600", flex: 1, textAlign: "right" }} numberOfLines={2}>{workOrder.serviceAddress}</ThemedText>
               </View>
-              <View style={[styles.detailRow, { marginTop: Spacing.md }]}>
-                <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID</ThemedText>
-                <ThemedText type="h4" style={{ fontWeight: "600", color: theme.primary }}>{workOrder.oldSystemId || "N/A"}</ThemedText>
+              <View style={[styles.detailRow, { flexDirection: "row", justifyContent: "space-between", marginTop: Spacing.sm }]}>
+                <ThemedText type="small" style={{ color: theme.textSecondary }}>Old System ID</ThemedText>
+                <ThemedText type="body" style={{ fontWeight: "600", color: theme.primary }}>{workOrder.oldSystemId || "N/A"}</ThemedText>
               </View>
               {workOrder.oldModuleId ? (
-                <View style={[styles.detailRow, { marginTop: Spacing.md }]}>
-                  <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Module ID</ThemedText>
-                  <ThemedText type="h4" style={{ fontWeight: "600", color: theme.primary }}>{workOrder.oldModuleId}</ThemedText>
+                <View style={[styles.detailRow, { flexDirection: "row", justifyContent: "space-between", marginTop: Spacing.sm }]}>
+                  <ThemedText type="small" style={{ color: theme.textSecondary }}>Old Module ID</ThemedText>
+                  <ThemedText type="body" style={{ fontWeight: "600", color: theme.primary }}>{workOrder.oldModuleId}</ThemedText>
                 </View>
               ) : null}
-              <View style={[styles.detailRow, { marginTop: Spacing.md }]}>
-                <ThemedText type="body" style={{ color: theme.textSecondary }}>Current Status</ThemedText>
+              <View style={[styles.detailRow, { flexDirection: "row", justifyContent: "space-between", marginTop: Spacing.sm }]}>
+                <ThemedText type="small" style={{ color: theme.textSecondary }}>Status</ThemedText>
                 <ThemedText type="body" style={{ color: workOrder.status === "Trouble" ? theme.warning : theme.text, fontWeight: "500" }}>
                   {workOrder.status}
                 </ThemedText>
@@ -944,11 +944,11 @@ export default function WorkflowWizardScreen() {
                   onPress={() => setShowNotesModal(true)}
                   style={({ pressed }) => [
                     { 
-                      marginTop: Spacing.lg, 
-                      paddingVertical: Spacing.sm, 
-                      paddingHorizontal: Spacing.md, 
+                      marginTop: Spacing.md, 
+                      paddingVertical: Spacing.xs, 
+                      paddingHorizontal: Spacing.sm, 
                       backgroundColor: theme.backgroundDefault, 
-                      borderRadius: 8,
+                      borderRadius: 6,
                       flexDirection: "row",
                       alignItems: "center",
                       alignSelf: "flex-start",
@@ -956,8 +956,8 @@ export default function WorkflowWizardScreen() {
                     }
                   ]}
                 >
-                  <Icon name="file-text" size={16} color={theme.primary} style={{ marginRight: Spacing.sm }} />
-                  <ThemedText type="body" style={{ color: theme.primary, fontWeight: "500" }}>Notes</ThemedText>
+                  <Icon name="file-text" size={14} color={theme.primary} style={{ marginRight: Spacing.xs }} />
+                  <ThemedText type="small" style={{ color: theme.primary, fontWeight: "500" }}>Notes</ThemedText>
                 </Pressable>
               ) : null}
             </View>
@@ -966,14 +966,14 @@ export default function WorkflowWizardScreen() {
               <Pressable
                 style={[
                   styles.decisionButton,
-                  { backgroundColor: formData.canChange === false ? theme.error : theme.backgroundSecondary }
+                  { backgroundColor: formData.canChange === false ? theme.error : theme.backgroundSecondary, padding: Spacing.lg }
                 ]}
                 onPress={() => setFormData(prev => ({ ...prev, canChange: false }))}
               >
-                <Icon name="x-circle" size={40} color={formData.canChange === false ? "#FFFFFF" : theme.error} />
+                <Icon name="x-circle" size={32} color={formData.canChange === false ? "#FFFFFF" : theme.error} />
                 <ThemedText 
-                  type="h4" 
-                  style={{ color: formData.canChange === false ? "#FFFFFF" : theme.text, marginTop: Spacing.md, textAlign: "center" }}
+                  type="body" 
+                  style={{ color: formData.canChange === false ? "#FFFFFF" : theme.text, marginTop: Spacing.sm, textAlign: "center", fontWeight: "600" }}
                 >
                   No - Report Issue
                 </ThemedText>
@@ -982,14 +982,14 @@ export default function WorkflowWizardScreen() {
               <Pressable
                 style={[
                   styles.decisionButton,
-                  { backgroundColor: formData.canChange === true ? theme.success : theme.backgroundSecondary }
+                  { backgroundColor: formData.canChange === true ? theme.success : theme.backgroundSecondary, padding: Spacing.lg }
                 ]}
                 onPress={() => setFormData(prev => ({ ...prev, canChange: true }))}
               >
-                <Icon name="check-circle" size={40} color={formData.canChange === true ? "#FFFFFF" : theme.success} />
+                <Icon name="check-circle" size={32} color={formData.canChange === true ? "#FFFFFF" : theme.success} />
                 <ThemedText 
-                  type="h4" 
-                  style={{ color: formData.canChange === true ? "#FFFFFF" : theme.text, marginTop: Spacing.md, textAlign: "center" }}
+                  type="body" 
+                  style={{ color: formData.canChange === true ? "#FFFFFF" : theme.text, marginTop: Spacing.sm, textAlign: "center", fontWeight: "600" }}
                 >
                   Yes - Proceed
                 </ThemedText>
