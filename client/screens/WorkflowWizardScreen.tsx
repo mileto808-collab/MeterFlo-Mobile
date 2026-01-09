@@ -1180,6 +1180,7 @@ export default function WorkflowWizardScreen() {
         );
 
       case "physicalChange":
+        const physicalHasSystem = Boolean(workOrder.oldSystemId) && formData.oldSystemReading.trim().length > 0;
         const physicalHasModule = Boolean(workOrder.oldModuleId) && formData.oldModuleRead.trim().length > 0;
         return (
           <View>
@@ -1187,21 +1188,23 @@ export default function WorkflowWizardScreen() {
               <Icon name="tool" size={48} color={theme.primary} />
             </View>
             <ThemedText type="h4" style={{ marginBottom: Spacing.lg, textAlign: "center" }}>
-              Safely remove the old system and install the new system
+              Safely remove the old equipment and install the new equipment
             </ThemedText>
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
-              <View style={styles.summaryRow}>
-                <Icon name="check-circle" size={24} color={theme.success} />
-                <ThemedText type="body" style={{ fontWeight: "500" }}>Old System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
-              </View>
+              {physicalHasSystem ? (
+                <View style={styles.summaryRow}>
+                  <Icon name="check-circle" size={24} color={theme.success} />
+                  <ThemedText type="body" style={{ fontWeight: "500" }}>Old System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
+                </View>
+              ) : null}
               {physicalHasModule ? (
-                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <View style={[styles.summaryRow, { marginTop: physicalHasSystem ? Spacing.md : 0 }]}>
                   <Icon name="check-circle" size={24} color={theme.success} />
                   <ThemedText type="body" style={{ fontWeight: "500" }}>Old Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleRead}</ThemedText></ThemedText>
                 </View>
               ) : null}
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+              <View style={[styles.summaryRow, { marginTop: (physicalHasSystem || physicalHasModule) ? Spacing.md : 0 }]}>
                 <Icon name="check-circle" size={24} color={theme.success} />
                 <ThemedText type="body" style={{ fontWeight: "500" }}>{formData.beforePhotos.length} Before Photo(s) Captured</ThemedText>
               </View>

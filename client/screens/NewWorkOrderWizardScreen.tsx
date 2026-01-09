@@ -1190,17 +1190,21 @@ export default function NewWorkOrderWizardScreen() {
             </ThemedText>
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
-              <View style={styles.summaryRow}>
-                <Icon name="check-circle" size={24} color={theme.success} />
-                <ThemedText type="body" style={{ fontWeight: "500" }}>Old System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId}</ThemedText></ThemedText>
-              </View>
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="check-circle" size={24} color={theme.success} />
-                <ThemedText type="body" style={{ fontWeight: "500" }}>System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
-              </View>
-              {hasOldModule && (
+              {hasOldSystem ? (
                 <>
+                  <View style={styles.summaryRow}>
+                    <Icon name="check-circle" size={24} color={theme.success} />
+                    <ThemedText type="body" style={{ fontWeight: "500" }}>Old System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId}</ThemedText></ThemedText>
+                  </View>
                   <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="check-circle" size={24} color={theme.success} />
+                    <ThemedText type="body" style={{ fontWeight: "500" }}>System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
+                  </View>
+                </>
+              ) : null}
+              {hasOldModule ? (
+                <>
+                  <View style={[styles.summaryRow, { marginTop: hasOldSystem ? Spacing.md : 0 }]}>
                     <Icon name="check-circle" size={24} color={theme.success} />
                     <ThemedText type="body" style={{ fontWeight: "500" }}>Old Module: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleId}</ThemedText></ThemedText>
                   </View>
@@ -1209,7 +1213,7 @@ export default function NewWorkOrderWizardScreen() {
                     <ThemedText type="body" style={{ fontWeight: "500" }}>Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleReading}</ThemedText></ThemedText>
                   </View>
                 </>
-              )}
+              ) : null}
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="check-circle" size={24} color={theme.success} />
                 <ThemedText type="body" style={{ fontWeight: "500" }}>{formData.beforePhotos.length} Before Photo(s) Captured</ThemedText>
