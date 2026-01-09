@@ -851,7 +851,7 @@ export default function NewWorkOrderWizardScreen() {
               ]}
               onPress={() => setCaptureType("system")}
             >
-              <Icon name="box" size={24} color={captureType === "system" ? "#FFFFFF" : theme.text} />
+              <Icon name="hard-drive" size={24} color={captureType === "system" ? "#FFFFFF" : theme.text} />
               <ThemedText type="body" style={{ marginLeft: Spacing.md, fontWeight: "600", color: captureType === "system" ? "#FFFFFF" : theme.text }}>
                 System Only
               </ThemedText>
@@ -885,7 +885,7 @@ export default function NewWorkOrderWizardScreen() {
               ]}
               onPress={() => setCaptureType("both")}
             >
-              <Icon name="package" size={24} color={captureType === "both" ? "#FFFFFF" : theme.text} />
+              <Icon name="server" size={24} color={captureType === "both" ? "#FFFFFF" : theme.text} />
               <ThemedText type="body" style={{ marginLeft: Spacing.md, fontWeight: "600", color: captureType === "both" ? "#FFFFFF" : theme.text }}>
                 System and Module
               </ThemedText>
@@ -1476,6 +1476,7 @@ export default function NewWorkOrderWizardScreen() {
             <SignaturePad
               onSignatureChange={(data) => setFormData(prev => ({ ...prev, signatureData: data }))}
               height={180}
+              initialValue={formData.signatureData}
             />
             
             <View style={{ marginTop: Spacing.lg }}>
