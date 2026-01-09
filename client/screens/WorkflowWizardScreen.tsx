@@ -518,8 +518,9 @@ export default function WorkflowWizardScreen() {
       case "canChange": 
         return formData.canChange !== null;
       case "oldReading": {
-        const systemReadingValid = formData.oldSystemReading.trim().length > 0 && oldSystemReadingTouched;
+        const hasSystem = Boolean(workOrder.oldSystemId);
         const hasModule = Boolean(workOrder.oldModuleId);
+        const systemReadingValid = !hasSystem || (formData.oldSystemReading.trim().length > 0 && oldSystemReadingTouched);
         const moduleReadingValid = !hasModule || (formData.oldModuleRead.trim().length > 0 && oldModuleReadingTouched);
         return systemReadingValid && moduleReadingValid;
       }
@@ -536,8 +537,9 @@ export default function WorkflowWizardScreen() {
         return systemValid && moduleValid;
       }
       case "newReading": {
-        const newSystemValid = formData.newSystemReading.trim().length > 0 && newSystemReadingTouched;
+        const hasNewSystem = Boolean(formData.newSystemId.trim());
         const hasNewModule = Boolean(formData.newModuleId.trim());
+        const newSystemValid = !hasNewSystem || (formData.newSystemReading.trim().length > 0 && newSystemReadingTouched);
         const newModuleValid = !hasNewModule || (formData.newModuleRead.trim().length > 0 && newModuleReadingTouched);
         return newSystemValid && newModuleValid;
       }
@@ -1056,9 +1058,15 @@ export default function WorkflowWizardScreen() {
         );
 
       case "oldReading":
+        const hasOldSystemId = Boolean(workOrder.oldSystemId);
         const hasOldModuleId = Boolean(workOrder.oldModuleId);
         const oldSystemType = workOrder.oldSystemType || (workOrder as any).old_system_type;
         const oldModuleType = workOrder.oldModuleType || (workOrder as any).old_module_type;
+        const oldReadingDescription = hasOldSystemId && hasOldModuleId 
+          ? "Record the final readings from the old system and module before removal."
+          : hasOldSystemId 
+            ? "Record the final reading from the old system before removal."
+            : "Record the final reading from the old module before removal.";
         
         return (
           <View>
@@ -1066,30 +1074,34 @@ export default function WorkflowWizardScreen() {
               <Icon name="tool" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Record the final readings from the old system{hasOldModuleId ? " and module" : ""} before removal.
+              {oldReadingDescription}
             </ThemedText>
             
-            <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
-              Old System Final Reading
-            </ThemedText>
-            <TextInput
-              value={formData.oldSystemReading}
-              onChangeText={(text) => {
-                setFormData(prev => ({ ...prev, oldSystemReading: text }));
-                setOldSystemReadingTouched(true);
-              }}
-              onFocus={() => {
-                setFormData(prev => ({ ...prev, oldSystemReading: "" }));
-                setOldSystemReadingTouched(false);
-              }}
-              placeholder="Enter reading (e.g., 12345)"
-              keyboardType="numeric"
-              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
-            />
-            {!oldSystemReadingTouched && formData.oldSystemReading.trim().length > 0 ? (
-              <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
-                Tap to clear and re-enter the reading
-              </ThemedText>
+            {hasOldSystemId ? (
+              <>
+                <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
+                  Old System Final Reading
+                </ThemedText>
+                <TextInput
+                  value={formData.oldSystemReading}
+                  onChangeText={(text) => {
+                    setFormData(prev => ({ ...prev, oldSystemReading: text }));
+                    setOldSystemReadingTouched(true);
+                  }}
+                  onFocus={() => {
+                    setFormData(prev => ({ ...prev, oldSystemReading: "" }));
+                    setOldSystemReadingTouched(false);
+                  }}
+                  placeholder="Enter reading (e.g., 12345)"
+                  keyboardType="numeric"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+                {!oldSystemReadingTouched && formData.oldSystemReading.trim().length > 0 ? (
+                  <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
+                    Tap to clear and re-enter the reading
+                  </ThemedText>
+                ) : null}
+              </>
             ) : null}
             
             {hasOldModuleId ? (
@@ -1455,9 +1467,15 @@ export default function WorkflowWizardScreen() {
         );
 
       case "newReading":
+        const hasNewSystemId = Boolean(formData.newSystemId.trim());
         const hasNewModuleId = Boolean(formData.newModuleId.trim());
         const newSystemType = workOrder.newSystemType || (workOrder as any).new_system_type;
         const newModuleType = workOrder.newModuleType || (workOrder as any).new_module_type;
+        const newReadingDescription = hasNewSystemId && hasNewModuleId 
+          ? "Record the initial readings from the new system and module after installation."
+          : hasNewSystemId 
+            ? "Record the initial reading from the new system after installation."
+            : "Record the initial reading from the new module after installation.";
         
         return (
           <View>
@@ -1465,30 +1483,34 @@ export default function WorkflowWizardScreen() {
               <Icon name="tool" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Record the initial readings from the new system{hasNewModuleId ? " and module" : ""} after installation.
+              {newReadingDescription}
             </ThemedText>
             
-            <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
-              New System Initial Reading
-            </ThemedText>
-            <TextInput
-              value={formData.newSystemReading}
-              onChangeText={(text) => {
-                setFormData(prev => ({ ...prev, newSystemReading: text }));
-                setNewSystemReadingTouched(true);
-              }}
-              onFocus={() => {
-                setFormData(prev => ({ ...prev, newSystemReading: "" }));
-                setNewSystemReadingTouched(false);
-              }}
-              placeholder="Enter system reading (usually 0)"
-              keyboardType="numeric"
-              style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
-            />
-            {!newSystemReadingTouched && formData.newSystemReading.trim().length > 0 ? (
-              <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
-                Tap to clear and re-enter the reading
-              </ThemedText>
+            {hasNewSystemId ? (
+              <>
+                <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
+                  New System Initial Reading
+                </ThemedText>
+                <TextInput
+                  value={formData.newSystemReading}
+                  onChangeText={(text) => {
+                    setFormData(prev => ({ ...prev, newSystemReading: text }));
+                    setNewSystemReadingTouched(true);
+                  }}
+                  onFocus={() => {
+                    setFormData(prev => ({ ...prev, newSystemReading: "" }));
+                    setNewSystemReadingTouched(false);
+                  }}
+                  placeholder="Enter system reading (usually 0)"
+                  keyboardType="numeric"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+                {!newSystemReadingTouched && formData.newSystemReading.trim().length > 0 ? (
+                  <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
+                    Tap to clear and re-enter the reading
+                  </ThemedText>
+                ) : null}
+              </>
             ) : null}
             
             {hasNewModuleId ? (

@@ -1105,30 +1105,37 @@ export default function NewWorkOrderWizardScreen() {
           </View>
         );
 
-      case "oldReading":
+      case "oldReading": {
+        const oldReadingDesc = hasOldSystem && hasOldModule 
+          ? "Enter the final readings from the old system and module"
+          : hasOldSystem 
+            ? "Enter the final reading from the old system"
+            : "Enter the final reading from the old module";
         return (
           <View>
             <View style={styles.iconHeader}>
               <Icon name="activity" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Enter the final reading(s) from the old equipment
+              {oldReadingDesc}
             </ThemedText>
             
-            <View style={{ marginBottom: Spacing.lg }}>
-              <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
-                System Reading
-              </ThemedText>
-              <TextInput
-                value={formData.oldSystemReading}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, oldSystemReading: text }))}
-                placeholder="Enter system reading"
-                keyboardType="numeric"
-                style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
-              />
-            </View>
+            {hasOldSystem ? (
+              <View style={{ marginBottom: Spacing.lg }}>
+                <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+                  System Reading
+                </ThemedText>
+                <TextInput
+                  value={formData.oldSystemReading}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, oldSystemReading: text }))}
+                  placeholder="Enter system reading"
+                  keyboardType="numeric"
+                  style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+              </View>
+            ) : null}
             
-            {hasOldModule && (
+            {hasOldModule ? (
               <View>
                 <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
                   Module Reading
@@ -1141,9 +1148,10 @@ export default function NewWorkOrderWizardScreen() {
                   style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
               </View>
-            )}
+            ) : null}
           </View>
         );
+      }
 
       case "beforePhotos":
         return (
@@ -1365,30 +1373,37 @@ export default function NewWorkOrderWizardScreen() {
         );
       }
 
-      case "newReading":
+      case "newReading": {
+        const newReadingDesc = hasNewSystem && hasNewModule 
+          ? "Enter the initial readings from the new system and module (usually 0)"
+          : hasNewSystem 
+            ? "Enter the initial reading from the new system (usually 0)"
+            : "Enter the initial reading from the new module (usually 0)";
         return (
           <View>
             <View style={styles.iconHeader}>
               <Icon name="activity" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Enter the initial reading(s) from the new equipment (usually 0)
+              {newReadingDesc}
             </ThemedText>
             
-            <View style={{ marginBottom: Spacing.lg }}>
-              <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
-                System Reading
-              </ThemedText>
-              <TextInput
-                value={formData.newSystemReading}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: text }))}
-                placeholder="Enter system reading (usually 0)"
-                keyboardType="numeric"
-                style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
-              />
-            </View>
+            {hasNewSystem ? (
+              <View style={{ marginBottom: Spacing.lg }}>
+                <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+                  System Reading
+                </ThemedText>
+                <TextInput
+                  value={formData.newSystemReading}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: text }))}
+                  placeholder="Enter system reading (usually 0)"
+                  keyboardType="numeric"
+                  style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+              </View>
+            ) : null}
             
-            {hasNewModule && (
+            {hasNewModule ? (
               <View>
                 <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
                   Module Reading
@@ -1401,9 +1416,10 @@ export default function NewWorkOrderWizardScreen() {
                   style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
               </View>
-            )}
+            ) : null}
           </View>
         );
+      }
 
       case "afterPhotos":
         return (
@@ -1524,18 +1540,22 @@ export default function NewWorkOrderWizardScreen() {
             <ThemedText type="h3" style={{ marginBottom: Spacing.lg, textAlign: "center" }}>Review & Submit</ThemedText>
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
-              <View style={styles.summaryRow}>
-                <Icon name="box" size={20} color={theme.primary} />
-                <ThemedText type="body">Old System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId}</ThemedText></ThemedText>
-              </View>
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="activity" size={20} color={theme.primary} />
-                <ThemedText type="body">System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
-              </View>
-              
-              {hasOldModule && (
+              {hasOldSystem ? (
                 <>
+                  <View style={styles.summaryRow}>
+                    <Icon name="box" size={20} color={theme.primary} />
+                    <ThemedText type="body">Old System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId}</ThemedText></ThemedText>
+                  </View>
                   <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="activity" size={20} color={theme.primary} />
+                    <ThemedText type="body">System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemReading}</ThemedText></ThemedText>
+                  </View>
+                </>
+              ) : null}
+              
+              {hasOldModule ? (
+                <>
+                  <View style={[styles.summaryRow, { marginTop: hasOldSystem ? Spacing.md : 0 }]}>
                     <Icon name="cpu" size={20} color={theme.primary} />
                     <ThemedText type="body">Old Module: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleId}</ThemedText></ThemedText>
                   </View>
@@ -1544,20 +1564,24 @@ export default function NewWorkOrderWizardScreen() {
                     <ThemedText type="body">Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleReading}</ThemedText></ThemedText>
                   </View>
                 </>
-              )}
+              ) : null}
               
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="box" size={20} color={theme.primary} />
-                <ThemedText type="body">New System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemId}</ThemedText></ThemedText>
-              </View>
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="activity" size={20} color={theme.primary} />
-                <ThemedText type="body">System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
-              </View>
-              
-              {hasNewModule && (
+              {hasNewSystem ? (
                 <>
+                  <View style={[styles.summaryRow, { marginTop: (hasOldSystem || hasOldModule) ? Spacing.md : 0 }]}>
+                    <Icon name="box" size={20} color={theme.primary} />
+                    <ThemedText type="body">New System: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemId}</ThemedText></ThemedText>
+                  </View>
                   <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                    <Icon name="activity" size={20} color={theme.primary} />
+                    <ThemedText type="body">System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
+                  </View>
+                </>
+              ) : null}
+              
+              {hasNewModule ? (
+                <>
+                  <View style={[styles.summaryRow, { marginTop: (hasOldSystem || hasOldModule || hasNewSystem) ? Spacing.md : 0 }]}>
                     <Icon name="cpu" size={20} color={theme.primary} />
                     <ThemedText type="body">New Module: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newModuleId}</ThemedText></ThemedText>
                   </View>
@@ -1566,7 +1590,7 @@ export default function NewWorkOrderWizardScreen() {
                     <ThemedText type="body">Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newModuleReading}</ThemedText></ThemedText>
                   </View>
                 </>
-              )}
+              ) : null}
               
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="map-pin" size={20} color={theme.primary} />
