@@ -54,14 +54,24 @@ function InfoRow({
   return content;
 }
 
-function GridItem({ label, value }: { label: string; value?: string | null }) {
+function GridItem({ label, value, onPress }: { label: string; value?: string | null; onPress?: () => void }) {
   const { theme } = useTheme();
-  return (
+  const content = (
     <View style={styles.gridItem}>
       <ThemedText type="caption" style={{ color: theme.textSecondary }}>{label}</ThemedText>
-      <ThemedText type="body">{value || "N/A"}</ThemedText>
+      <ThemedText type="body" style={onPress && value ? { color: theme.primary } : undefined}>{value || "N/A"}</ThemedText>
     </View>
   );
+
+  if (onPress && value) {
+    return (
+      <Pressable onPress={onPress} style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.6 : 1 })}>
+        {content}
+      </Pressable>
+    );
+  }
+
+  return content;
 }
 
 const { width: screenWidth } = Dimensions.get("window");
@@ -195,6 +205,16 @@ export default function WorkOrderDetailScreen() {
       Linking.openURL(`maps:?q=${encodedAddress}`);
     } else {
       Linking.openURL(`https://maps.google.com/?q=${encodedAddress}`);
+    }
+  };
+
+  const handleOpenGps = (gpsCoords: string) => {
+    if (!gpsCoords) return;
+    const coords = gpsCoords.replace(/\s/g, '');
+    if (Platform.OS === "ios") {
+      Linking.openURL(`maps:?ll=${coords}`);
+    } else {
+      Linking.openURL(`https://maps.google.com/?q=${coords}`);
     }
   };
 
@@ -409,8 +429,16 @@ export default function WorkOrderDetailScreen() {
               GPS Coordinates
             </ThemedText>
             <View style={styles.gridRow}>
-              <GridItem label="Old GPS" value={workOrder.oldGps} />
-              <GridItem label="New GPS" value={workOrder.newGps} />
+              <GridItem 
+                label="Old GPS" 
+                value={workOrder.oldGps} 
+                onPress={workOrder.oldGps ? () => handleOpenGps(workOrder.oldGps!) : undefined}
+              />
+              <GridItem 
+                label="New GPS" 
+                value={workOrder.newGps} 
+                onPress={workOrder.newGps ? () => handleOpenGps(workOrder.newGps!) : undefined}
+              />
             </View>
           </View>
 
