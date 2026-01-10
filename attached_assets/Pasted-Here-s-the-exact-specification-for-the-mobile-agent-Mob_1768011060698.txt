@@ -1,0 +1,64 @@
+Here's the exact specification for the mobile agent:
+
+Mobile Work Order Completion Endpoint
+URL
+POST /api/mobile/projects/{projectId}/work-orders/{workOrderId}/complete
+Headers
+Content-Type: application/json
+credentials: include
+Request Body - BOTH formats accepted
+The server normalizes all field names, so both camelCase and snake_case work:
+
+Field	camelCase	snake_case
+Old System Reading	oldSystemReading	old_system_reading
+New System Reading	newSystemReading	new_system_reading
+New System ID	newSystemId	new_system_id
+New System Type	newSystemType	new_system_type
+Old Module Reading	oldModuleReading OR oldModuleRead	old_module_reading OR old_module_read
+New Module Reading	newModuleReading OR newModuleRead	new_module_reading OR new_module_read
+New Module ID	newModuleId	new_module_id
+Old Module Type	oldModuleType	old_module_type
+New Module Type	newModuleType	new_module_type
+GPS Coordinates	gpsCoordinates	new_gps OR old_gps
+Signature Data	signatureData	signature_data
+Signature Name	signatureName	signature_name
+Completed At	completedAt	completed_at
+Notes	notes	notes
+Before Photos	beforePhotos	before_photos
+After Photos	afterPhotos	after_photos
+Example Payloads (both work)
+Online (camelCase):
+
+{
+  "oldModuleReading": "55555",
+  "newModuleId": "NEW123",
+  "newModuleReading": "0",
+  "gpsCoordinates": "38.8339,-104.8214",
+  "signatureData": "data:image/png;base64,...",
+  "signatureName": "John Doe",
+  "completedAt": "2026-01-10T01:45:00.000Z",
+  "notes": "Some notes",
+  "beforePhotos": [{"base64": "..."}],
+  "afterPhotos": [{"base64": "..."}]
+}
+Offline Sync (snake_case):
+
+{
+  "old_module_read": "55555",
+  "new_module_id": "NEW123",
+  "new_module_read": "0",
+  "new_gps": "38.8339,-104.8214",
+  "signature_data": "data:image/png;base64,...",
+  "signature_name": "John Doe",
+  "completed_at": "2026-01-10T01:45:00.000Z",
+  "notes": "Some notes",
+  "before_photos": [{"base64": "..."}],
+  "after_photos": [{"base64": "..."}]
+}
+Key Points
+No status field needed - Server automatically sets status to "Completed"
+No projectId in body - It comes from the URL
+Required fields depend on work order type:
+Module-only: oldModuleReading, newModuleId, newModuleReading
+System-only: oldSystemReading, newSystemId, newSystemReading
+Both: All of the above

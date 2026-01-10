@@ -508,9 +508,9 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               return isNaN(parsed) ? null : String(parsed);
             };
             
-            // Use snake_case field names to match server expectations (same as online submission)
+            // Use snake_case field names to match server expectations
+            // Note: status and projectId not needed - server sets status automatically and projectId comes from URL
             const completePayload = {
-              status: "Completed",
               old_system_reading: oldSystemReading ?? 0,
               old_module_id: offlineData.oldModuleId || null,
               old_module_read: offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? "0") : null,
@@ -527,6 +527,15 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               before_photos: offlineData.beforePhotos || [],
               after_photos: offlineData.afterPhotos || [],
             };
+            
+            // Log payload without sensitive data (photos/signature)
+            const logPayload = {
+              ...completePayload,
+              signature_data: completePayload.signature_data ? '[REDACTED]' : null,
+              before_photos: completePayload.before_photos?.length ? `[${completePayload.before_photos.length} photos]` : [],
+              after_photos: completePayload.after_photos?.length ? `[${completePayload.after_photos.length} photos]` : [],
+            };
+            console.log(`[syncPendingActions] Sending complete payload for WO ${serverWorkOrderId}:`, JSON.stringify(logPayload));
             
             const completeResponse = await fetch(
               `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${serverWorkOrderId}/complete`,
