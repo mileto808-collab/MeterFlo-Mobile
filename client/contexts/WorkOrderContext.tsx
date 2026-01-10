@@ -61,6 +61,7 @@ export interface WorkOrder {
   updatedByUsername?: string;
   syncPending?: boolean;
   localUpdatedAt?: string;
+  isOfflineCreated?: boolean;
 }
 
 interface ServerWorkOrder {
@@ -437,6 +438,19 @@ interface WorkOrderContextType {
     newModuleId?: string;
     oldModuleRead?: string;
     newModuleRead?: string;
+    route?: string;
+    zone?: string;
+    assignedUserId?: string;
+    assignedUserUsername?: string;
+    assignedUserDisplayName?: string;
+    assignedGroupId?: string;
+    assignedGroupName?: string;
+    customerName?: string;
+    customerPhone?: string;
+    customerEmail?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
   }) => Promise<void>;
 }
 
@@ -676,6 +690,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
             beforePhotos: localWo.beforePhotos || serverWo.beforePhotos,
             afterPhotos: localWo.afterPhotos || serverWo.afterPhotos,
             troublePhotos: localWo.troublePhotos || serverWo.troublePhotos,
+            isOfflineCreated: localWo.isOfflineCreated,
           };
         }
         
@@ -1037,6 +1052,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       updatedAt: new Date().toISOString(),
       syncPending: true,
       localUpdatedAt: new Date().toISOString(),
+      isOfflineCreated: true,
     };
     
     setWorkOrdersState(prev => {
@@ -1073,6 +1089,19 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     newModuleId?: string;
     oldModuleRead?: string;
     newModuleRead?: string;
+    route?: string;
+    zone?: string;
+    assignedUserId?: string;
+    assignedUserUsername?: string;
+    assignedUserDisplayName?: string;
+    assignedGroupId?: string;
+    assignedGroupName?: string;
+    customerName?: string;
+    customerPhone?: string;
+    customerEmail?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
   }) => {
     console.log("[transformOfflineToServerWorkOrder] Transforming offline WO for lookupKey:", lookupKey, "to server ID:", serverData.id);
     const offlineCustomerWoId = `OFFLINE-${lookupKey}`;
@@ -1093,8 +1122,22 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
             newModuleId: serverData.newModuleId || wo.newModuleId,
             oldModuleRead: serverData.oldModuleRead || wo.oldModuleRead,
             newModuleRead: serverData.newModuleRead || wo.newModuleRead,
+            route: serverData.route || wo.route,
+            zone: serverData.zone || wo.zone,
+            assignedUserId: serverData.assignedUserId || wo.assignedUserId,
+            assignedUserUsername: serverData.assignedUserUsername || wo.assignedUserUsername,
+            assignedUserDisplayName: serverData.assignedUserDisplayName || wo.assignedUserDisplayName,
+            assignedGroupId: serverData.assignedGroupId || wo.assignedGroupId,
+            assignedGroupName: serverData.assignedGroupName || wo.assignedGroupName,
+            customerName: serverData.customerName || wo.customerName,
+            customerPhone: serverData.customerPhone || wo.customerPhone,
+            customerEmail: serverData.customerEmail || wo.customerEmail,
+            city: serverData.city || wo.city,
+            state: serverData.state || wo.state,
+            zip: serverData.zip || wo.zip,
             syncPending: false,
             localUpdatedAt: new Date().toISOString(),
+            isOfflineCreated: true,
           };
         }
         return wo;

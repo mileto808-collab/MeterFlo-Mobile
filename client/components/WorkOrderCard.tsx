@@ -45,7 +45,7 @@ export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
     return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   };
 
-  const displayAddress = workOrder.serviceAddress || "No address";
+  const displayAddress = workOrder.isOfflineCreated ? "Offline Work Order" : (workOrder.serviceAddress || "No address");
   const displayAssignee = workOrder.assignedUserDisplayName || workOrder.assignedUserUsername || "Unassigned";
 
   return (

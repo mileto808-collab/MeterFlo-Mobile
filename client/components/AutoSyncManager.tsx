@@ -69,6 +69,19 @@ export function AutoSyncManager() {
                   newModuleId: syncedWo.newModuleId,
                   oldModuleRead: syncedWo.oldModuleRead,
                   newModuleRead: syncedWo.newModuleRead,
+                  route: syncedWo.route,
+                  zone: syncedWo.zone,
+                  assignedUserId: syncedWo.assignedUserId,
+                  assignedUserUsername: syncedWo.assignedUserUsername,
+                  assignedUserDisplayName: syncedWo.assignedUserDisplayName,
+                  assignedGroupId: syncedWo.assignedGroupId,
+                  assignedGroupName: syncedWo.assignedGroupName,
+                  customerName: syncedWo.customerName,
+                  customerPhone: syncedWo.customerPhone,
+                  customerEmail: syncedWo.customerEmail,
+                  city: syncedWo.city,
+                  state: syncedWo.state,
+                  zip: syncedWo.zip,
                 }
               );
             }

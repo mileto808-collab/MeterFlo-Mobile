@@ -42,6 +42,19 @@ interface SyncedOfflineWorkOrder {
   serviceAddress?: string;
   oldGps?: string;
   newGps?: string;
+  route?: string;
+  zone?: string;
+  assignedUserId?: string;
+  assignedUserUsername?: string;
+  assignedUserDisplayName?: string;
+  assignedGroupId?: string;
+  assignedGroupName?: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
 }
 
 interface SyncResult {
@@ -586,6 +599,19 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               serviceAddress: serverWo?.service_address || serverWo?.serviceAddress || eligibleWorkOrder.service_address || eligibleWorkOrder.serviceAddress,
               oldGps: serverWo?.old_gps || serverWo?.oldGps || offlineData.oldGps,
               newGps: serverWo?.new_gps || serverWo?.newGps || offlineData.newGps,
+              route: serverWo?.route || eligibleWorkOrder.route,
+              zone: serverWo?.zone || eligibleWorkOrder.zone,
+              assignedUserId: serverWo?.assigned_user_id || serverWo?.assignedUserId || eligibleWorkOrder.assigned_user_id || eligibleWorkOrder.assignedUserId,
+              assignedUserUsername: serverWo?.assigned_user_username || serverWo?.assignedUserUsername || eligibleWorkOrder.assigned_user_username || eligibleWorkOrder.assignedUserUsername,
+              assignedUserDisplayName: serverWo?.assigned_user_display_name || serverWo?.assignedUserDisplayName || eligibleWorkOrder.assigned_user_display_name || eligibleWorkOrder.assignedUserDisplayName,
+              assignedGroupId: serverWo?.assigned_group_id || serverWo?.assignedGroupId || eligibleWorkOrder.assigned_group_id || eligibleWorkOrder.assignedGroupId,
+              assignedGroupName: serverWo?.assigned_group_name || serverWo?.assignedGroupName || eligibleWorkOrder.assigned_group_name || eligibleWorkOrder.assignedGroupName,
+              customerName: serverWo?.customer_name || serverWo?.customerName || eligibleWorkOrder.customer_name || eligibleWorkOrder.customerName,
+              customerPhone: serverWo?.phone || serverWo?.customerPhone || eligibleWorkOrder.phone || eligibleWorkOrder.customerPhone,
+              customerEmail: serverWo?.email || serverWo?.customerEmail || eligibleWorkOrder.email || eligibleWorkOrder.customerEmail,
+              city: serverWo?.city || eligibleWorkOrder.city,
+              state: serverWo?.state || eligibleWorkOrder.state,
+              zip: serverWo?.zip || eligibleWorkOrder.zip,
             });
             
           } else if (action.type === "claim") {
