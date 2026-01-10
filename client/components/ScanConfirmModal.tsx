@@ -151,18 +151,38 @@ export function ScanConfirmModal({
                     {workOrder.serviceAddress || "No address"}
                   </ThemedText>
                 </View>
-                <View style={styles.infoRow}>
-                  <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID:</ThemedText>
-                  <ThemedText type="body" style={{ fontWeight: "600" }}>
-                    {workOrder.oldSystemId || "N/A"}
-                  </ThemedText>
-                </View>
-                <View style={styles.infoRow}>
-                  <ThemedText type="body" style={{ color: theme.textSecondary }}>New System ID:</ThemedText>
-                  <ThemedText type="body" style={{ fontWeight: "600" }}>
-                    {workOrder.newSystemId || "N/A"}
-                  </ThemedText>
-                </View>
+                {(workOrder.oldSystemId || workOrder.newSystemId) ? (
+                  <>
+                    <View style={styles.infoRow}>
+                      <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID:</ThemedText>
+                      <ThemedText type="body" style={{ fontWeight: "600" }}>
+                        {workOrder.oldSystemId || "N/A"}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <ThemedText type="body" style={{ color: theme.textSecondary }}>New System ID:</ThemedText>
+                      <ThemedText type="body" style={{ fontWeight: "600" }}>
+                        {workOrder.newSystemId || "N/A"}
+                      </ThemedText>
+                    </View>
+                  </>
+                ) : null}
+                {(workOrder.oldModuleId || workOrder.newModuleId) ? (
+                  <>
+                    <View style={styles.infoRow}>
+                      <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Module ID:</ThemedText>
+                      <ThemedText type="body" style={{ fontWeight: "600" }}>
+                        {workOrder.oldModuleId || "N/A"}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <ThemedText type="body" style={{ color: theme.textSecondary }}>New Module ID:</ThemedText>
+                      <ThemedText type="body" style={{ fontWeight: "600" }}>
+                        {workOrder.newModuleId || "N/A"}
+                      </ThemedText>
+                    </View>
+                  </>
+                ) : null}
                 <View style={styles.infoRow}>
                   <ThemedText type="body" style={{ color: theme.textSecondary }}>Status:</ThemedText>
                   <ThemedText type="body" style={{ fontWeight: "500", color: isAlreadyCompleted ? (theme.error || "#EF4444") : undefined }}>
