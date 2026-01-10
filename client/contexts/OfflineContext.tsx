@@ -508,23 +508,24 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               return isNaN(parsed) ? null : String(parsed);
             };
             
+            // Use snake_case field names to match server expectations (same as online submission)
             const completePayload = {
-              projectId: Number(projectId),
-              oldSystemReading: oldSystemReading,
-              oldModuleId: offlineData.oldModuleId || null,
-              oldModuleReading: offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? "0") : null,
-              newSystemId: newSystemId,
-              newSystemReading: newSystemReading,
-              newModuleId: offlineData.newModuleId || null,
-              newModuleReading: offlineData.newModuleId ? (parseModuleReading(newModuleReadRaw) ?? "0") : null,
-              oldGps: offlineData.oldGps || null,
-              gpsCoordinates: offlineData.newGps || null,
-              signatureData: offlineData.signatureData || null,
-              signatureName: offlineData.signatureName,
-              completedAt: offlineData.completedAt,
+              status: "Completed",
+              old_system_reading: oldSystemReading ?? 0,
+              old_module_id: offlineData.oldModuleId || null,
+              old_module_read: offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? "0") : null,
+              new_system_id: newSystemId,
+              new_system_reading: newSystemReading ?? 0,
+              new_module_id: offlineData.newModuleId || null,
+              new_module_read: offlineData.newModuleId ? (parseModuleReading(newModuleReadRaw) ?? "0") : null,
+              old_gps: offlineData.oldGps || null,
+              new_gps: offlineData.newGps || null,
+              signature_data: offlineData.signatureData || null,
+              signature_name: offlineData.signatureName,
+              completed_at: offlineData.completedAt,
               notes: offlineData.notes || null,
-              beforePhotos: offlineData.beforePhotos || [],
-              afterPhotos: offlineData.afterPhotos || [],
+              before_photos: offlineData.beforePhotos || [],
+              after_photos: offlineData.afterPhotos || [],
             };
             
             const completeResponse = await fetch(
