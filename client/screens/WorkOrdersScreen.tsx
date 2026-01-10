@@ -9,6 +9,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders, WorkOrder } from "@/contexts/WorkOrderContext";
 import { useOffline } from "@/contexts/OfflineContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { ThemedText } from "@/components/ThemedText";
 import { SearchBar } from "@/components/SearchBar";
@@ -42,6 +43,13 @@ export default function WorkOrdersScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { filters, setFilters, getFilteredWorkOrders, workOrders, isLoading, refreshWorkOrders, error, searchWorkOrdersByMeterIdOnServer } = useWorkOrders();
   const { isOnline } = useOffline();
+  const { projectId, projects } = useAuth();
+
+  const currentProjectName = useMemo(() => {
+    if (!projectId || !projects.length) return null;
+    const project = projects.find(p => p.id === projectId);
+    return project?.name || null;
+  }, [projectId, projects]);
 
   const [showSearchOptions, setShowSearchOptions] = useState(false);
   const [showHIDScanner, setShowHIDScanner] = useState(false);
@@ -310,7 +318,16 @@ export default function WorkOrdersScreen() {
     <View style={[styles.container, { backgroundColor: theme.backgroundRoot }]}>
       {!isOnline ? <OfflineBanner style={{ marginTop: headerHeight }} /> : null}
       
-      <View style={[styles.searchContainer, { paddingTop: isOnline ? headerHeight + Spacing.md : Spacing.md }]}>
+      {currentProjectName ? (
+        <View style={[styles.projectBanner, { paddingTop: isOnline ? headerHeight + Spacing.sm : Spacing.sm, backgroundColor: theme.backgroundSecondary }]}>
+          <Icon name="folder" size={14} color={theme.textSecondary} />
+          <ThemedText type="small" style={styles.projectName} numberOfLines={2}>
+            {currentProjectName}
+          </ThemedText>
+        </View>
+      ) : null}
+
+      <View style={[styles.searchContainer, { paddingTop: currentProjectName ? Spacing.sm : (isOnline ? headerHeight + Spacing.md : Spacing.md) }]}>
         <SearchBar
           value={filters.searchQuery}
           onChangeText={handleSearchChange}
@@ -432,6 +449,17 @@ export default function WorkOrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  projectBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xs,
+    gap: Spacing.xs,
+  },
+  projectName: {
+    flex: 1,
+    flexShrink: 1,
   },
   searchContainer: {
     flexDirection: "row",
