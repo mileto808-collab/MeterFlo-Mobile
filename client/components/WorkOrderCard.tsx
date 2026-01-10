@@ -82,9 +82,19 @@ export function WorkOrderCard({ workOrder, onPress }: WorkOrderCardProps) {
           WO: {workOrder.customerWoId}
         </ThemedText>
         <ThemedText type="body" style={[styles.idLabel, { color: theme.text }]}>
-          System: {workOrder.status?.toLowerCase() === "completed" 
-            ? (workOrder.newSystemId || workOrder.oldSystemId || "N/A")
-            : (workOrder.oldSystemId || "N/A")}
+          {(() => {
+            const isCompleted = workOrder.status?.toLowerCase() === "completed";
+            const systemId = isCompleted 
+              ? (workOrder.newSystemId || workOrder.oldSystemId)
+              : workOrder.oldSystemId;
+            const moduleId = isCompleted
+              ? (workOrder.newModuleId || workOrder.oldModuleId)
+              : workOrder.oldModuleId;
+            
+            if (systemId) return `System: ${systemId}`;
+            if (moduleId) return `Module: ${moduleId}`;
+            return "ID: N/A";
+          })()}
         </ThemedText>
       </View>
 
