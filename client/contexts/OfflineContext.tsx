@@ -413,81 +413,54 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             // Server uses meterId parameter that searches across all ID fields (old_meter_id, new_meter_id, old_module_id, new_module_id)
             const searchByMeterId = async (id: string) => {
               if (!id) return [];
-              const searchUrl = `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(id)}`;
-              console.log(`[syncPendingActions] Searching server: ${searchUrl}`);
               const response = await fetch(
-                searchUrl,
+                `${serverUrl}/api/projects/${projectId}/work-orders/search?meterId=${encodeURIComponent(id)}`,
                 { 
                   method: "GET", 
                   headers: { "X-Requested-With": "XMLHttpRequest", "Origin": serverUrl, "Referer": `${serverUrl}/` },
                   credentials: "include" 
                 }
               );
-              if (!response.ok) {
-                console.log(`[syncPendingActions] Search failed with status ${response.status}`);
-                return [];
-              }
+              if (!response.ok) return [];
               const data = await response.json();
-              const results = data.workOrders || data || [];
-              console.log(`[syncPendingActions] Search returned ${results.length} work orders`);
-              if (results.length > 0) {
-                results.forEach((wo: any, idx: number) => {
-                  console.log(`[syncPendingActions] Result ${idx}: id=${wo.id}, status=${wo.status}, customerWoId=${wo.customer_wo_id || wo.customerWoId}`);
-                });
-              }
-              return results;
+              return data.workOrders || data || [];
             };
             
             const findEligible = (workOrders: any[]) => {
-              const eligible = workOrders.find((wo: any) => {
+              return workOrders.find((wo: any) => {
                 const status = (wo.status || "").toLowerCase();
                 return status !== "completed" && status !== "closed";
               });
-              if (!eligible && workOrders.length > 0) {
-                console.log(`[syncPendingActions] All ${workOrders.length} work orders are completed/closed - none eligible`);
-              }
-              return eligible;
             };
             
             // Search order: old system ID -> old module ID -> new system ID -> new module ID
             // All searches use the unified meterId parameter that searches across all ID fields
-            let searchAttempts = 0;
-            let totalResultsFound = 0;
-            
             if (oldSystemId) {
-              searchAttempts++;
-              console.log(`[syncPendingActions] Search attempt ${searchAttempts}: old system ID: ${oldSystemId}`);
+              console.log(`[syncPendingActions] Searching by old system ID: ${oldSystemId}`);
               const oldSystemResults = await searchByMeterId(oldSystemId);
-              totalResultsFound += oldSystemResults.length;
               eligibleWorkOrder = findEligible(oldSystemResults);
             }
             
             if (!eligibleWorkOrder && oldModuleId) {
-              searchAttempts++;
-              console.log(`[syncPendingActions] Search attempt ${searchAttempts}: old module ID: ${oldModuleId}`);
+              console.log(`[syncPendingActions] No match by old system ID, searching by old module ID: ${oldModuleId}`);
               const oldModuleResults = await searchByMeterId(oldModuleId);
-              totalResultsFound += oldModuleResults.length;
               eligibleWorkOrder = findEligible(oldModuleResults);
             }
             
             if (!eligibleWorkOrder && newSystemId) {
-              searchAttempts++;
-              console.log(`[syncPendingActions] Search attempt ${searchAttempts}: new system ID: ${newSystemId}`);
+              console.log(`[syncPendingActions] No match by old IDs, searching by new system ID: ${newSystemId}`);
               const newSystemResults = await searchByMeterId(newSystemId);
-              totalResultsFound += newSystemResults.length;
               eligibleWorkOrder = findEligible(newSystemResults);
             }
             
             if (!eligibleWorkOrder && newModuleId) {
-              searchAttempts++;
-              console.log(`[syncPendingActions] Search attempt ${searchAttempts}: new module ID: ${newModuleId}`);
+              console.log(`[syncPendingActions] No match by system IDs, searching by new module ID: ${newModuleId}`);
               const newModuleResults = await searchByMeterId(newModuleId);
-              totalResultsFound += newModuleResults.length;
               eligibleWorkOrder = findEligible(newModuleResults);
             }
             
             if (!eligibleWorkOrder) {
-              console.log(`[syncPendingActions] No eligible work order found after ${searchAttempts} searches (${totalResultsFound} total results, all completed/closed or no match). Keeping in queue for retry.`);
+              console.log(`[syncPendingActions] No eligible work order found for system ${oldSystemId || newSystemId || 'none'} or module ${oldModuleId || newModuleId || 'none'}, keeping in queue for retry`);
               continue;
             }
             
