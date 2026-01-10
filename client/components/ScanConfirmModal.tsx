@@ -9,12 +9,14 @@ import { WorkOrder } from "@/contexts/WorkOrderContext";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 export type MatchSource = "local" | "server" | "none";
+export type MatchFieldType = "system" | "module" | null;
 
 interface ScanConfirmModalProps {
   visible: boolean;
   meterId: string;
   workOrder: WorkOrder | undefined;
   matchSource?: MatchSource;
+  matchFieldType?: MatchFieldType;
   isSearching?: boolean;
   searchError?: string | null;
   isOffline?: boolean;
@@ -31,6 +33,7 @@ export function ScanConfirmModal({
   meterId, 
   workOrder, 
   matchSource = "local",
+  matchFieldType = null,
   isSearching = false,
   searchError = null,
   isOffline = false,
@@ -110,7 +113,7 @@ export function ScanConfirmModal({
           
           <View style={[styles.meterIdBox, { backgroundColor: theme.backgroundSecondary }]}>
             <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              Scanned System ID
+              {matchFieldType === "module" ? "Scanned Module ID" : "Scanned System ID"}
             </ThemedText>
             <ThemedText type="h3" style={{ fontWeight: "700", marginTop: Spacing.xs }}>
               {meterId}
@@ -151,7 +154,7 @@ export function ScanConfirmModal({
                     {workOrder.serviceAddress || "No address"}
                   </ThemedText>
                 </View>
-                {(workOrder.oldSystemId || workOrder.newSystemId) ? (
+                {(workOrder.oldSystemId?.trim() || workOrder.newSystemId?.trim()) ? (
                   <>
                     <View style={styles.infoRow}>
                       <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID:</ThemedText>
@@ -167,7 +170,7 @@ export function ScanConfirmModal({
                     </View>
                   </>
                 ) : null}
-                {(workOrder.oldModuleId || workOrder.newModuleId) ? (
+                {(workOrder.oldModuleId?.trim() || workOrder.newModuleId?.trim()) ? (
                   <>
                     <View style={styles.infoRow}>
                       <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Module ID:</ThemedText>

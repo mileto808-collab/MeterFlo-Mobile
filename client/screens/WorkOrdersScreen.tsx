@@ -21,10 +21,13 @@ import { ScanConfirmModal, MatchSource } from "@/components/ScanConfirmModal";
 import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
+type MatchFieldType = "system" | "module" | null;
+
 interface ScanResult {
   meterId: string;
   workOrder: WorkOrder | undefined;
   matchSource: MatchSource;
+  matchFieldType?: MatchFieldType;
   isSearching: boolean;
   searchError: string | null;
   isAlreadyCompleted?: boolean;
@@ -94,11 +97,28 @@ export default function WorkOrdersScreen() {
 
   const handleScanResult = useCallback(async (scannedValue: string, isManualSearch: boolean = false) => {
     const normalizedValue = scannedValue.trim();
+    const normalizedLower = normalizedValue.toLowerCase();
     
     // Helper to check if work order is completed/closed
     const isCompletedOrClosed = (wo: WorkOrder) => {
       const status = wo.status?.toLowerCase();
       return status === "completed" || status === "closed";
+    };
+    
+    // Helper to determine which field was matched
+    const getMatchFieldType = (wo: WorkOrder): MatchFieldType => {
+      const oldSystemId = wo.oldSystemId?.trim().toLowerCase() || "";
+      const newSystemId = wo.newSystemId?.trim().toLowerCase() || "";
+      const oldModuleId = wo.oldModuleId?.trim().toLowerCase() || "";
+      const newModuleId = wo.newModuleId?.trim().toLowerCase() || "";
+      
+      if (oldSystemId === normalizedLower || newSystemId === normalizedLower) {
+        return "system";
+      }
+      if (oldModuleId === normalizedLower || newModuleId === normalizedLower) {
+        return "module";
+      }
+      return null;
     };
     
     // First, show the modal in searching state
@@ -121,6 +141,7 @@ export default function WorkOrdersScreen() {
         meterId: normalizedValue,
         workOrder: eligibleLocalWo,
         matchSource: "local",
+        matchFieldType: getMatchFieldType(eligibleLocalWo),
         isSearching: false,
         searchError: null,
         isAlreadyCompleted: false,
@@ -136,6 +157,7 @@ export default function WorkOrdersScreen() {
         meterId: normalizedValue,
         workOrder: completedLocalWo,
         matchSource: "local",
+        matchFieldType: getMatchFieldType(completedLocalWo),
         isSearching: false,
         searchError: null,
         isAlreadyCompleted: true,
@@ -156,6 +178,7 @@ export default function WorkOrdersScreen() {
             meterId: normalizedValue,
             workOrder: eligibleServerWo,
             matchSource: "server",
+            matchFieldType: getMatchFieldType(eligibleServerWo),
             isSearching: false,
             searchError: null,
             isAlreadyCompleted: false,
@@ -171,6 +194,7 @@ export default function WorkOrdersScreen() {
             meterId: normalizedValue,
             workOrder: completedServerWo,
             matchSource: "server",
+            matchFieldType: getMatchFieldType(completedServerWo),
             isSearching: false,
             searchError: null,
             isAlreadyCompleted: true,
@@ -394,6 +418,7 @@ export default function WorkOrdersScreen() {
         meterId={scanConfirmResult?.meterId || ""}
         workOrder={scanConfirmResult?.workOrder}
         matchSource={scanConfirmResult?.matchSource || "none"}
+        matchFieldType={scanConfirmResult?.matchFieldType || null}
         isSearching={scanConfirmResult?.isSearching || false}
         searchError={scanConfirmResult?.searchError || null}
         isOffline={!isOnline}

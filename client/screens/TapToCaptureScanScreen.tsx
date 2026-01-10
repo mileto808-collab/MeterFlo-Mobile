@@ -22,6 +22,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type Phase = "scanning" | "confirming";
 
 type MatchSource = "local" | "server";
+type MatchFieldType = "system" | "module" | null;
 
 export default function TapToCaptureScanScreen() {
   const insets = useSafeAreaInsets();
@@ -40,6 +41,7 @@ export default function TapToCaptureScanScreen() {
   const [matchedWorkOrders, setMatchedWorkOrders] = useState<WorkOrder[]>([]);
   const [selectedWorkOrderIndex, setSelectedWorkOrderIndex] = useState(0);
   const [matchSource, setMatchSource] = useState<MatchSource>("local");
+  const [matchFieldType, setMatchFieldType] = useState<MatchFieldType>(null);
   const [isSearchingServer, setIsSearchingServer] = useState(false);
   const [serverSearchError, setServerSearchError] = useState<string | null>(null);
   const [isClaimingWorkOrder, setIsClaimingWorkOrder] = useState(false);
@@ -85,13 +87,24 @@ export default function TapToCaptureScanScreen() {
     const normalizedValue = detectedValue.trim().toUpperCase();
     
     // First, search locally by system IDs and module IDs
+    // Track what field type matched
+    let detectedFieldType: MatchFieldType = null;
+    
     const foundWorkOrders = workOrders.filter(wo => {
       const oldSystemId = (wo.oldSystemId || "").trim().toUpperCase();
       const newSystemId = (wo.newSystemId || "").trim().toUpperCase();
       const oldModuleId = (wo.oldModuleId || "").trim().toUpperCase();
       const newModuleId = (wo.newModuleId || "").trim().toUpperCase();
-      return oldSystemId === normalizedValue || newSystemId === normalizedValue ||
-             oldModuleId === normalizedValue || newModuleId === normalizedValue;
+      
+      if (oldSystemId === normalizedValue || newSystemId === normalizedValue) {
+        detectedFieldType = "system";
+        return true;
+      }
+      if (oldModuleId === normalizedValue || newModuleId === normalizedValue) {
+        detectedFieldType = "module";
+        return true;
+      }
+      return false;
     });
     
     if (foundWorkOrders.length > 0) {
@@ -99,6 +112,7 @@ export default function TapToCaptureScanScreen() {
       setMatchedWorkOrders(foundWorkOrders);
       setSelectedWorkOrderIndex(0);
       setMatchSource("local");
+      setMatchFieldType(detectedFieldType);
       setServerSearchError(null);
       setUnavailableWorkOrders([]);
       setPhase("confirming");
@@ -131,11 +145,33 @@ export default function TapToCaptureScanScreen() {
         setUnavailableWorkOrders(unavailable);
         setSelectedWorkOrderIndex(0);
         setMatchSource("server");
+        
+        // Determine field type from server results
+        const allResults = [...eligibleWorkOrders, ...unavailable];
+        if (allResults.length > 0) {
+          const firstWo = allResults[0];
+          const oldSystemId = (firstWo.oldSystemId || "").trim().toUpperCase();
+          const newSystemId = (firstWo.newSystemId || "").trim().toUpperCase();
+          const oldModuleId = (firstWo.oldModuleId || "").trim().toUpperCase();
+          const newModuleId = (firstWo.newModuleId || "").trim().toUpperCase();
+          
+          if (oldSystemId === normalizedValue || newSystemId === normalizedValue) {
+            setMatchFieldType("system");
+          } else if (oldModuleId === normalizedValue || newModuleId === normalizedValue) {
+            setMatchFieldType("module");
+          } else {
+            setMatchFieldType(null);
+          }
+        } else {
+          // No results - reset match field type
+          setMatchFieldType(null);
+        }
       } catch (error) {
         console.error("[TapToCaptureScan] Server search failed:", error);
         setServerSearchError(error instanceof Error ? error.message : "Server search failed");
         setMatchedWorkOrders([]);
         setUnavailableWorkOrders([]);
+        setMatchFieldType(null);
       } finally {
         setIsSearchingServer(false);
       }
@@ -143,6 +179,7 @@ export default function TapToCaptureScanScreen() {
       // Offline and no local match
       setMatchedWorkOrders([]);
       setMatchSource("local");
+      setMatchFieldType(null);
       setServerSearchError(null);
       setUnavailableWorkOrders([]);
       setPhase("confirming");
@@ -162,6 +199,7 @@ export default function TapToCaptureScanScreen() {
     setMatchedWorkOrders([]);
     setSelectedWorkOrderIndex(0);
     setMatchSource("local");
+    setMatchFieldType(null);
     setServerSearchError(null);
     setIsSearchingServer(false);
     setIsClaimingWorkOrder(false);
@@ -336,7 +374,7 @@ export default function TapToCaptureScanScreen() {
 
             <View style={[styles.scannedValueBox, { backgroundColor: theme.backgroundTertiary }]}>
               <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                Scanned System ID
+                {matchFieldType === "module" ? "Scanned Module ID" : "Scanned System ID"}
               </ThemedText>
               <ThemedText type="h4" style={{ fontWeight: "600", marginTop: Spacing.xs }}>
                 {detectedValue}
@@ -357,18 +395,38 @@ export default function TapToCaptureScanScreen() {
                     {matchedWorkOrder.serviceAddress || "No address"}
                   </ThemedText>
                 </View>
-                <View style={styles.detailRow}>
-                  <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID:</ThemedText>
-                  <ThemedText type="body" style={{ fontWeight: "600" }}>
-                    {matchedWorkOrder.oldSystemId || "N/A"}
-                  </ThemedText>
-                </View>
-                <View style={styles.detailRow}>
-                  <ThemedText type="body" style={{ color: theme.textSecondary }}>New System ID:</ThemedText>
-                  <ThemedText type="body" style={{ fontWeight: "600" }}>
-                    {matchedWorkOrder.newSystemId || "N/A"}
-                  </ThemedText>
-                </View>
+                {(matchedWorkOrder.oldSystemId?.trim() || matchedWorkOrder.newSystemId?.trim()) ? (
+                  <>
+                    <View style={styles.detailRow}>
+                      <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID:</ThemedText>
+                      <ThemedText type="body" style={{ fontWeight: "600" }}>
+                        {matchedWorkOrder.oldSystemId || "N/A"}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <ThemedText type="body" style={{ color: theme.textSecondary }}>New System ID:</ThemedText>
+                      <ThemedText type="body" style={{ fontWeight: "600" }}>
+                        {matchedWorkOrder.newSystemId || "N/A"}
+                      </ThemedText>
+                    </View>
+                  </>
+                ) : null}
+                {(matchedWorkOrder.oldModuleId?.trim() || matchedWorkOrder.newModuleId?.trim()) ? (
+                  <>
+                    <View style={styles.detailRow}>
+                      <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Module ID:</ThemedText>
+                      <ThemedText type="body" style={{ fontWeight: "600" }}>
+                        {matchedWorkOrder.oldModuleId || "N/A"}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <ThemedText type="body" style={{ color: theme.textSecondary }}>New Module ID:</ThemedText>
+                      <ThemedText type="body" style={{ fontWeight: "600" }}>
+                        {matchedWorkOrder.newModuleId || "N/A"}
+                      </ThemedText>
+                    </View>
+                  </>
+                ) : null}
                 <View style={styles.detailRow}>
                   <ThemedText type="body" style={{ color: theme.textSecondary }}>Status:</ThemedText>
                   <ThemedText 
@@ -411,18 +469,38 @@ export default function TapToCaptureScanScreen() {
                       {unavailableWorkOrders[0].serviceAddress || "No address"}
                     </ThemedText>
                   </View>
-                  <View style={styles.detailRow}>
-                    <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID:</ThemedText>
-                    <ThemedText type="body" style={{ fontWeight: "600" }}>
-                      {unavailableWorkOrders[0].oldSystemId || "N/A"}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <ThemedText type="body" style={{ color: theme.textSecondary }}>New System ID:</ThemedText>
-                    <ThemedText type="body" style={{ fontWeight: "600" }}>
-                      {unavailableWorkOrders[0].newSystemId || "N/A"}
-                    </ThemedText>
-                  </View>
+                  {(unavailableWorkOrders[0].oldSystemId?.trim() || unavailableWorkOrders[0].newSystemId?.trim()) ? (
+                    <>
+                      <View style={styles.detailRow}>
+                        <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID:</ThemedText>
+                        <ThemedText type="body" style={{ fontWeight: "600" }}>
+                          {unavailableWorkOrders[0].oldSystemId || "N/A"}
+                        </ThemedText>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <ThemedText type="body" style={{ color: theme.textSecondary }}>New System ID:</ThemedText>
+                        <ThemedText type="body" style={{ fontWeight: "600" }}>
+                          {unavailableWorkOrders[0].newSystemId || "N/A"}
+                        </ThemedText>
+                      </View>
+                    </>
+                  ) : null}
+                  {(unavailableWorkOrders[0].oldModuleId?.trim() || unavailableWorkOrders[0].newModuleId?.trim()) ? (
+                    <>
+                      <View style={styles.detailRow}>
+                        <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Module ID:</ThemedText>
+                        <ThemedText type="body" style={{ fontWeight: "600" }}>
+                          {unavailableWorkOrders[0].oldModuleId || "N/A"}
+                        </ThemedText>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <ThemedText type="body" style={{ color: theme.textSecondary }}>New Module ID:</ThemedText>
+                        <ThemedText type="body" style={{ fontWeight: "600" }}>
+                          {unavailableWorkOrders[0].newModuleId || "N/A"}
+                        </ThemedText>
+                      </View>
+                    </>
+                  ) : null}
                   <View style={styles.detailRow}>
                     <ThemedText type="body" style={{ color: theme.textSecondary }}>Status:</ThemedText>
                     <ThemedText type="body" style={{ fontWeight: "500", color: theme.error || "#EF4444" }}>
