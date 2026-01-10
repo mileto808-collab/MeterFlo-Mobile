@@ -16,7 +16,6 @@ import { OfflineProvider } from "@/contexts/OfflineContext";
 import { WorkOrderProvider } from "@/contexts/WorkOrderContext";
 import { AutoSyncManager } from "@/components/AutoSyncManager";
 import { AutoUpdateManager } from "@/components/AutoUpdateManager";
-import { AppointmentReminderManager } from "@/components/AppointmentReminderManager";
 
 export default function App() {
   return (
@@ -28,7 +27,6 @@ export default function App() {
               <AutoSyncManager />
               <AutoUpdateManager />
               <SafeAreaProvider>
-                <AppointmentReminderManager />
                 <GestureHandlerRootView style={styles.root}>
                   <KeyboardProvider>
                     <NavigationContainer>
