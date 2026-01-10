@@ -401,7 +401,7 @@ export default function WorkOrderDetailScreen() {
         </Accordion>
 
         <Accordion title="System | Module Details" icon="cpu">
-          {workOrder.oldSystemId || workOrder.oldSystemReading || workOrder.oldSystemType || workOrder.systemType || workOrder.oldGps ? (
+          {workOrder.oldSystemId?.trim() || workOrder.oldSystemReading?.trim() || workOrder.oldSystemType?.trim() || workOrder.systemType?.trim() ? (
             <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
               <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
                 Old System
@@ -414,7 +414,7 @@ export default function WorkOrderDetailScreen() {
             </View>
           ) : null}
 
-          {workOrder.oldModuleId || workOrder.oldModuleRead || workOrder.oldModuleType ? (
+          {workOrder.oldModuleId?.trim() || workOrder.oldModuleRead?.trim() || workOrder.oldModuleType?.trim() ? (
             <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
               <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
                 Old Module
@@ -427,20 +427,20 @@ export default function WorkOrderDetailScreen() {
             </View>
           ) : null}
 
-          {(workOrder.oldGps || workOrder.newGps) ? (
+          {(workOrder.oldGps?.trim() || workOrder.newGps?.trim()) ? (
             <View style={[styles.meterSection, { borderLeftColor: theme.textSecondary }]}>
               <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.textSecondary }]}>
                 GPS Coordinates
               </ThemedText>
               <View style={styles.gridRow}>
-                {workOrder.oldGps ? (
+                {workOrder.oldGps?.trim() ? (
                   <GridItem 
                     label="Old GPS" 
                     value={workOrder.oldGps} 
                     onPress={() => handleOpenGps(workOrder.oldGps!)}
                   />
                 ) : null}
-                {workOrder.newGps ? (
+                {workOrder.newGps?.trim() ? (
                   <GridItem 
                     label="New GPS" 
                     value={workOrder.newGps} 
@@ -451,7 +451,7 @@ export default function WorkOrderDetailScreen() {
             </View>
           ) : null}
 
-          {workOrder.newSystemId || workOrder.newSystemReading || workOrder.newSystemType ? (
+          {workOrder.newSystemId?.trim() || workOrder.newSystemReading?.trim() || workOrder.newSystemType?.trim() ? (
             <View style={[styles.meterSection, { borderLeftColor: theme.success }]}>
               <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.success }]}>
                 New System
@@ -464,7 +464,7 @@ export default function WorkOrderDetailScreen() {
             </View>
           ) : null}
 
-          {workOrder.newModuleId || workOrder.newModuleRead || workOrder.newModuleType ? (
+          {workOrder.newModuleId?.trim() || workOrder.newModuleRead?.trim() || workOrder.newModuleType?.trim() ? (
             <View style={[styles.meterSection, { borderLeftColor: theme.success }]}>
               <ThemedText type="h4" style={[styles.meterSectionTitle, { color: theme.success }]}>
                 New Module

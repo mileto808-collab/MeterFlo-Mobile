@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
+import { navigationRef } from "@/lib/navigationRef";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -16,6 +17,8 @@ import { OfflineProvider } from "@/contexts/OfflineContext";
 import { WorkOrderProvider } from "@/contexts/WorkOrderContext";
 import { AutoSyncManager } from "@/components/AutoSyncManager";
 import { AutoUpdateManager } from "@/components/AutoUpdateManager";
+import { AppointmentReminderProvider } from "@/contexts/AppointmentReminderContext";
+import { AppointmentReminderManager } from "@/components/AppointmentReminderManager";
 
 export default function App() {
   return (
@@ -24,18 +27,21 @@ export default function App() {
         <AuthProvider>
           <OfflineProvider>
             <WorkOrderProvider>
-              <AutoSyncManager />
-              <AutoUpdateManager />
-              <SafeAreaProvider>
-                <GestureHandlerRootView style={styles.root}>
-                  <KeyboardProvider>
-                    <NavigationContainer>
-                      <RootStackNavigator />
-                    </NavigationContainer>
-                    <StatusBar style="auto" />
-                  </KeyboardProvider>
-                </GestureHandlerRootView>
-              </SafeAreaProvider>
+              <AppointmentReminderProvider>
+                <AutoSyncManager />
+                <AutoUpdateManager />
+                <SafeAreaProvider>
+                  <GestureHandlerRootView style={styles.root}>
+                    <KeyboardProvider>
+                      <NavigationContainer ref={navigationRef}>
+                        <RootStackNavigator />
+                      </NavigationContainer>
+                      <AppointmentReminderManager />
+                      <StatusBar style="auto" />
+                    </KeyboardProvider>
+                  </GestureHandlerRootView>
+                </SafeAreaProvider>
+              </AppointmentReminderProvider>
             </WorkOrderProvider>
           </OfflineProvider>
         </AuthProvider>
