@@ -17,11 +17,9 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { SearchOptionsModal, SearchOption } from "@/components/SearchOptionsModal";
 import { HIDScannerModal } from "@/components/HIDScannerModal";
 import { ManualSearchModal } from "@/components/ManualSearchModal";
-import { ScanConfirmModal, MatchSource } from "@/components/ScanConfirmModal";
+import { ScanConfirmModal, MatchSource, MatchFieldType, MATCH_FIELD_LABELS, determineMatchFieldType } from "@/components/ScanConfirmModal";
 import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
-
-type MatchFieldType = "system" | "module" | null;
 
 interface ScanResult {
   meterId: string;
@@ -71,18 +69,11 @@ export default function WorkOrdersScreen() {
         return true;
       }
       
-      // Exact match on work order ID: check customerWoId first, fall back to internal id if customerWoId is empty
+      // Exact match on work order ID: match either customerWoId or internal id
       const customerWoId = wo.customerWoId?.trim().toLowerCase() || "";
-      if (customerWoId) {
-        if (customerWoId === normalizedTerm) {
-          return true;
-        }
-      } else {
-        // Fall back to internal id when customerWoId is not set
-        const internalId = String(wo.id).toLowerCase();
-        if (internalId === normalizedTerm) {
-          return true;
-        }
+      const internalId = String(wo.id).toLowerCase();
+      if (customerWoId === normalizedTerm || internalId === normalizedTerm) {
+        return true;
       }
       
       // Partial match on service address (case-insensitive)
@@ -105,20 +96,9 @@ export default function WorkOrdersScreen() {
       return status === "completed" || status === "closed";
     };
     
-    // Helper to determine which field was matched
+    // Use shared helper for consistent match type detection
     const getMatchFieldType = (wo: WorkOrder): MatchFieldType => {
-      const oldSystemId = wo.oldSystemId?.trim().toLowerCase() || "";
-      const newSystemId = wo.newSystemId?.trim().toLowerCase() || "";
-      const oldModuleId = wo.oldModuleId?.trim().toLowerCase() || "";
-      const newModuleId = wo.newModuleId?.trim().toLowerCase() || "";
-      
-      if (oldSystemId === normalizedLower || newSystemId === normalizedLower) {
-        return "system";
-      }
-      if (oldModuleId === normalizedLower || newModuleId === normalizedLower) {
-        return "module";
-      }
-      return null;
+      return determineMatchFieldType(wo, normalizedValue);
     };
     
     // First, show the modal in searching state
@@ -418,7 +398,7 @@ export default function WorkOrdersScreen() {
         meterId={scanConfirmResult?.meterId || ""}
         workOrder={scanConfirmResult?.workOrder}
         matchSource={scanConfirmResult?.matchSource || "none"}
-        matchFieldType={scanConfirmResult?.matchFieldType || null}
+        matchFieldType={scanConfirmResult?.matchFieldType || "none"}
         isSearching={scanConfirmResult?.isSearching || false}
         searchError={scanConfirmResult?.searchError || null}
         isOffline={!isOnline}

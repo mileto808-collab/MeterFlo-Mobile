@@ -9,7 +9,86 @@ import { WorkOrder } from "@/contexts/WorkOrderContext";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 export type MatchSource = "local" | "server" | "none";
-export type MatchFieldType = "system" | "module" | null;
+export type MatchFieldType = "systemId" | "moduleId" | "workOrderId" | "address" | "none";
+
+// Label map for displaying match type to users
+export const MATCH_FIELD_LABELS: Record<MatchFieldType, string> = {
+  systemId: "Matched by System ID",
+  moduleId: "Matched by Module ID",
+  workOrderId: "Matched by Work Order",
+  address: "Matched by Address",
+  none: "Scanned ID",
+};
+
+/**
+ * Shared helper to determine match field type with consistent priority ordering.
+ * Priority: System ID (exact) > Module ID (exact) > Work Order ID (exact) > Address (partial)
+ * Use this across all search paths (local, server, scan) for consistent behavior.
+ */
+export function determineMatchFieldType(
+  workOrder: WorkOrder,
+  searchTerm: string
+): MatchFieldType {
+  const normalizedTerm = searchTerm.trim().toLowerCase();
+  
+  const oldSystemId = workOrder.oldSystemId?.trim().toLowerCase() || "";
+  const newSystemId = workOrder.newSystemId?.trim().toLowerCase() || "";
+  const oldModuleId = workOrder.oldModuleId?.trim().toLowerCase() || "";
+  const newModuleId = workOrder.newModuleId?.trim().toLowerCase() || "";
+  const customerWoId = workOrder.customerWoId?.trim().toLowerCase() || "";
+  const internalId = String(workOrder.id).toLowerCase();
+  const serviceAddress = workOrder.serviceAddress?.trim().toLowerCase() || "";
+  
+  // Priority 1: System ID (exact match)
+  if (oldSystemId === normalizedTerm || newSystemId === normalizedTerm) {
+    return "systemId";
+  }
+  
+  // Priority 2: Module ID (exact match)
+  if (oldModuleId === normalizedTerm || newModuleId === normalizedTerm) {
+    return "moduleId";
+  }
+  
+  // Priority 3: Work Order ID (exact match on either customer ID or internal ID)
+  if (customerWoId === normalizedTerm || internalId === normalizedTerm) {
+    return "workOrderId";
+  }
+  
+  // Priority 4: Address (partial/substring match)
+  if (serviceAddress.includes(normalizedTerm)) {
+    return "address";
+  }
+  
+  return "none";
+}
+
+// Priority ordering for match types (lower index = higher priority)
+const MATCH_PRIORITY: MatchFieldType[] = ["systemId", "moduleId", "workOrderId", "address", "none"];
+
+/**
+ * Find the highest priority match type across multiple work orders.
+ * Use when you have multiple matches and need to determine the best label to display.
+ */
+export function findHighestPriorityMatchType(
+  workOrders: WorkOrder[],
+  searchTerm: string
+): MatchFieldType {
+  let highestPriority: MatchFieldType = "none";
+  let highestPriorityIndex = MATCH_PRIORITY.indexOf("none");
+  
+  for (const wo of workOrders) {
+    const matchType = determineMatchFieldType(wo, searchTerm);
+    const priorityIndex = MATCH_PRIORITY.indexOf(matchType);
+    if (priorityIndex < highestPriorityIndex) {
+      highestPriority = matchType;
+      highestPriorityIndex = priorityIndex;
+    }
+    // Early exit if we found the highest priority match
+    if (highestPriorityIndex === 0) break;
+  }
+  
+  return highestPriority;
+}
 
 interface ScanConfirmModalProps {
   visible: boolean;
@@ -33,7 +112,7 @@ export function ScanConfirmModal({
   meterId, 
   workOrder, 
   matchSource = "local",
-  matchFieldType = null,
+  matchFieldType = "none",
   isSearching = false,
   searchError = null,
   isOffline = false,
@@ -113,7 +192,7 @@ export function ScanConfirmModal({
           
           <View style={[styles.meterIdBox, { backgroundColor: theme.backgroundSecondary }]}>
             <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              {matchFieldType === "module" ? "Scanned Module ID" : "Scanned System ID"}
+              {MATCH_FIELD_LABELS[matchFieldType]}
             </ThemedText>
             <ThemedText type="h3" style={{ fontWeight: "700", marginTop: Spacing.xs }}>
               {meterId}

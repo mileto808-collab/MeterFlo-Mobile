@@ -15,6 +15,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Button } from "@/components/Button";
 import { Spacing, BorderRadius } from "@/constants/theme";
+import { MatchFieldType, MATCH_FIELD_LABELS, determineMatchFieldType, findHighestPriorityMatchType } from "@/components/ScanConfirmModal";
 
 type RouteProps = RouteProp<RootStackParamList, "TapToCaptureScan">;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -22,7 +23,6 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type Phase = "scanning" | "confirming";
 
 type MatchSource = "local" | "server";
-type MatchFieldType = "system" | "module" | null;
 
 export default function TapToCaptureScanScreen() {
   const insets = useSafeAreaInsets();
@@ -41,7 +41,7 @@ export default function TapToCaptureScanScreen() {
   const [matchedWorkOrders, setMatchedWorkOrders] = useState<WorkOrder[]>([]);
   const [selectedWorkOrderIndex, setSelectedWorkOrderIndex] = useState(0);
   const [matchSource, setMatchSource] = useState<MatchSource>("local");
-  const [matchFieldType, setMatchFieldType] = useState<MatchFieldType>(null);
+  const [matchFieldType, setMatchFieldType] = useState<MatchFieldType>("none");
   const [isSearchingServer, setIsSearchingServer] = useState(false);
   const [serverSearchError, setServerSearchError] = useState<string | null>(null);
   const [isClaimingWorkOrder, setIsClaimingWorkOrder] = useState(false);
@@ -84,31 +84,17 @@ export default function TapToCaptureScanScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     
-    const normalizedValue = detectedValue.trim().toUpperCase();
+    const normalizedValue = detectedValue.trim();
     
-    // First, search locally by system IDs and module IDs
-    // Track what field type matched
-    let detectedFieldType: MatchFieldType = null;
-    
+    // First, search locally by system IDs, module IDs, work order IDs, and address
     const foundWorkOrders = workOrders.filter(wo => {
-      const oldSystemId = (wo.oldSystemId || "").trim().toUpperCase();
-      const newSystemId = (wo.newSystemId || "").trim().toUpperCase();
-      const oldModuleId = (wo.oldModuleId || "").trim().toUpperCase();
-      const newModuleId = (wo.newModuleId || "").trim().toUpperCase();
-      
-      if (oldSystemId === normalizedValue || newSystemId === normalizedValue) {
-        detectedFieldType = "system";
-        return true;
-      }
-      if (oldModuleId === normalizedValue || newModuleId === normalizedValue) {
-        detectedFieldType = "module";
-        return true;
-      }
-      return false;
+      const matchType = determineMatchFieldType(wo, normalizedValue);
+      return matchType !== "none";
     });
     
     if (foundWorkOrders.length > 0) {
-      // Found locally
+      // Found locally - find highest priority match type across all matches
+      const detectedFieldType = findHighestPriorityMatchType(foundWorkOrders, normalizedValue);
       setMatchedWorkOrders(foundWorkOrders);
       setSelectedWorkOrderIndex(0);
       setMatchSource("local");
@@ -146,32 +132,21 @@ export default function TapToCaptureScanScreen() {
         setSelectedWorkOrderIndex(0);
         setMatchSource("server");
         
-        // Determine field type from server results
+        // Determine field type from server results - find highest priority across all matches
         const allResults = [...eligibleWorkOrders, ...unavailable];
         if (allResults.length > 0) {
-          const firstWo = allResults[0];
-          const oldSystemId = (firstWo.oldSystemId || "").trim().toUpperCase();
-          const newSystemId = (firstWo.newSystemId || "").trim().toUpperCase();
-          const oldModuleId = (firstWo.oldModuleId || "").trim().toUpperCase();
-          const newModuleId = (firstWo.newModuleId || "").trim().toUpperCase();
-          
-          if (oldSystemId === normalizedValue || newSystemId === normalizedValue) {
-            setMatchFieldType("system");
-          } else if (oldModuleId === normalizedValue || newModuleId === normalizedValue) {
-            setMatchFieldType("module");
-          } else {
-            setMatchFieldType(null);
-          }
+          const detectedFieldType = findHighestPriorityMatchType(allResults, normalizedValue);
+          setMatchFieldType(detectedFieldType);
         } else {
           // No results - reset match field type
-          setMatchFieldType(null);
+          setMatchFieldType("none");
         }
       } catch (error) {
         console.error("[TapToCaptureScan] Server search failed:", error);
         setServerSearchError(error instanceof Error ? error.message : "Server search failed");
         setMatchedWorkOrders([]);
         setUnavailableWorkOrders([]);
-        setMatchFieldType(null);
+        setMatchFieldType("none");
       } finally {
         setIsSearchingServer(false);
       }
@@ -179,7 +154,7 @@ export default function TapToCaptureScanScreen() {
       // Offline and no local match
       setMatchedWorkOrders([]);
       setMatchSource("local");
-      setMatchFieldType(null);
+      setMatchFieldType("none");
       setServerSearchError(null);
       setUnavailableWorkOrders([]);
       setPhase("confirming");
@@ -199,7 +174,7 @@ export default function TapToCaptureScanScreen() {
     setMatchedWorkOrders([]);
     setSelectedWorkOrderIndex(0);
     setMatchSource("local");
-    setMatchFieldType(null);
+    setMatchFieldType("none");
     setServerSearchError(null);
     setIsSearchingServer(false);
     setIsClaimingWorkOrder(false);
@@ -374,7 +349,7 @@ export default function TapToCaptureScanScreen() {
 
             <View style={[styles.scannedValueBox, { backgroundColor: theme.backgroundTertiary }]}>
               <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                {matchFieldType === "module" ? "Scanned Module ID" : "Scanned System ID"}
+                {MATCH_FIELD_LABELS[matchFieldType]}
               </ThemedText>
               <ThemedText type="h4" style={{ fontWeight: "600", marginTop: Spacing.xs }}>
                 {detectedValue}
