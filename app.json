@@ -2,7 +2,7 @@
   "expo": {
     "name": "MeterFlo Mobile",
     "slug": "meterflo-mobile",
-    "version": "1.0.1",
+    "version": "1.1.1",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "meterflo",
