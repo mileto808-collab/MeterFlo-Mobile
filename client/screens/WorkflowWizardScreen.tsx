@@ -727,8 +727,8 @@ export default function WorkflowWizardScreen() {
 
       if (isOnline && serverUrl && projectId) {
         const endpoint = canChange 
-          ? `${serverUrl}/api/mobile/workorders/${workOrder.id}/complete`
-          : `${serverUrl}/api/mobile/workorders/${workOrder.id}/trouble`;
+          ? `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${workOrder.id}/complete`
+          : `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${workOrder.id}/trouble`;
         
         console.log(`[WorkflowWizard] Submitting to endpoint: ${endpoint}`);
         
@@ -744,11 +744,11 @@ export default function WorkflowWizardScreen() {
           projectId: Number(projectId),
           oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: workOrder.oldModuleId ? (parseReading(formData.oldModuleRead) ?? 0) : null,
+          oldModuleReading: workOrder.oldModuleId ? String(parseReading(formData.oldModuleRead) ?? 0) : null,
           newSystemId: formData.newSystemId,
           newSystemReading: parseReading(formData.newSystemReading) ?? 0,
           newModuleId: formData.newModuleId || null,
-          newModuleReading: formData.newModuleId ? (parseReading(formData.newModuleRead) ?? 0) : null,
+          newModuleReading: formData.newModuleId ? String(parseReading(formData.newModuleRead) ?? 0) : null,
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
@@ -762,7 +762,7 @@ export default function WorkflowWizardScreen() {
           notes: formData.troubleNote || null,
           oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: workOrder.oldModuleId ? (parseReading(formData.oldModuleRead) ?? 0) : null,
+          oldModuleReading: workOrder.oldModuleId ? String(parseReading(formData.oldModuleRead) ?? 0) : null,
           photos: formatPhotosForServer(troublePhotosBase64, 'trouble'),
         };
         
@@ -851,11 +851,11 @@ export default function WorkflowWizardScreen() {
           projectId: Number(projectId),
           oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: workOrder.oldModuleId ? (parseReading(formData.oldModuleRead) ?? 0) : null,
+          oldModuleReading: workOrder.oldModuleId ? String(parseReading(formData.oldModuleRead) ?? 0) : null,
           newSystemId: formData.newSystemId,
           newSystemReading: parseReading(formData.newSystemReading) ?? 0,
           newModuleId: formData.newModuleId || null,
-          newModuleReading: formData.newModuleId ? (parseReading(formData.newModuleRead) ?? 0) : null,
+          newModuleReading: formData.newModuleId ? String(parseReading(formData.newModuleRead) ?? 0) : null,
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
@@ -869,7 +869,7 @@ export default function WorkflowWizardScreen() {
           notes: formData.troubleNote || null,
           oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: workOrder.oldModuleId ? (parseReading(formData.oldModuleRead) ?? 0) : null,
+          oldModuleReading: workOrder.oldModuleId ? String(parseReading(formData.oldModuleRead) ?? 0) : null,
           photos: formatPhotosForOffline(troublePhotosBase64, 'trouble'),
         };
         

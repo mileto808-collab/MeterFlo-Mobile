@@ -333,8 +333,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             }
             
             const endpoint = action.completionMode === "complete"
-              ? `${serverUrl}/api/mobile/workorders/${action.workOrderId}/complete`
-              : `${serverUrl}/api/mobile/workorders/${action.workOrderId}/trouble`;
+              ? `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${action.workOrderId}/complete`
+              : `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${action.workOrderId}/trouble`;
             
             console.log(`[syncPendingActions] Syncing ${action.completionMode} for WO ${action.workOrderId} to ${endpoint}`);
             
@@ -500,22 +500,23 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             const oldModuleReadRaw = offlineData.oldModuleRead;
             const newModuleReadRaw = offlineData.newModuleRead;
             
-            // Parse module readings to numbers, defaulting to 0 if module exists but reading is empty/invalid
-            const parseModuleReading = (val: string | undefined | null): number | null => {
+            // Parse module readings to numeric strings, defaulting to "0" if module exists but reading is empty/invalid
+            const parseModuleReading = (val: string | undefined | null): string | null => {
               if (val === undefined || val === null || val === "") return null;
-              const parsed = parseFloat(val);
-              return isNaN(parsed) ? null : parsed;
+              const trimmed = String(val).trim();
+              const parsed = parseFloat(trimmed);
+              return isNaN(parsed) ? null : String(parsed);
             };
             
             const completePayload = {
               projectId: Number(projectId),
               oldSystemReading: oldSystemReading,
               oldModuleId: offlineData.oldModuleId || null,
-              oldModuleReading: offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? 0) : null,
+              oldModuleReading: offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? "0") : null,
               newSystemId: newSystemId,
               newSystemReading: newSystemReading,
               newModuleId: offlineData.newModuleId || null,
-              newModuleReading: offlineData.newModuleId ? (parseModuleReading(newModuleReadRaw) ?? 0) : null,
+              newModuleReading: offlineData.newModuleId ? (parseModuleReading(newModuleReadRaw) ?? "0") : null,
               oldGps: offlineData.oldGps || null,
               gpsCoordinates: offlineData.newGps || null,
               signatureData: offlineData.signatureData || null,
@@ -527,7 +528,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             };
             
             const completeResponse = await fetch(
-              `${serverUrl}/api/mobile/workorders/${serverWorkOrderId}/complete`,
+              `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${serverWorkOrderId}/complete`,
               {
                 method: "POST",
                 headers: { 
