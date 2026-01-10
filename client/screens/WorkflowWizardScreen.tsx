@@ -75,7 +75,6 @@ const SUCCESS_STEPS: WizardStep[] = [
   "newReading",
   "afterPhotos",
   "gps",
-  "notes",
   "signature",
   "confirm",
 ];
@@ -560,8 +559,6 @@ export default function WorkflowWizardScreen() {
         return formData.gpsCoordinates.trim().length > 0;
       case "signature": 
         return formData.signatureData.length > 0 && formData.signatureName.trim().length > 0;
-      case "notes":
-        return true;
       case "confirm":
         return true;
       case "troubleCapture":
@@ -1643,15 +1640,15 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Icon name="map-pin" size={48} color={theme.primary} />
+              <Icon name="map-pin" size={32} color={theme.primary} />
             </View>
-            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Capture GPS coordinates of the system location
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.md, textAlign: "center" }}>
+              Capture GPS coordinates (required)
             </ThemedText>
             
             <Button
               onPress={captureGps}
-              style={{ backgroundColor: theme.primary, marginBottom: Spacing.md }}
+              style={{ backgroundColor: theme.primary, marginBottom: Spacing.sm }}
               disabled={isCapturingGps}
             >
               {isCapturingGps ? (
@@ -1670,6 +1667,20 @@ export default function WorkflowWizardScreen() {
                 <ThemedText type="body" style={{ marginLeft: Spacing.sm }}>{formData.gpsCoordinates}</ThemedText>
               </View>
             ) : null}
+            
+            <View style={{ marginTop: Spacing.lg, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: Spacing.lg }}>
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: Spacing.sm }}>
+                <Icon name="file-text" size={20} color={theme.primary} />
+                <ThemedText type="body" style={{ marginLeft: Spacing.sm, fontWeight: "600" }}>Notes (optional)</ThemedText>
+              </View>
+              <TextInput
+                value={formData.notes}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
+                placeholder="Enter notes here..."
+                multiline
+                style={{ minHeight: 80, maxHeight: 120 }}
+              />
+            </View>
           </View>
         );
 
@@ -1700,26 +1711,6 @@ export default function WorkflowWizardScreen() {
                 placeholder="Enter printed name"
               />
             </View>
-          </View>
-        );
-
-      case "notes":
-        return (
-          <View>
-            <View style={styles.iconHeader}>
-              <Icon name="file-text" size={48} color={theme.primary} />
-            </View>
-            
-            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Add any additional notes (optional)
-            </ThemedText>
-            
-            <TextInput
-              value={formData.notes}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
-              placeholder="Enter notes here..."
-              multiline
-            />
           </View>
         );
 
@@ -1983,8 +1974,6 @@ export default function WorkflowWizardScreen() {
   const getStepRequiredLabel = () => {
     switch (currentStep) {
       case "physicalChange":
-      case "notes":
-        return null;
       default:
         return (
           <ThemedText type="caption" style={[styles.requiredText, { color: theme.error }]}>
