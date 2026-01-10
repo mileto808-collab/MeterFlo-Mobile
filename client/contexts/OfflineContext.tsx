@@ -497,8 +497,9 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             const oldSystemReading = offlineData.oldSystemReading ?? offlineData.oldMeterReading;
             const newSystemReading = offlineData.newSystemReading ?? offlineData.newMeterReading;
-            const oldModuleReadRaw = offlineData.oldModuleRead;
-            const newModuleReadRaw = offlineData.newModuleRead;
+            // Check both field name variants: oldModuleRead (from regular wizard) and oldModuleReading (from offline wizard)
+            const oldModuleReadRaw = offlineData.oldModuleRead ?? offlineData.oldModuleReading;
+            const newModuleReadRaw = offlineData.newModuleRead ?? offlineData.newModuleReading;
             
             // Parse module readings to numeric strings, defaulting to "0" if module exists but reading is empty/invalid
             const parseModuleReading = (val: string | undefined | null): string | null => {
