@@ -497,18 +497,25 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             const oldSystemReading = offlineData.oldSystemReading ?? offlineData.oldMeterReading;
             const newSystemReading = offlineData.newSystemReading ?? offlineData.newMeterReading;
-            const oldModuleRead = offlineData.oldModuleRead;
-            const newModuleRead = offlineData.newModuleRead;
+            const oldModuleReadRaw = offlineData.oldModuleRead;
+            const newModuleReadRaw = offlineData.newModuleRead;
+            
+            // Parse module readings to numbers, defaulting to 0 if module exists but reading is empty/invalid
+            const parseModuleReading = (val: string | undefined | null): number | null => {
+              if (val === undefined || val === null || val === "") return null;
+              const parsed = parseFloat(val);
+              return isNaN(parsed) ? null : parsed;
+            };
             
             const completePayload = {
               projectId: Number(projectId),
               oldSystemReading: oldSystemReading,
               oldModuleId: offlineData.oldModuleId || null,
-              oldModuleRead: oldModuleRead,
+              oldModuleReading: offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? 0) : null,
               newSystemId: newSystemId,
               newSystemReading: newSystemReading,
               newModuleId: offlineData.newModuleId || null,
-              newModuleRead: newModuleRead,
+              newModuleReading: offlineData.newModuleId ? (parseModuleReading(newModuleReadRaw) ?? 0) : null,
               oldGps: offlineData.oldGps || null,
               gpsCoordinates: offlineData.newGps || null,
               signatureData: offlineData.signatureData || null,
