@@ -334,17 +334,37 @@ export default function NewWorkOrderWizardScreen() {
   
   const handleCaptureBarcode = () => {
     if (detectedBarcode) {
+      const hasOldSystem = captureType === "system" || captureType === "both";
+      const hasOldModule = captureType === "module" || captureType === "both";
+      const hasNewSystem = hasOldSystem;
+      const hasNewModule = hasOldModule;
+      
       if (scannerTarget === "oldSystem") {
         setFormData(prev => ({ ...prev, oldSystemId: detectedBarcode }));
+        // Advance to module if needed, otherwise to summary
+        if (hasOldModule) {
+          setOldCaptureMode("module");
+        } else {
+          setOldCaptureMode("summary");
+        }
       } else if (scannerTarget === "oldModule") {
         setFormData(prev => ({ ...prev, oldModuleId: detectedBarcode }));
+        setOldCaptureMode("summary");
       } else if (scannerTarget === "newSystem") {
         setFormData(prev => ({ ...prev, newSystemId: detectedBarcode }));
+        // Advance to module if needed, otherwise to summary
+        if (hasNewModule) {
+          setNewCaptureMode("module");
+        } else {
+          setNewCaptureMode("summary");
+        }
       } else if (scannerTarget === "newModule") {
         setFormData(prev => ({ ...prev, newModuleId: detectedBarcode }));
+        setNewCaptureMode("summary");
       }
       setShowScanner(false);
       setDetectedBarcode(null);
+      setIsIdInputFocused(false);
     }
   };
   

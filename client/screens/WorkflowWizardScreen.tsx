@@ -454,6 +454,7 @@ export default function WorkflowWizardScreen() {
       }
       setShowScanner(false);
       setDetectedBarcode(null);
+      setIsIdInputFocused(false);
     }
   };
   
