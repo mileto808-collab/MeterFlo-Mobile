@@ -109,6 +109,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [syncHistory, setSyncHistory] = useState<SyncHistoryEntry[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const previousSessionRef = useRef<{ userId: string | null; projectId: number | null }>({ userId: null, projectId: null });
+  const hasInitializedRef = useRef(false);
 
   useEffect(() => {
     loadStoredData();
@@ -120,6 +122,57 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
 
     return () => unsubscribe();
   }, []);
+
+  // Clear sync history when user logs out
+  useEffect(() => {
+    if (!user) {
+      console.log("[OfflineContext] User logged out, clearing sync history from state");
+      setSyncHistory([]);
+      hasInitializedRef.current = false;
+      previousSessionRef.current = { userId: null, projectId: null };
+    }
+  }, [user]);
+
+  // Clear sync history when user or project changes to avoid confusion
+  useEffect(() => {
+    const currentUserId = user?.id || null;
+    const currentProjectId = projectId;
+    const prev = previousSessionRef.current;
+    
+    if (!currentUserId || !currentProjectId) {
+      return;
+    }
+    
+    const userChanged = prev.userId !== null && prev.userId !== currentUserId;
+    const projectChanged = prev.projectId !== null && prev.projectId !== currentProjectId;
+    
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      // Check if sync history belongs to a different session
+      AsyncStorage.getItem("meterflo_offline_session").then((cachedSession) => {
+        if (cachedSession) {
+          try {
+            const { userId: cachedUserId, projectId: cachedProjectId } = JSON.parse(cachedSession);
+            if (cachedUserId !== currentUserId || cachedProjectId !== currentProjectId) {
+              console.log("[OfflineContext] Sync history from different session, clearing");
+              setSyncHistory([]);
+              AsyncStorage.removeItem(STORAGE_KEYS.SYNC_HISTORY);
+            }
+          } catch (e) {
+            // Invalid cache session
+          }
+        }
+        AsyncStorage.setItem("meterflo_offline_session", JSON.stringify({ userId: currentUserId, projectId: currentProjectId }));
+      });
+    } else if (userChanged || projectChanged) {
+      console.log(`[OfflineContext] Session changed, clearing sync history`);
+      setSyncHistory([]);
+      AsyncStorage.removeItem(STORAGE_KEYS.SYNC_HISTORY);
+      AsyncStorage.setItem("meterflo_offline_session", JSON.stringify({ userId: currentUserId, projectId: currentProjectId }));
+    }
+    
+    previousSessionRef.current = { userId: currentUserId, projectId: currentProjectId };
+  }, [user?.id, projectId]);
 
   const loadStoredData = async () => {
     try {

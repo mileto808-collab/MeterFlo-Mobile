@@ -472,7 +472,7 @@ const defaultFilters: FilterConfig = {
 const defaultSort: SortConfig = [];
 
 export function WorkOrderProvider({ children }: { children: ReactNode }) {
-  const { serverUrl, projectId, isAuthenticated } = useAuth();
+  const { serverUrl, projectId, isAuthenticated, user } = useAuth();
   const [workOrders, setWorkOrdersState] = useState<WorkOrder[]>([]);
   const [referenceData, setReferenceData] = useState<ReferenceData | null>(null);
   const [filters, setFiltersState] = useState<FilterConfig>(defaultFilters);
@@ -480,43 +480,100 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const lastSyncTimeRef = useRef<string | null>(null);
-  const previousProjectIdRef = useRef<number | null>(null);
+  const previousSessionRef = useRef<{ userId: string | null; projectId: number | null }>({ userId: null, projectId: null });
+  const hasLoadedDataRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadStoredData();
-  }, []);
 
   useEffect(() => {
     lastSyncTimeRef.current = lastSyncTime;
   }, [lastSyncTime]);
 
+  // Clear work orders immediately when user logs out
   useEffect(() => {
-    const prevProjectId = previousProjectIdRef.current;
+    if (!user) {
+      console.log("[WorkOrderContext] User logged out, clearing work orders from state");
+      setWorkOrdersState([]);
+      setReferenceData(null);
+      setLastSyncTime(null);
+      lastSyncTimeRef.current = null;
+      hasLoadedDataRef.current = false;
+      previousSessionRef.current = { userId: null, projectId: null };
+    }
+  }, [user]);
+
+  // Load cached data only when we have a valid session, and verify it belongs to current user+project
+  useEffect(() => {
+    const currentUserId = user?.id || null;
+    const currentProjectId = projectId;
     
-    if (prevProjectId !== null && projectId !== null && prevProjectId !== projectId) {
-      console.log(`[WorkOrderContext] Project changed from ${prevProjectId} to ${projectId}, clearing cached work orders`);
-      AsyncStorage.multiRemove([
-        STORAGE_KEYS.WORK_ORDERS,
-        STORAGE_KEYS.REFERENCE_DATA,
-        STORAGE_KEYS.LAST_SYNC,
-      ]).then(() => {
-        lastSyncTimeRef.current = null;
-        setLastSyncTime(null);
-        setReferenceData(null);
-        setWorkOrdersState([]);
-        console.log("[WorkOrderContext] Cache cleared for project switch");
-      });
+    // Skip if no user or project yet
+    if (!currentUserId || !currentProjectId) {
+      return;
     }
     
-    previousProjectIdRef.current = projectId;
-  }, [projectId]);
+    const prev = previousSessionRef.current;
+    const userChanged = prev.userId !== null && prev.userId !== currentUserId;
+    const projectChanged = prev.projectId !== null && prev.projectId !== currentProjectId;
+    
+    // If session changed mid-session, clear immediately
+    if (userChanged || projectChanged) {
+      console.log(`[WorkOrderContext] Session changed (user: ${prev.userId}->${currentUserId}, project: ${prev.projectId}->${currentProjectId}), clearing cache`);
+      clearCacheForSessionChange();
+      AsyncStorage.setItem("meterflo_cache_session", JSON.stringify({ userId: currentUserId, projectId: currentProjectId }));
+    } else if (!hasLoadedDataRef.current) {
+      // First time loading with valid session - verify cached data belongs to this session
+      hasLoadedDataRef.current = true;
+      loadStoredDataIfSessionMatches(currentUserId, currentProjectId);
+    }
+    
+    previousSessionRef.current = { userId: currentUserId, projectId: currentProjectId };
+  }, [user?.id, projectId]);
+  
+  const clearCacheForSessionChange = useCallback(async () => {
+    await AsyncStorage.multiRemove([
+      STORAGE_KEYS.WORK_ORDERS,
+      STORAGE_KEYS.REFERENCE_DATA,
+      STORAGE_KEYS.LAST_SYNC,
+    ]);
+    lastSyncTimeRef.current = null;
+    setLastSyncTime(null);
+    setReferenceData(null);
+    setWorkOrdersState([]);
+    console.log("[WorkOrderContext] Cache cleared for session change");
+  }, []);
+
+  // Verify session before loading cached data - prevents stale data from showing briefly
+  const loadStoredDataIfSessionMatches = async (currentUserId: string, currentProjectId: number) => {
+    try {
+      const cachedSession = await AsyncStorage.getItem("meterflo_cache_session");
+      if (cachedSession) {
+        try {
+          const { userId: cachedUserId, projectId: cachedProjectId } = JSON.parse(cachedSession);
+          if (cachedUserId !== currentUserId || cachedProjectId !== currentProjectId) {
+            console.log(`[WorkOrderContext] Cached data from different session (user: ${cachedUserId}/${currentUserId}, project: ${cachedProjectId}/${currentProjectId}), clearing`);
+            await clearCacheForSessionChange();
+            await AsyncStorage.setItem("meterflo_cache_session", JSON.stringify({ userId: currentUserId, projectId: currentProjectId }));
+            return; // Don't load stale data
+          }
+        } catch (e) {
+          await clearCacheForSessionChange();
+          await AsyncStorage.setItem("meterflo_cache_session", JSON.stringify({ userId: currentUserId, projectId: currentProjectId }));
+          return;
+        }
+      }
+      // Session matches or no previous session - safe to load cached data
+      await AsyncStorage.setItem("meterflo_cache_session", JSON.stringify({ userId: currentUserId, projectId: currentProjectId }));
+      await loadStoredData();
+    } catch (e) {
+      console.error("[WorkOrderContext] Error checking session:", e);
+    }
+  };
 
   useEffect(() => {
     if (isAuthenticated && serverUrl && projectId) {
       refreshWorkOrders();
     }
-  }, [isAuthenticated, serverUrl, projectId]);
+  }, [isAuthenticated, serverUrl, projectId, user?.id]);
 
   const loadStoredData = async () => {
     try {
