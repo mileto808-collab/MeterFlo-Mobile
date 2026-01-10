@@ -578,17 +578,23 @@ export default function NewWorkOrderWizardScreen() {
         totalFailedPhotos += result.failedCount;
       }
       
+      // Only include system/module fields based on what was actually captured
+      const includeOldSystem = hasOldSystem && formData.oldSystemId.trim();
+      const includeOldModule = hasOldModule && formData.oldModuleId.trim();
+      const includeNewSystem = hasNewSystem && formData.newSystemId.trim();
+      const includeNewModule = hasNewModule && formData.newModuleId.trim();
+      
       const offlineWorkOrderData = canChange ? {
         id: offlineWorkOrderId,
         projectId: Number(projectId),
-        oldSystemId: formData.oldSystemId,
-        oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
-        oldModuleId: formData.oldModuleId || null,
-        oldModuleReading: formData.oldModuleId ? (parseReading(formData.oldModuleReading) ?? 0) : null,
-        newSystemId: formData.newSystemId,
-        newSystemReading: parseReading(formData.newSystemReading) ?? 0,
-        newModuleId: formData.newModuleId || null,
-        newModuleReading: formData.newModuleId ? (parseReading(formData.newModuleReading) ?? 0) : null,
+        oldSystemId: includeOldSystem ? formData.oldSystemId : undefined,
+        oldSystemReading: includeOldSystem ? (parseReading(formData.oldSystemReading) ?? 0) : undefined,
+        oldModuleId: includeOldModule ? formData.oldModuleId : undefined,
+        oldModuleReading: includeOldModule ? (parseReading(formData.oldModuleReading) ?? 0) : undefined,
+        newSystemId: includeNewSystem ? formData.newSystemId : undefined,
+        newSystemReading: includeNewSystem ? (parseReading(formData.newSystemReading) ?? 0) : undefined,
+        newModuleId: includeNewModule ? formData.newModuleId : undefined,
+        newModuleReading: includeNewModule ? (parseReading(formData.newModuleReading) ?? 0) : undefined,
         gpsCoordinates: formData.gpsCoordinates || null,
         signatureData: formData.signatureData || null,
         signatureName: formData.signatureName,
@@ -604,10 +610,10 @@ export default function NewWorkOrderWizardScreen() {
       } : {
         id: offlineWorkOrderId,
         projectId: Number(projectId),
-        oldSystemId: formData.oldSystemId,
-        oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
-        oldModuleId: formData.oldModuleId || null,
-        oldModuleReading: formData.oldModuleId ? (parseReading(formData.oldModuleReading) ?? 0) : null,
+        oldSystemId: includeOldSystem ? formData.oldSystemId : undefined,
+        oldSystemReading: includeOldSystem ? (parseReading(formData.oldSystemReading) ?? 0) : undefined,
+        oldModuleId: includeOldModule ? formData.oldModuleId : undefined,
+        oldModuleReading: includeOldModule ? (parseReading(formData.oldModuleReading) ?? 0) : undefined,
         troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
         notes: formData.troubleNote || null,
         troublePhotos: formatPhotosForStorage(troublePhotosBase64, 'trouble'),

@@ -379,8 +379,8 @@ function mapServerReferenceData(serverRef: ServerReferenceData): ReferenceData {
 export interface OfflineWorkOrderData {
   id: string;
   projectId: number;
-  oldSystemId: string;
-  oldSystemReading: number | null;
+  oldSystemId?: string;
+  oldSystemReading?: number | null;
   oldModuleId?: string | null;
   oldModuleReading?: number | null;
   newSystemId?: string;
