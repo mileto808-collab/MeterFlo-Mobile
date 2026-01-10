@@ -577,6 +577,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             // Use snake_case field names to match server expectations
             // Note: status and projectId not needed - server sets status automatically and projectId comes from URL
+            // GPS: check oldGps/newGps separately, with gpsCoordinates as fallback for each
+            // For offline work orders, gpsCoordinates from wizard represents the work location (used for both old/new)
+            const oldGpsValue = offlineData.oldGps ?? offlineData.gpsCoordinates ?? null;
+            const newGpsValue = offlineData.newGps ?? offlineData.gpsCoordinates ?? null;
             const completePayload = {
               old_system_reading: oldSystemReading ?? 0,
               old_module_id: offlineData.oldModuleId || null,
@@ -585,8 +589,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               new_system_reading: newSystemReading ?? 0,
               new_module_id: offlineData.newModuleId || null,
               new_module_read: offlineData.newModuleId ? (parseModuleReading(newModuleReadRaw) ?? "0") : null,
-              old_gps: offlineData.oldGps || null,
-              new_gps: offlineData.newGps || null,
+              old_gps: oldGpsValue,
+              new_gps: newGpsValue,
               signature_data: offlineData.signatureData || null,
               signature_name: offlineData.signatureName,
               completed_at: offlineData.completedAt,
@@ -650,8 +654,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               customerWoId: serverWo?.customer_wo_id || serverWo?.customerWoId || eligibleWorkOrder.customer_wo_id || eligibleWorkOrder.customerWoId,
               status: serverWo?.status || "Completed",
               serviceAddress: serverWo?.service_address || serverWo?.serviceAddress || eligibleWorkOrder.service_address || eligibleWorkOrder.serviceAddress,
-              oldGps: serverWo?.old_gps || serverWo?.oldGps || offlineData.oldGps,
-              newGps: serverWo?.new_gps || serverWo?.newGps || offlineData.newGps,
+              oldGps: serverWo?.old_gps || serverWo?.oldGps || oldGpsValue,
+              newGps: serverWo?.new_gps || serverWo?.newGps || newGpsValue,
               route: serverWo?.route || eligibleWorkOrder.route,
               zone: serverWo?.zone || eligibleWorkOrder.zone,
               assignedUserId: serverWo?.assigned_user_id || serverWo?.assignedUserId || eligibleWorkOrder.assigned_user_id || eligibleWorkOrder.assignedUserId,
