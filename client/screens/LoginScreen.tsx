@@ -13,12 +13,14 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
-  const { login, serverUrl: savedServerUrl, isLoading } = useAuth();
+  const { login, serverUrl: savedServerUrl, mobileApiKey: savedMobileApiKey, setMobileApiKey, isLoading } = useAuth();
 
   const [serverUrl, setServerUrl] = useState(savedServerUrl || "https://");
+  const [mobileApiKey, setMobileApiKeyLocal] = useState(savedMobileApiKey || "");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
   const [error, setError] = useState("");
 
   const isValid = serverUrl.length > 8 && username.length > 0 && password.length > 0;
@@ -28,6 +30,8 @@ export default function LoginScreen() {
     
     setError("");
     try {
+      // Save the mobile API key before login
+      await setMobileApiKey(mobileApiKey);
       await login(serverUrl, username, password);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed. Please try again.";
@@ -73,6 +77,34 @@ export default function LoginScreen() {
             autoCapitalize="none"
             autoCorrect={false}
           />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <ThemedText type="small" style={[styles.label, { color: theme.textSecondary }]}>
+            Mobile API Key (optional)
+          </ThemedText>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              value={mobileApiKey}
+              onChangeText={setMobileApiKeyLocal}
+              placeholder="Enter mobile API key if required"
+              secureTextEntry={!showApiKey}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={styles.passwordInput}
+            />
+            <Pressable
+              onPress={() => setShowApiKey(!showApiKey)}
+              style={styles.eyeButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Icon
+                name={showApiKey ? "eye-off" : "eye"}
+                size={20}
+                color={theme.textSecondary}
+              />
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.inputGroup}>
