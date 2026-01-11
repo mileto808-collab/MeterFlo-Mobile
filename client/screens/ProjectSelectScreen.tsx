@@ -31,12 +31,28 @@ export default function ProjectSelectScreen() {
     await selectProject(project.id);
     
     if (wasFirstLogin) {
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [{ name: "Main" }],
-        })
-      );
+      const navigateToMain = (retries = 0) => {
+        try {
+          const state = navigation.getState();
+          const mainRouteExists = state?.routeNames?.includes("Main");
+          
+          if (mainRouteExists) {
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: "Main" }],
+              })
+            );
+          } else if (retries < 10) {
+            setTimeout(() => navigateToMain(retries + 1), 100);
+          }
+        } catch {
+          if (retries < 10) {
+            setTimeout(() => navigateToMain(retries + 1), 100);
+          }
+        }
+      };
+      setTimeout(() => navigateToMain(0), 50);
     } else if (navigation.canGoBack()) {
       navigation.goBack();
     }
