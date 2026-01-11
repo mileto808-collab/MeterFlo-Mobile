@@ -19,11 +19,15 @@ export default function ProjectSelectScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { projects, selectProject, logout, user, projectId, isAuthenticated, needsProjectSelection } = useAuth();
   const [isSelecting, setIsSelecting] = useState(false);
+  
+  const isInitialFlowRef = useRef(needsProjectSelection);
   const hasAttemptedNavigationRef = useRef(false);
 
   const isAlreadyInProject = projectId !== null;
   
   useEffect(() => {
+    if (!isInitialFlowRef.current) return;
+    
     if (isAuthenticated && !needsProjectSelection && !hasAttemptedNavigationRef.current) {
       hasAttemptedNavigationRef.current = true;
       InteractionManager.runAfterInteractions(() => {
@@ -44,11 +48,14 @@ export default function ProjectSelectScreen() {
     if (isSelecting) return;
     setIsSelecting(true);
     
+    const canGoBackBeforeSelect = navigation.canGoBack();
     await selectProject(project.id);
     
-    if (navigation.canGoBack()) {
+    if (canGoBackBeforeSelect) {
       navigation.goBack();
     }
+    
+    setIsSelecting(false);
   };
 
   const renderProject = ({ item }: { item: Project }) => {
