@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { View, StyleSheet, FlatList, Pressable } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { View, StyleSheet, FlatList, Pressable, InteractionManager } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, CommonActions } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -17,43 +17,36 @@ export default function ProjectSelectScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { projects, selectProject, logout, user, projectId } = useAuth();
+  const { projects, selectProject, logout, user, projectId, isAuthenticated, needsProjectSelection } = useAuth();
   const [isSelecting, setIsSelecting] = useState(false);
-  const isFirstLoginRef = useRef(projectId === null);
+  const hasAttemptedNavigationRef = useRef(false);
 
   const isAlreadyInProject = projectId !== null;
+  
+  useEffect(() => {
+    if (isAuthenticated && !needsProjectSelection && !hasAttemptedNavigationRef.current) {
+      hasAttemptedNavigationRef.current = true;
+      InteractionManager.runAfterInteractions(() => {
+        const state = navigation.getState();
+        if (state?.routeNames?.includes("Main")) {
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: "Main" }],
+            })
+          );
+        }
+      });
+    }
+  }, [isAuthenticated, needsProjectSelection, navigation]);
 
   const handleSelectProject = async (project: Project) => {
     if (isSelecting) return;
     setIsSelecting(true);
     
-    const wasFirstLogin = isFirstLoginRef.current;
     await selectProject(project.id);
     
-    if (wasFirstLogin) {
-      const navigateToMain = (retries = 0) => {
-        try {
-          const state = navigation.getState();
-          const mainRouteExists = state?.routeNames?.includes("Main");
-          
-          if (mainRouteExists) {
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [{ name: "Main" }],
-              })
-            );
-          } else if (retries < 10) {
-            setTimeout(() => navigateToMain(retries + 1), 100);
-          }
-        } catch {
-          if (retries < 10) {
-            setTimeout(() => navigateToMain(retries + 1), 100);
-          }
-        }
-      };
-      setTimeout(() => navigateToMain(0), 50);
-    } else if (navigation.canGoBack()) {
+    if (navigation.canGoBack()) {
       navigation.goBack();
     }
   };
