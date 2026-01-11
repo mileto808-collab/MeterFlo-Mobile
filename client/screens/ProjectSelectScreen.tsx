@@ -26,11 +26,19 @@ export default function ProjectSelectScreen() {
     // If this is a modal (user is switching projects while authenticated), go back
     if (navigation.canGoBack()) {
       navigation.goBack();
+    } else {
+      // When shown at root level during first login, force navigation to Main
+      // This is needed because React Navigation's conditional screen rendering
+      // doesn't always properly transition on some React Native versions
+      setTimeout(() => {
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: "Main" }],
+          })
+        );
+      }, 100);
     }
-    // When shown at root level during first login (canGoBack is false),
-    // the auth state change in selectProject sets isAuthenticated=true,
-    // which causes the navigator to automatically re-render with Main screen.
-    // No manual navigation needed - React Navigation handles the transition.
   };
 
   const renderProject = ({ item }: { item: Project }) => {
