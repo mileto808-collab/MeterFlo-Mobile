@@ -3,7 +3,10 @@ import { View, ScrollView, StyleSheet, Pressable, Alert, Platform, Switch } from
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as SecureStore from "expo-secure-store";
+import { RootStackParamList } from "@/navigation/RootStackNavigator";
 
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,11 +39,14 @@ async function secureSet(key: string, value: string): Promise<void> {
   await SecureStore.setItemAsync(key, value);
 }
 
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
+  const navigation = useNavigation<NavigationProp>();
   const { user, serverUrl, projectId, projects, logout, isOfflineSession, getUpdateUrl, updateUrl } = useAuth();
   const { isOnline } = useOffline();
   const { lastSyncTime } = useWorkOrders();
@@ -195,6 +201,25 @@ export default function AccountScreen() {
                 {currentProject.description}
               </ThemedText>
             </View>
+          ) : null}
+
+          {projects.length > 1 ? (
+            <Pressable
+              onPress={() => navigation.navigate("ProjectSelect")}
+              style={({ pressed }) => [
+                styles.switchProjectButton,
+                { 
+                  backgroundColor: theme.primary + "15",
+                  borderColor: theme.primary + "30",
+                  opacity: pressed ? 0.7 : 1,
+                },
+              ]}
+            >
+              <Icon name="refresh-cw" size={16} color={theme.primary} />
+              <ThemedText type="body" style={{ color: theme.primary, fontWeight: "500" }}>
+                Switch Project
+              </ThemedText>
+            </Pressable>
           ) : null}
         </View>
       ) : null}
@@ -432,5 +457,16 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     gap: Spacing.sm,
     marginTop: Spacing.sm,
+  },
+  switchProjectButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
   },
 });

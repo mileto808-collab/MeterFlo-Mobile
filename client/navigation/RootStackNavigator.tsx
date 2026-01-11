@@ -64,6 +64,14 @@ export default function RootStackNavigator() {
             options={{ headerShown: false }}
           />
           <Stack.Screen
+            name="ProjectSelect"
+            component={ProjectSelectScreen}
+            options={{ 
+              headerShown: false,
+              presentation: "modal",
+            }}
+          />
+          <Stack.Screen
             name="WorkOrderDetail"
             component={WorkOrderDetailScreen}
             options={{

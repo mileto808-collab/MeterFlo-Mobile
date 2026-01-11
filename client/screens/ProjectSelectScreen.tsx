@@ -1,48 +1,78 @@
 import React from "react";
 import { View, StyleSheet, FlatList, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth, Project } from "@/contexts/AuthContext";
 import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
+import { RootStackParamList } from "@/navigation/RootStackNavigator";
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ProjectSelectScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
-  const { projects, selectProject, logout, user } = useAuth();
+  const navigation = useNavigation<NavigationProp>();
+  const { projects, selectProject, logout, user, projectId } = useAuth();
+
+  const isAlreadyInProject = projectId !== null;
 
   const handleSelectProject = async (project: Project) => {
     await selectProject(project.id);
+    // Dismiss the screen after selection
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Main" }],
+      });
+    }
   };
 
-  const renderProject = ({ item }: { item: Project }) => (
-    <Pressable
-      onPress={() => handleSelectProject(item)}
-      style={({ pressed }) => [
-        styles.projectCard,
-        { backgroundColor: theme.backgroundDefault, opacity: pressed ? 0.8 : 1 },
-      ]}
-    >
-      <View style={styles.projectInfo}>
-        <View style={[styles.projectIcon, { backgroundColor: theme.primary + "20" }]}>
-          <Icon name="folder" size={24} color={theme.primary} />
-        </View>
-        <View style={styles.projectDetails}>
-          <ThemedText type="body" style={styles.projectName}>
-            {item.name}
-          </ThemedText>
-          {item.description ? (
-            <ThemedText type="small" style={{ color: theme.textSecondary }}>
-              {item.description}
+  const renderProject = ({ item }: { item: Project }) => {
+    const isCurrentProject = item.id === projectId;
+    
+    return (
+      <Pressable
+        onPress={() => handleSelectProject(item)}
+        style={({ pressed }) => [
+          styles.projectCard,
+          { 
+            backgroundColor: isCurrentProject ? theme.primary + "15" : theme.backgroundDefault, 
+            borderWidth: isCurrentProject ? 1 : 0,
+            borderColor: theme.primary + "40",
+            opacity: pressed ? 0.8 : 1,
+          },
+        ]}
+      >
+        <View style={styles.projectInfo}>
+          <View style={[styles.projectIcon, { backgroundColor: theme.primary + "20" }]}>
+            <Icon name="folder" size={24} color={theme.primary} />
+          </View>
+          <View style={styles.projectDetails}>
+            <ThemedText type="body" style={styles.projectName}>
+              {item.name}
             </ThemedText>
-          ) : null}
+            {item.description ? (
+              <ThemedText type="small" style={{ color: theme.textSecondary }}>
+                {item.description}
+              </ThemedText>
+            ) : null}
+          </View>
         </View>
-      </View>
-      <Icon name="chevron-right" size={20} color={theme.textSecondary} />
-    </Pressable>
-  );
+        {isCurrentProject ? (
+          <Icon name="check" size={20} color={theme.primary} />
+        ) : (
+          <Icon name="chevron-right" size={20} color={theme.textSecondary} />
+        )}
+      </Pressable>
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -56,11 +86,33 @@ export default function ProjectSelectScreen() {
         ]}
       >
         <View style={styles.header}>
+          {isAlreadyInProject ? (
+            <Pressable
+              onPress={() => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  // If we can't go back (screen is root), reset to main tabs
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: "Main" }],
+                  });
+                }
+              }}
+              style={styles.backButton}
+            >
+              <Icon name="chevron-left" size={20} color={theme.text} />
+              <ThemedText type="body">Cancel</ThemedText>
+            </Pressable>
+          ) : null}
           <ThemedText type="h2" style={styles.title}>
-            Select Project
+            {isAlreadyInProject ? "Switch Project" : "Select Project"}
           </ThemedText>
           <ThemedText type="body" style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Welcome, {user?.displayName || user?.username}. Choose a project to continue.
+            {isAlreadyInProject 
+              ? "Select a different project to switch to."
+              : `Welcome, ${user?.displayName || user?.username}. Choose a project to continue.`
+            }
           </ThemedText>
         </View>
 
@@ -96,6 +148,12 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: Spacing["2xl"],
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    marginBottom: Spacing.lg,
   },
   title: {
     marginBottom: Spacing.sm,
