@@ -27,7 +27,6 @@ interface AuthState {
   needsProjectSelection: boolean;
   isOfflineSession: boolean;
   updateUrl: string | null;
-  mobileApiKey: string;
 }
 
 interface AuthContextType extends AuthState {
@@ -38,7 +37,6 @@ interface AuthContextType extends AuthState {
   getApiUrl: (path: string) => string;
   revalidateSession: () => Promise<boolean>;
   getUpdateUrl: () => Promise<string | null>;
-  setMobileApiKey: (key: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,7 +48,6 @@ const STORAGE_KEYS = {
   PROJECTS: "meterflo_projects",
   CREDENTIALS: "meterflo_credentials",
   UPDATE_URL: "meterflo_update_url",
-  MOBILE_API_KEY: "meterflo_mobile_api_key",
 };
 
 interface StoredCredentials {
@@ -159,7 +156,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     needsProjectSelection: false,
     isOfflineSession: false,
     updateUrl: null,
-    mobileApiKey: "",
   });
 
   useEffect(() => {
@@ -168,16 +164,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadStoredAuth = async () => {
     try {
-      const [storedUser, storedServerUrl, storedProjectId, storedProjects, storedUpdateUrl, storedMobileApiKey] = await Promise.all([
+      const [storedUser, storedServerUrl, storedProjectId, storedProjects, storedUpdateUrl] = await Promise.all([
         secureGet(STORAGE_KEYS.USER),
         secureGet(STORAGE_KEYS.SERVER_URL),
         secureGet(STORAGE_KEYS.PROJECT_ID),
         secureGet(STORAGE_KEYS.PROJECTS),
         secureGet(STORAGE_KEYS.UPDATE_URL),
-        secureGet(STORAGE_KEYS.MOBILE_API_KEY),
       ]);
-      
-      const mobileApiKey = storedMobileApiKey || "";
 
       if (storedUser && storedServerUrl && storedProjectId) {
         setState({
@@ -190,7 +183,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           needsProjectSelection: false,
           isOfflineSession: false,
           updateUrl: storedUpdateUrl || null,
-          mobileApiKey,
         });
       } else if (storedUser && storedServerUrl && storedProjects) {
         setState({
@@ -203,13 +195,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           needsProjectSelection: true,
           isOfflineSession: false,
           updateUrl: storedUpdateUrl || null,
-          mobileApiKey,
         });
       } else {
         setState(prev => ({
           ...prev,
           serverUrl: storedServerUrl || "",
-          mobileApiKey,
           isLoading: false,
         }));
       }
@@ -287,8 +277,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (projectId) {
           await secureSet(STORAGE_KEYS.PROJECT_ID, String(projectId));
-          setState(prev => ({
-            ...prev,
+          setState({
             user: user!,
             serverUrl: normalizedUrl,
             projectId,
@@ -298,11 +287,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             needsProjectSelection: false,
             isOfflineSession: true,
             updateUrl: storedUpdateUrl || null,
-          }));
+          });
         } else if (projects && projects.length === 1) {
           await secureSet(STORAGE_KEYS.PROJECT_ID, String(projects[0].id));
-          setState(prev => ({
-            ...prev,
+          setState({
             user: user!,
             serverUrl: normalizedUrl,
             projectId: projects[0].id,
@@ -312,10 +300,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             needsProjectSelection: false,
             isOfflineSession: true,
             updateUrl: storedUpdateUrl || null,
-          }));
+          });
         } else {
-          setState(prev => ({
-            ...prev,
+          setState({
             user: user!,
             serverUrl: normalizedUrl,
             projectId: null,
@@ -325,35 +312,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             needsProjectSelection: true,
             isOfflineSession: true,
             updateUrl: storedUpdateUrl || null,
-          }));
+          });
         }
         return;
       }
       
-      // Get mobile API key for CAPTCHA bypass
-      const storedMobileApiKey = await secureGet(STORAGE_KEYS.MOBILE_API_KEY);
-      
       console.log(`[Auth] Attempting login to: ${normalizedUrl}/api/auth/local/login`);
       console.log(`[Auth] Headers: Origin=${normalizedUrl}, X-Requested-With=XMLHttpRequest, Referer=${normalizedUrl}/`);
-      if (storedMobileApiKey) {
-        console.log(`[Auth] Using mobile API key for CAPTCHA bypass`);
-      }
-      
-      const loginHeaders: Record<string, string> = { 
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-        "Origin": normalizedUrl,
-        "Referer": `${normalizedUrl}/`,
-      };
-      
-      // Add mobile API key header if configured
-      if (storedMobileApiKey) {
-        loginHeaders["X-MeterFlo-Mobile-Key"] = storedMobileApiKey;
-      }
       
       const loginResponse = await fetch(`${normalizedUrl}/api/auth/local/login`, {
         method: "POST",
-        headers: loginHeaders,
+        headers: { 
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+          "Origin": normalizedUrl,
+          "Referer": `${normalizedUrl}/`,
+        },
         credentials: "include",
         body: JSON.stringify({ username, password }),
       });
@@ -432,8 +406,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await storeCredentials({ ...storedCreds, lastProjectId: projects[0].id });
         }
         
-        setState(prev => ({
-          ...prev,
+        setState({
           user,
           serverUrl: normalizedUrl,
           projectId: projects[0].id,
@@ -443,10 +416,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           needsProjectSelection: false,
           isOfflineSession: false,
           updateUrl,
-        }));
+        });
       } else {
-        setState(prev => ({
-          ...prev,
+        setState({
           user,
           serverUrl: normalizedUrl,
           projectId: null,
@@ -456,7 +428,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           needsProjectSelection: true,
           isOfflineSession: false,
           updateUrl,
-        }));
+        });
       }
     } catch (error) {
       setState(prev => ({ ...prev, isLoading: false }));
@@ -465,7 +437,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const selectProject = useCallback(async (projectId: number) => {
-    console.log(`[Auth] selectProject called with projectId: ${projectId}`);
     await secureSet(STORAGE_KEYS.PROJECT_ID, String(projectId));
     
     const storedCreds = await getStoredCredentials();
@@ -473,26 +444,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await storeCredentials({ ...storedCreds, lastProjectId: projectId });
     }
     
-    console.log(`[Auth] selectProject: Setting isAuthenticated=true, needsProjectSelection=false`);
-    setState(prev => {
-      console.log(`[Auth] selectProject setState - prev state:`, { 
-        isAuthenticated: prev.isAuthenticated, 
-        needsProjectSelection: prev.needsProjectSelection,
-        projectId: prev.projectId 
-      });
-      const newState = {
-        ...prev,
-        projectId,
-        isAuthenticated: true,
-        needsProjectSelection: false,
-      };
-      console.log(`[Auth] selectProject setState - new state:`, { 
-        isAuthenticated: newState.isAuthenticated, 
-        needsProjectSelection: newState.needsProjectSelection,
-        projectId: newState.projectId 
-      });
-      return newState;
-    });
+    setState(prev => ({
+      ...prev,
+      projectId,
+      isAuthenticated: true,
+      needsProjectSelection: false,
+    }));
   }, []);
 
   const logout = useCallback(async () => {
@@ -556,23 +513,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       console.log("[Auth] Attempting silent re-authentication...");
       
-      // Get mobile API key for CAPTCHA bypass
-      const storedMobileApiKey = await secureGet(STORAGE_KEYS.MOBILE_API_KEY);
-      
-      const loginHeaders: Record<string, string> = { 
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-        "Origin": state.serverUrl,
-        "Referer": `${state.serverUrl}/`,
-      };
-      
-      if (storedMobileApiKey) {
-        loginHeaders["X-MeterFlo-Mobile-Key"] = storedMobileApiKey;
-      }
-      
       const loginResponse = await fetch(`${state.serverUrl}/api/auth/local/login`, {
         method: "POST",
-        headers: loginHeaders,
+        headers: { 
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+          "Origin": state.serverUrl,
+          "Referer": `${state.serverUrl}/`,
+        },
         credentials: "include",
         body: JSON.stringify({ 
           username: storedCreds.username, 
@@ -617,18 +565,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return storedUrl || null;
   }, [state.updateUrl]);
 
-  const setMobileApiKey = useCallback(async (key: string) => {
-    const trimmedKey = key.trim();
-    if (trimmedKey) {
-      await secureSet(STORAGE_KEYS.MOBILE_API_KEY, trimmedKey);
-    } else {
-      await secureDelete(STORAGE_KEYS.MOBILE_API_KEY);
-    }
-    setState(prev => ({ ...prev, mobileApiKey: trimmedKey }));
-  }, []);
-
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, selectProject, updateServerUrl, getApiUrl, revalidateSession, getUpdateUrl, setMobileApiKey }}>
+    <AuthContext.Provider value={{ ...state, login, logout, selectProject, updateServerUrl, getApiUrl, revalidateSession, getUpdateUrl }}>
       {children}
     </AuthContext.Provider>
   );

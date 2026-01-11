@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,15 +30,9 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootStackNavigator() {
-  const { isAuthenticated, isLoading, needsProjectSelection, projectId } = useAuth();
+  const { isAuthenticated, isLoading, needsProjectSelection } = useAuth();
   const { theme } = useTheme();
   const screenOptions = useScreenOptions();
-
-  console.log(`[Navigator] Render - isAuthenticated: ${isAuthenticated}, needsProjectSelection: ${needsProjectSelection}, isLoading: ${isLoading}, projectId: ${projectId}`);
-
-  useEffect(() => {
-    console.log(`[Navigator] Auth state changed - isAuthenticated: ${isAuthenticated}, needsProjectSelection: ${needsProjectSelection}, projectId: ${projectId}`);
-  }, [isAuthenticated, needsProjectSelection, projectId]);
 
   if (isLoading) {
     return (
@@ -48,11 +42,8 @@ export default function RootStackNavigator() {
     );
   }
 
-  // Use a key based on auth state to force navigator remount when auth changes
-  const navigatorKey = needsProjectSelection ? 'project-select' : isAuthenticated ? 'authenticated' : 'login';
-  
   return (
-    <Stack.Navigator key={navigatorKey} screenOptions={screenOptions}>
+    <Stack.Navigator screenOptions={screenOptions}>
       {!isAuthenticated && !needsProjectSelection ? (
         <Stack.Screen
           name="Login"

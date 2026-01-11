@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
-import { View, StyleSheet, FlatList, Pressable, InteractionManager } from "react-native";
+import React from "react";
+import { View, StyleSheet, FlatList, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation, CommonActions } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -17,45 +17,21 @@ export default function ProjectSelectScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { projects, selectProject, logout, user, projectId, isAuthenticated, needsProjectSelection } = useAuth();
-  const [isSelecting, setIsSelecting] = useState(false);
-  
-  const isInitialFlowRef = useRef(needsProjectSelection);
-  const hasAttemptedNavigationRef = useRef(false);
+  const { projects, selectProject, logout, user, projectId } = useAuth();
 
   const isAlreadyInProject = projectId !== null;
-  
-  useEffect(() => {
-    if (!isInitialFlowRef.current) return;
-    
-    if (isAuthenticated && !needsProjectSelection && !hasAttemptedNavigationRef.current) {
-      hasAttemptedNavigationRef.current = true;
-      InteractionManager.runAfterInteractions(() => {
-        const state = navigation.getState();
-        if (state?.routeNames?.includes("Main")) {
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [{ name: "Main" }],
-            })
-          );
-        }
-      });
-    }
-  }, [isAuthenticated, needsProjectSelection, navigation]);
 
   const handleSelectProject = async (project: Project) => {
-    if (isSelecting) return;
-    setIsSelecting(true);
-    
-    const canGoBackBeforeSelect = navigation.canGoBack();
     await selectProject(project.id);
-    
-    if (canGoBackBeforeSelect) {
+    // Dismiss the screen after selection
+    if (navigation.canGoBack()) {
       navigation.goBack();
+    } else {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Main" }],
+      });
     }
-    
-    setIsSelecting(false);
   };
 
   const renderProject = ({ item }: { item: Project }) => {
@@ -116,9 +92,11 @@ export default function ProjectSelectScreen() {
                 if (navigation.canGoBack()) {
                   navigation.goBack();
                 } else {
-                  // If we can't go back (rare: deep link), navigate to Main
-                  // Use navigate instead of reset to avoid errors if Main isn't in current stack
-                  navigation.dispatch(CommonActions.navigate({ name: "Main" }));
+                  // If we can't go back (screen is root), reset to main tabs
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: "Main" }],
+                  });
                 }
               }}
               style={styles.backButton}
