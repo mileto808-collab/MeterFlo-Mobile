@@ -19,7 +19,11 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.meterflo.mobile"
+      "package": "com.meterflo.mobile",
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.REQUEST_INSTALL_PACKAGES"
+      ]
     },
     "web": {
       "output": "single",
@@ -39,7 +43,8 @@
         }
       ],
       "expo-web-browser",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-intent-launcher"
     ],
     "experiments": {
       "reactCompiler": true

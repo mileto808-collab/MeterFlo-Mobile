@@ -62,6 +62,9 @@ export function UpdateAvailableModal({
       const fileName = `meterflo-${updateInfo.latestVersion}.apk`;
       const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
 
+      console.log("[UpdateModal] Starting download from:", updateInfo.apkDownloadUrl);
+      console.log("[UpdateModal] Saving to:", fileUri);
+
       const downloadResumable = FileSystem.createDownloadResumable(
         updateInfo.apkDownloadUrl,
         fileUri,
@@ -77,25 +80,39 @@ export function UpdateAvailableModal({
       const result = await downloadResumable.downloadAsync();
 
       if (!result?.uri) {
+        console.error("[UpdateModal] Download failed - no URI returned");
         throw new Error("Download failed - no file URI returned");
       }
 
-      console.log("[UpdateModal] Download complete:", result.uri);
-
-      const contentUri = await FileSystem.getContentUriAsync(result.uri);
+      console.log("[UpdateModal] Download complete, file saved to:", result.uri);
       
+      // Verify file exists
+      const fileInfo = await FileSystem.getInfoAsync(result.uri);
+      console.log("[UpdateModal] File info:", JSON.stringify(fileInfo));
+      
+      if (!fileInfo.exists) {
+        throw new Error("Downloaded file does not exist");
+      }
+
+      // Convert to content URI for Android package installer
+      const contentUri = await FileSystem.getContentUriAsync(result.uri);
+      console.log("[UpdateModal] Content URI for installer:", contentUri);
+      
+      // Launch Android package installer
+      console.log("[UpdateModal] Launching package installer...");
       await startActivityAsync("android.intent.action.VIEW", {
         data: contentUri,
-        flags: 1,
+        flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
         type: "application/vnd.android.package-archive",
       });
-
+      
+      console.log("[UpdateModal] Package installer launched successfully");
       onClose();
     } catch (err) {
       console.error("[UpdateModal] Download/install error:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to download update"
-      );
+      const errorMessage = err instanceof Error ? err.message : "Failed to download update";
+      console.error("[UpdateModal] Error details:", errorMessage);
+      setError(errorMessage);
     } finally {
       setIsDownloading(false);
     }
