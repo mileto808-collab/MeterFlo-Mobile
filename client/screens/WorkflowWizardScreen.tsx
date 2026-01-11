@@ -193,10 +193,20 @@ export default function WorkflowWizardScreen() {
     if (currentStep === "newSystemId") {
       const hasSystem = Boolean(workOrder.oldSystemId);
       const hasModule = Boolean(workOrder.oldModuleId);
-      if (hasSystem && !formData.newSystemId.trim()) {
+      const systemFilled = formData.newSystemId.trim().length > 0;
+      const moduleFilled = formData.newModuleId.trim().length > 0;
+      
+      // Determine if all required IDs are already filled
+      const systemSatisfied = !hasSystem || systemFilled;
+      const moduleSatisfied = !hasModule || moduleFilled;
+      
+      if (systemSatisfied && moduleSatisfied) {
+        // Both required IDs are already captured, show summary mode
+        setCaptureMode("summary");
+      } else if (hasSystem && !systemFilled) {
         setCaptureMode("system");
         setScannerTargetField("system");
-      } else if (hasModule && !formData.newModuleId.trim()) {
+      } else if (hasModule && !moduleFilled) {
         setCaptureMode("module");
         setScannerTargetField("module");
       }
