@@ -106,12 +106,15 @@ export default function WorkflowWizardScreen() {
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { updateWorkOrder, referenceData, claimWorkOrder, deleteLocalWorkOrder } = useWorkOrders();
+  const { updateWorkOrder, referenceData, claimWorkOrder, deleteLocalWorkOrder, workOrders } = useWorkOrders();
   const { serverUrl, projectId, user } = useAuth();
   const { isOnline, addPendingAction, addDirectSubmissionHistory } = useOffline();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
-  const workOrder = route.params.workOrder;
+  // Look up fresh work order from context to get latest persisted data
+  // Fall back to route params if not found (e.g., during initial navigation)
+  const routeWorkOrder = route.params.workOrder;
+  const workOrder = workOrders.find(wo => wo.id === routeWorkOrder.id) || routeWorkOrder;
   
   const isEditingTrouble = workOrder.status?.toLowerCase() === "trouble";
   const isEditingCompleted = workOrder.status?.toLowerCase() === "completed";
