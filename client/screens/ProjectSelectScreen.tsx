@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import { View, StyleSheet, FlatList, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, CommonActions } from "@react-navigation/native";
@@ -18,26 +18,27 @@ export default function ProjectSelectScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const { projects, selectProject, logout, user, projectId } = useAuth();
+  const [isSelecting, setIsSelecting] = useState(false);
+  const isFirstLoginRef = useRef(projectId === null);
 
   const isAlreadyInProject = projectId !== null;
 
   const handleSelectProject = async (project: Project) => {
+    if (isSelecting) return;
+    setIsSelecting(true);
+    
+    const wasFirstLogin = isFirstLoginRef.current;
     await selectProject(project.id);
-    // If this is a modal (user is switching projects while authenticated), go back
-    if (navigation.canGoBack()) {
+    
+    if (wasFirstLogin) {
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: "Main" }],
+        })
+      );
+    } else if (navigation.canGoBack()) {
       navigation.goBack();
-    } else {
-      // When shown at root level during first login, force navigation to Main
-      // This is needed because React Navigation's conditional screen rendering
-      // doesn't always properly transition on some React Native versions
-      setTimeout(() => {
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{ name: "Main" }],
-          })
-        );
-      }, 100);
     }
   };
 
