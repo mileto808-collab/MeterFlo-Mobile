@@ -465,6 +465,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const selectProject = useCallback(async (projectId: number) => {
+    console.log(`[Auth] selectProject called with projectId: ${projectId}`);
     await secureSet(STORAGE_KEYS.PROJECT_ID, String(projectId));
     
     const storedCreds = await getStoredCredentials();
@@ -472,12 +473,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await storeCredentials({ ...storedCreds, lastProjectId: projectId });
     }
     
-    setState(prev => ({
-      ...prev,
-      projectId,
-      isAuthenticated: true,
-      needsProjectSelection: false,
-    }));
+    console.log(`[Auth] selectProject: Setting isAuthenticated=true, needsProjectSelection=false`);
+    setState(prev => {
+      console.log(`[Auth] selectProject setState - prev state:`, { 
+        isAuthenticated: prev.isAuthenticated, 
+        needsProjectSelection: prev.needsProjectSelection,
+        projectId: prev.projectId 
+      });
+      const newState = {
+        ...prev,
+        projectId,
+        isAuthenticated: true,
+        needsProjectSelection: false,
+      };
+      console.log(`[Auth] selectProject setState - new state:`, { 
+        isAuthenticated: newState.isAuthenticated, 
+        needsProjectSelection: newState.needsProjectSelection,
+        projectId: newState.projectId 
+      });
+      return newState;
+    });
   }, []);
 
   const logout = useCallback(async () => {
