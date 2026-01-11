@@ -43,8 +43,7 @@
         }
       ],
       "expo-web-browser",
-      "expo-secure-store",
-      "expo-intent-launcher"
+      "expo-secure-store"
     ],
     "experiments": {
       "reactCompiler": true
