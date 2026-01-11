@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet, FlatList, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, CommonActions } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -23,15 +23,14 @@ export default function ProjectSelectScreen() {
 
   const handleSelectProject = async (project: Project) => {
     await selectProject(project.id);
-    // Dismiss the screen after selection
+    // If this is a modal (user is switching projects while authenticated), go back
     if (navigation.canGoBack()) {
       navigation.goBack();
-    } else {
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Main" }],
-      });
     }
+    // When shown at root level during first login (canGoBack is false),
+    // the auth state change in selectProject sets isAuthenticated=true,
+    // which causes the navigator to automatically re-render with Main screen.
+    // No manual navigation needed - React Navigation handles the transition.
   };
 
   const renderProject = ({ item }: { item: Project }) => {
@@ -92,11 +91,9 @@ export default function ProjectSelectScreen() {
                 if (navigation.canGoBack()) {
                   navigation.goBack();
                 } else {
-                  // If we can't go back (screen is root), reset to main tabs
-                  navigation.reset({
-                    index: 0,
-                    routes: [{ name: "Main" }],
-                  });
+                  // If we can't go back (rare: deep link), navigate to Main
+                  // Use navigate instead of reset to avoid errors if Main isn't in current stack
+                  navigation.dispatch(CommonActions.navigate({ name: "Main" }));
                 }
               }}
               style={styles.backButton}
