@@ -1814,6 +1814,26 @@ export default function NewWorkOrderWizardScreen() {
     }
   };
 
+  const getStepTitle = (): string => {
+    if (currentStep === "oldIds") {
+      if (hasOldSystem && hasOldModule) {
+        return "Capture Old System ID and Module ID";
+      } else if (hasOldModule && !hasOldSystem) {
+        return "Capture Old Module ID";
+      }
+      return "Capture Old System ID";
+    }
+    if (currentStep === "newIds") {
+      if (hasNewSystem && hasNewModule) {
+        return "Capture New System ID and Module ID";
+      } else if (hasNewModule && !hasNewSystem) {
+        return "Capture New Module ID";
+      }
+      return "Capture New System ID";
+    }
+    return STEP_TITLES[currentStep];
+  };
+
   const getStepRequiredLabel = () => {
     switch (currentStep) {
       case "physicalChange":
@@ -1868,7 +1888,7 @@ export default function NewWorkOrderWizardScreen() {
         ]}
       >
         <View style={[styles.stepCard, { backgroundColor: theme.backgroundDefault }]}>
-          <ThemedText type="h3" style={styles.stepTitle}>{STEP_TITLES[currentStep]}</ThemedText>
+          <ThemedText type="h3" style={styles.stepTitle}>{getStepTitle()}</ThemedText>
           {getStepRequiredLabel()}
           
           <View style={styles.inputContainer}>

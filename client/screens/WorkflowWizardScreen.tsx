@@ -555,9 +555,9 @@ export default function WorkflowWizardScreen() {
       case "oldReading": {
         const hasSystem = Boolean(workOrder.oldSystemId);
         const hasModule = Boolean(workOrder.oldModuleId);
-        // Simply require valid numeric values for required fields
-        const systemReadingValid = !hasSystem || isValidNumeric(formData.oldSystemReading);
-        const moduleReadingValid = !hasModule || isValidNumeric(formData.oldModuleRead);
+        // Require valid numeric values AND user must have touched/re-entered the reading (unless editing an existing completion)
+        const systemReadingValid = !hasSystem || (isValidNumeric(formData.oldSystemReading) && (oldSystemReadingTouched || isEditing));
+        const moduleReadingValid = !hasModule || (isValidNumeric(formData.oldModuleRead) && (oldModuleReadingTouched || isEditing));
         return systemReadingValid && moduleReadingValid;
       }
       case "beforePhotos":
@@ -575,9 +575,9 @@ export default function WorkflowWizardScreen() {
       case "newReading": {
         const hasNewSystem = Boolean(formData.newSystemId.trim());
         const hasNewModule = Boolean(formData.newModuleId.trim());
-        // Simply require valid numeric values for required fields
-        const newSystemValid = !hasNewSystem || isValidNumeric(formData.newSystemReading);
-        const newModuleValid = !hasNewModule || isValidNumeric(formData.newModuleRead);
+        // Require valid numeric values AND user must have touched/re-entered the reading (unless editing an existing completion)
+        const newSystemValid = !hasNewSystem || (isValidNumeric(formData.newSystemReading) && (newSystemReadingTouched || isEditing));
+        const newModuleValid = !hasNewModule || (isValidNumeric(formData.newModuleRead) && (newModuleReadingTouched || isEditing));
         return newSystemValid && newModuleValid;
       }
       case "afterPhotos":
