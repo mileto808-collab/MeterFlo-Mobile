@@ -428,6 +428,20 @@ export default function NewWorkOrderWizardScreen() {
     return match ? match[1] : displayValue;
   };
 
+  const filterNumericInput = (value: string): string => {
+    let result = "";
+    let hasDecimal = false;
+    for (const char of value) {
+      if (char >= "0" && char <= "9") {
+        result += char;
+      } else if (char === "." && !hasDecimal) {
+        result += char;
+        hasDecimal = true;
+      }
+    }
+    return result;
+  };
+
   const isValidNumeric = (value: string): boolean => {
     const trimmed = value.trim();
     if (!trimmed) return false;
@@ -1190,9 +1204,9 @@ export default function NewWorkOrderWizardScreen() {
                 </ThemedText>
                 <TextInput
                   value={formData.oldSystemReading}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, oldSystemReading: text }))}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, oldSystemReading: filterNumericInput(text) }))}
                   placeholder="Enter system reading"
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
               </View>
@@ -1205,9 +1219,9 @@ export default function NewWorkOrderWizardScreen() {
                 </ThemedText>
                 <TextInput
                   value={formData.oldModuleReading}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, oldModuleReading: text }))}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, oldModuleReading: filterNumericInput(text) }))}
                   placeholder="Enter module reading"
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
               </View>
@@ -1462,9 +1476,9 @@ export default function NewWorkOrderWizardScreen() {
                 </ThemedText>
                 <TextInput
                   value={formData.newSystemReading}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: text }))}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }))}
                   placeholder="Enter system reading (usually 0)"
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
               </View>
@@ -1477,9 +1491,9 @@ export default function NewWorkOrderWizardScreen() {
                 </ThemedText>
                 <TextInput
                   value={formData.newModuleReading}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, newModuleReading: text }))}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, newModuleReading: filterNumericInput(text) }))}
                   placeholder="Enter module reading (usually 0)"
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
               </View>

@@ -526,6 +526,20 @@ export default function WorkflowWizardScreen() {
     }
   };
 
+  const filterNumericInput = (value: string): string => {
+    let result = "";
+    let hasDecimal = false;
+    for (const char of value) {
+      if (char >= "0" && char <= "9") {
+        result += char;
+      } else if (char === "." && !hasDecimal) {
+        result += char;
+        hasDecimal = true;
+      }
+    }
+    return result;
+  };
+
   const isValidNumeric = (value: string): boolean => {
     const trimmed = value.trim();
     if (!trimmed) return false;
@@ -1110,7 +1124,7 @@ export default function WorkflowWizardScreen() {
                 <TextInput
                   value={formData.oldSystemReading}
                   onChangeText={(text) => {
-                    setFormData(prev => ({ ...prev, oldSystemReading: text }));
+                    setFormData(prev => ({ ...prev, oldSystemReading: filterNumericInput(text) }));
                     setOldSystemReadingTouched(true);
                   }}
                   onFocus={() => {
@@ -1118,7 +1132,7 @@ export default function WorkflowWizardScreen() {
                     setOldSystemReadingTouched(false);
                   }}
                   placeholder="Enter reading (e.g., 12345)"
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
                 {!oldSystemReadingTouched && formData.oldSystemReading.trim().length > 0 ? (
@@ -1137,7 +1151,7 @@ export default function WorkflowWizardScreen() {
                 <TextInput
                   value={formData.oldModuleRead}
                   onChangeText={(text) => {
-                    setFormData(prev => ({ ...prev, oldModuleRead: text }));
+                    setFormData(prev => ({ ...prev, oldModuleRead: filterNumericInput(text) }));
                     setOldModuleReadingTouched(true);
                   }}
                   onFocus={() => {
@@ -1145,7 +1159,7 @@ export default function WorkflowWizardScreen() {
                     setOldModuleReadingTouched(false);
                   }}
                   placeholder="Enter module reading"
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
                 {!oldModuleReadingTouched && formData.oldModuleRead.trim().length > 0 ? (
@@ -1559,7 +1573,7 @@ export default function WorkflowWizardScreen() {
                 <TextInput
                   value={formData.newSystemReading}
                   onChangeText={(text) => {
-                    setFormData(prev => ({ ...prev, newSystemReading: text }));
+                    setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }));
                     setNewSystemReadingTouched(true);
                   }}
                   onFocus={() => {
@@ -1567,7 +1581,7 @@ export default function WorkflowWizardScreen() {
                     setNewSystemReadingTouched(false);
                   }}
                   placeholder="Enter system reading (usually 0)"
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
                 {!newSystemReadingTouched && formData.newSystemReading.trim().length > 0 ? (
@@ -1586,7 +1600,7 @@ export default function WorkflowWizardScreen() {
                 <TextInput
                   value={formData.newModuleRead}
                   onChangeText={(text) => {
-                    setFormData(prev => ({ ...prev, newModuleRead: text }));
+                    setFormData(prev => ({ ...prev, newModuleRead: filterNumericInput(text) }));
                     setNewModuleReadingTouched(true);
                   }}
                   onFocus={() => {
@@ -1594,7 +1608,7 @@ export default function WorkflowWizardScreen() {
                     setNewModuleReadingTouched(false);
                   }}
                   placeholder="Enter module reading (usually 0)"
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
                 {!newModuleReadingTouched && formData.newModuleRead.trim().length > 0 ? (
