@@ -464,7 +464,7 @@ const STORAGE_KEYS = {
 };
 
 const defaultFilters: FilterConfig = {
-  status: [],
+  status: ["Open", "Scheduled"],
   assignedTo: "",
   searchQuery: "",
 };
