@@ -7,27 +7,24 @@ echo ""
 
 cd "$(dirname "$0")/.."
 
-echo "[1/5] Cleaning previous builds..."
+echo "[1/4] Cleaning previous builds..."
 rm -rf android/app/build
-rm -rf android/app/src/main/assets/index.android.bundle
+rm -rf dist
 
-echo "[2/5] Creating assets directory..."
+echo "[2/4] Exporting JavaScript bundle..."
+npx expo export --platform android
+
+echo "[3/4] Copying bundle to Android assets..."
 mkdir -p android/app/src/main/assets
+cp dist/bundles/android-*.js android/app/src/main/assets/index.android.bundle
+cp -r dist/assets android/app/src/main/res/
 
-echo "[3/5] Bundling JavaScript..."
-npx react-native bundle \
-  --platform android \
-  --dev false \
-  --entry-file index.js \
-  --bundle-output android/app/src/main/assets/index.android.bundle \
-  --assets-dest android/app/src/main/res
-
-echo "[4/5] Building release APK..."
+echo "[4/4] Building release APK..."
 cd android
 ./gradlew assembleRelease
 
 echo ""
-echo "[5/5] Build complete!"
+echo "Build complete!"
 echo ""
 echo "APK location:"
 echo "  android/app/build/outputs/apk/release/app-release.apk"
