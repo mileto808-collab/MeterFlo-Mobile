@@ -69,18 +69,8 @@ interface SystemChangeoutData {
   notes: string;
 }
 
-const SUCCESS_STEPS: WizardStep[] = [
-  "canChange",
-  "oldReading", 
-  "beforePhotos",
-  "physicalChange",
-  "newSystemId",
-  "newReading",
-  "afterPhotos",
-  "gps",
-  "signature",
-  "confirm",
-];
+// Dynamic step building - SUCCESS_STEPS now generated based on projectConfig
+// See getSteps() function for step filtering logic
 
 const TROUBLE_STEPS: WizardStep[] = [
   "canChange",
@@ -213,13 +203,14 @@ export default function WorkflowWizardScreen() {
     if (isReadingOnlyMode) {
       const readingSteps: WizardStep[] = ["canChange"];
       
-      if (projectConfig?.wizardGpsMode !== "disabled") {
+      // GPS step only shown if wizardShowGpsStep is true AND wizardGpsMode is "manual"
+      if (projectConfig.wizardShowGpsStep && projectConfig.wizardGpsMode === "manual") {
         readingSteps.push("gps");
       }
       
       readingSteps.push("readingCapture");
       
-      if (projectConfig?.wizardShowNotesStep !== false) {
+      if (projectConfig.wizardShowNotesStep) {
         readingSteps.push("notes");
       }
       
@@ -227,7 +218,31 @@ export default function WorkflowWizardScreen() {
       return readingSteps;
     }
     
-    return SUCCESS_STEPS;
+    // Build changeout steps dynamically based on projectConfig
+    const changeoutSteps: WizardStep[] = ["canChange", "oldReading"];
+    
+    if (projectConfig.wizardShowBeforePhotosStep) {
+      changeoutSteps.push("beforePhotos");
+    }
+    
+    changeoutSteps.push("physicalChange", "newSystemId", "newReading");
+    
+    if (projectConfig.wizardShowAfterPhotosStep) {
+      changeoutSteps.push("afterPhotos");
+    }
+    
+    // GPS step only shown if wizardShowGpsStep is true AND wizardGpsMode is "manual"
+    if (projectConfig.wizardShowGpsStep && projectConfig.wizardGpsMode === "manual") {
+      changeoutSteps.push("gps");
+    }
+    
+    if (projectConfig.wizardShowSignatureStep) {
+      changeoutSteps.push("signature");
+    }
+    
+    changeoutSteps.push("confirm");
+    
+    return changeoutSteps;
   };
   
   const steps = getSteps();
@@ -594,6 +609,27 @@ export default function WorkflowWizardScreen() {
     }
   };
 
+  const captureGpsInBackground = async () => {
+    try {
+      const permResult = await Location.requestForegroundPermissionsAsync();
+      if (!permResult.granted) {
+        console.log("[WorkflowWizard] Background GPS capture: permission denied");
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        mayShowUserSettingsDialog: false,
+      });
+
+      const coords = `${location.coords.latitude.toFixed(6)},${location.coords.longitude.toFixed(6)}`;
+      console.log(`[WorkflowWizard] Background GPS captured: ${coords}`);
+      setFormData(prev => ({ ...prev, gpsCoordinates: coords }));
+    } catch (error) {
+      console.log("[WorkflowWizard] Background GPS capture failed:", error);
+    }
+  };
+
   const filterNumericInput = (value: string): string => {
     let result = "";
     let hasDecimal = false;
@@ -682,6 +718,11 @@ export default function WorkflowWizardScreen() {
     if (currentStep === "canChange" && formData.canChange === false) {
       setCurrentStepIndex(1);
       return;
+    }
+
+    // Trigger background GPS capture when user clicks "Yes - Proceed" and wizardGpsMode is automatic
+    if (currentStep === "canChange" && formData.canChange === true && projectConfig.wizardGpsMode === "automatic") {
+      captureGpsInBackground();
     }
 
     if (isLastStep) {
