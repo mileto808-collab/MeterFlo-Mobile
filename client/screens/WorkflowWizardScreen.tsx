@@ -2144,12 +2144,12 @@ export default function WorkflowWizardScreen() {
               <Icon name="activity" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Enter the current meter reading
+              Enter the current {workOrder.oldSystemId ? "system" : "module"} reading
             </ThemedText>
             
             <View style={{ marginBottom: Spacing.lg }}>
               <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
-                Current Reading
+                {workOrder.oldSystemId ? "System" : "Module"} Reading
               </ThemedText>
               <TextInput
                 value={formData.newSystemReading}
@@ -2178,8 +2178,20 @@ export default function WorkflowWizardScreen() {
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="activity" size={20} color={theme.primary} />
-                <ThemedText type="body">Current Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
+                <ThemedText type="body">{workOrder.oldSystemId ? "System" : "Module"} Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
               </View>
+              {formData.beforePhotos.length > 0 ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="camera" size={20} color={theme.primary} />
+                  <ThemedText type="body">{formData.beforePhotos.length} Before Photo(s)</ThemedText>
+                </View>
+              ) : null}
+              {formData.afterPhotos.length > 0 ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="camera" size={20} color={theme.primary} />
+                  <ThemedText type="body">{formData.afterPhotos.length} After Photo(s)</ThemedText>
+                </View>
+              ) : null}
               {formData.gpsCoordinates ? (
                 <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                   <Icon name="map-pin" size={20} color={theme.primary} />
@@ -2190,6 +2202,12 @@ export default function WorkflowWizardScreen() {
                 <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                   <Icon name="file-text" size={20} color={theme.primary} />
                   <ThemedText type="body" numberOfLines={2}>Notes: {formData.notes}</ThemedText>
+                </View>
+              ) : null}
+              {formData.signatureData ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="edit-3" size={20} color={theme.primary} />
+                  <ThemedText type="body">Signature: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.signatureName}</ThemedText></ThemedText>
                 </View>
               ) : null}
             </View>
