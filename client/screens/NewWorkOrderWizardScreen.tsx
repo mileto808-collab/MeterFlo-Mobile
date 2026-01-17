@@ -2078,7 +2078,8 @@ export default function NewWorkOrderWizardScreen() {
                 </ThemedText>
                 <TextInput
                   value={formData.newSystemReading}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: text }))}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }))}
+                  onFocus={() => setFormData(prev => ({ ...prev, newSystemReading: "" }))}
                   placeholder="Enter system reading"
                   keyboardType="numeric"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
@@ -2093,7 +2094,8 @@ export default function NewWorkOrderWizardScreen() {
                 </ThemedText>
                 <TextInput
                   value={formData.newModuleReading}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, newModuleReading: text }))}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, newModuleReading: filterNumericInput(text) }))}
+                  onFocus={() => setFormData(prev => ({ ...prev, newModuleReading: "" }))}
                   placeholder="Enter module reading"
                   keyboardType="numeric"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
@@ -2108,7 +2110,8 @@ export default function NewWorkOrderWizardScreen() {
                 </ThemedText>
                 <TextInput
                   value={formData.newSystemReading}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: text }))}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }))}
+                  onFocus={() => setFormData(prev => ({ ...prev, newSystemReading: "" }))}
                   placeholder="Enter module reading"
                   keyboardType="numeric"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
