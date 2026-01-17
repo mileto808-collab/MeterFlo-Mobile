@@ -177,11 +177,14 @@ export default function WorkflowWizardScreen() {
   
   const [formData, setFormData] = useState<SystemChangeoutData>(() => {
     const isEditingStatus = workOrder.status?.toLowerCase() === "trouble" || workOrder.status?.toLowerCase() === "completed";
+    const isEditingCompleted = workOrder.status?.toLowerCase() === "completed";
+    const isEditingTroubleStatus = workOrder.status?.toLowerCase() === "trouble";
     
     return {
-      canChange: null,
+      // When editing a completed work order, canChange was true; when editing trouble, it was false
+      canChange: isEditingCompleted ? true : isEditingTroubleStatus ? false : null,
       troubleCode: workOrder.troubleCode || "",
-      troubleNote: hasUnsyncedDraft ? (workOrder.notes || workOrder.troubleNote || "") : "",
+      troubleNote: isEditingStatus ? (workOrder.notes || workOrder.troubleNote || "") : "",
       troublePhotos: isEditingStatus ? convertStoredPhotosToAssets(workOrder.troublePhotos) : [],
       oldSystemReading: workOrder.oldSystemReading || "",
       oldModuleRead: workOrder.oldModuleRead || "",
@@ -194,7 +197,8 @@ export default function WorkflowWizardScreen() {
       gpsCoordinates: workOrder.newGps || "",
       signatureData: workOrder.signatureData || "",
       signatureName: workOrder.signatureName || "",
-      notes: hasUnsyncedDraft ? (workOrder.notes || "") : "",
+      // Load notes when editing (not just when hasUnsyncedDraft)
+      notes: isEditingStatus ? (workOrder.notes || "") : "",
     };
   });
 
@@ -736,8 +740,12 @@ export default function WorkflowWizardScreen() {
     }
 
     // Trigger background GPS capture when user clicks "Yes - Proceed" and wizardGpsMode is automatic
+    // Skip GPS re-capture when editing if GPS is already available
     if (currentStep === "canChange" && formData.canChange === true && projectConfig.wizardGpsMode === "automatic") {
-      captureGpsInBackground();
+      const hasExistingGps = formData.gpsCoordinates && formData.gpsCoordinates.trim().length > 0;
+      if (!isEditing || !hasExistingGps) {
+        captureGpsInBackground();
+      }
     }
 
     if (isLastStep) {
