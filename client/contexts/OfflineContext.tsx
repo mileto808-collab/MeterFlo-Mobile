@@ -587,11 +587,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             // In Reading Only mode, omit old reading fields entirely - server preserves existing values
             const isReadingOnly = offlineData.isReadingOnly === true;
             
+            // Determine if this is module-only (no system) for reading field handling
+            const hasSystem = !!(newSystemId && newSystemId.trim());
+            const hasModule = !!(offlineData.newModuleId && offlineData.newModuleId.trim());
+            
             const completePayload: Record<string, any> = {
-              new_system_id: newSystemId,
-              new_system_reading: newSystemReading ?? 0,
-              new_module_id: offlineData.newModuleId || null,
-              new_module_read: offlineData.newModuleId ? (parseModuleReading(newModuleReadRaw) ?? "0") : null,
               old_gps: oldGpsValue,
               new_gps: newGpsValue,
               signature_data: offlineData.signatureData || null,
@@ -601,6 +601,24 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               before_photos: offlineData.beforePhotos || [],
               after_photos: offlineData.afterPhotos || [],
             };
+            
+            // Add Reading Only mode flags
+            if (isReadingOnly) {
+              completePayload.canChange = true;
+              completePayload.isReadingOnly = true;
+            }
+            
+            // Add system fields if system exists
+            if (hasSystem) {
+              completePayload.new_system_id = newSystemId;
+              completePayload.new_system_reading = newSystemReading ?? 0;
+            }
+            
+            // Add module fields if module exists
+            if (hasModule) {
+              completePayload.new_module_id = offlineData.newModuleId;
+              completePayload.new_module_read = parseModuleReading(newModuleReadRaw) ?? "0";
+            }
             
             // Only include old reading fields in changeout mode (not Reading Only)
             if (!isReadingOnly) {

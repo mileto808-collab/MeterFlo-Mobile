@@ -750,6 +750,28 @@ export default function NewWorkOrderWizardScreen() {
       const finalNewSystemId = isReadingOnlyMode ? formData.oldSystemId : (includeNewSystem ? formData.newSystemId : undefined);
       const finalNewModuleId = isReadingOnlyMode ? formData.oldModuleId : (includeNewModule ? formData.newModuleId : undefined);
       
+      // Determine new readings based on mode
+      // In Reading Only mode, the readingCapture step stores reading in newSystemReading field
+      // For module-only work orders, we need to use that value for newModuleReading
+      const hasSystemInReadingOnly = isReadingOnlyMode && includeOldSystem;
+      const hasModuleInReadingOnly = isReadingOnlyMode && includeOldModule;
+      const isModuleOnlyReadingOnly = hasModuleInReadingOnly && !hasSystemInReadingOnly;
+      
+      // New system reading: send in changeout mode with new system, or reading-only with system
+      const finalNewSystemReading = (hasSystemInReadingOnly || includeNewSystem) 
+        ? (parseReading(formData.newSystemReading) ?? 0) 
+        : undefined;
+      
+      // New module reading: 
+      // - Changeout mode with new module: use newModuleReading field
+      // - Reading-only with module-only: use newSystemReading field (that's where wizard captures it)
+      // - Reading-only with both system AND module: use newModuleReading field if populated
+      const finalNewModuleReading = isModuleOnlyReadingOnly
+        ? (parseReading(formData.newSystemReading) ?? 0) // Module-only uses newSystemReading field
+        : (hasModuleInReadingOnly || (!isReadingOnlyMode && includeNewModule))
+        ? (parseReading(formData.newModuleReading) ?? 0)
+        : undefined;
+      
       const offlineWorkOrderData = canChange ? {
         id: offlineWorkOrderId,
         projectId: Number(projectId),
@@ -758,9 +780,9 @@ export default function NewWorkOrderWizardScreen() {
         oldModuleId: includeOldModule ? formData.oldModuleId : undefined,
         oldModuleReading: (!isReadingOnlyMode && includeOldModule) ? (parseReading(formData.oldModuleReading) ?? 0) : undefined,
         newSystemId: finalNewSystemId,
-        newSystemReading: (isReadingOnlyMode || includeNewSystem) ? (parseReading(formData.newSystemReading) ?? 0) : undefined,
+        newSystemReading: finalNewSystemReading,
         newModuleId: finalNewModuleId,
-        newModuleReading: (!isReadingOnlyMode && includeNewModule) ? (parseReading(formData.newModuleReading) ?? 0) : undefined,
+        newModuleReading: finalNewModuleReading,
         gpsCoordinates: formData.gpsCoordinates || null,
         signatureData: formData.signatureData || null,
         signatureName: formData.signatureName,
