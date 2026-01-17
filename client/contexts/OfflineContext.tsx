@@ -591,15 +591,16 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             const hasSystem = !!(newSystemId && newSystemId.trim());
             const hasModule = !!(offlineData.newModuleId && offlineData.newModuleId.trim());
             
+            // Use camelCase field names to match mobile endpoint expectations
             const completePayload: Record<string, any> = {
-              old_gps: oldGpsValue,
-              new_gps: newGpsValue,
-              signature_data: offlineData.signatureData || null,
-              signature_name: offlineData.signatureName,
-              completed_at: offlineData.completedAt,
+              oldGps: oldGpsValue,
+              newGps: newGpsValue,
+              signatureData: offlineData.signatureData || null,
+              signatureName: offlineData.signatureName,
+              completedAt: offlineData.completedAt,
               notes: offlineData.notes || null,
-              before_photos: offlineData.beforePhotos || [],
-              after_photos: offlineData.afterPhotos || [],
+              beforePhotos: offlineData.beforePhotos || [],
+              afterPhotos: offlineData.afterPhotos || [],
             };
             
             // Add Reading Only mode flags
@@ -610,29 +611,29 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             // Add system fields if system exists
             if (hasSystem) {
-              completePayload.new_system_id = newSystemId;
-              completePayload.new_system_reading = newSystemReading ?? 0;
+              completePayload.newSystemId = newSystemId;
+              completePayload.newSystemReading = newSystemReading ?? 0;
             }
             
             // Add module fields if module exists
             if (hasModule) {
-              completePayload.new_module_id = offlineData.newModuleId;
-              completePayload.new_module_read = parseModuleReading(newModuleReadRaw) ?? "0";
+              completePayload.newModuleId = offlineData.newModuleId;
+              completePayload.newModuleReading = parseModuleReading(newModuleReadRaw) ?? "0";
             }
             
             // Only include old reading fields in changeout mode (not Reading Only)
             if (!isReadingOnly) {
-              completePayload.old_system_reading = oldSystemReading ?? 0;
-              completePayload.old_module_id = offlineData.oldModuleId || null;
-              completePayload.old_module_read = offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? "0") : null;
+              completePayload.oldSystemReading = oldSystemReading ?? 0;
+              completePayload.oldModuleId = offlineData.oldModuleId || null;
+              completePayload.oldModuleRead = offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? "0") : null;
             }
             
             // Log payload without sensitive data (photos/signature)
             const logPayload = {
               ...completePayload,
-              signature_data: completePayload.signature_data ? '[REDACTED]' : null,
-              before_photos: completePayload.before_photos?.length ? `[${completePayload.before_photos.length} photos]` : [],
-              after_photos: completePayload.after_photos?.length ? `[${completePayload.after_photos.length} photos]` : [],
+              signatureData: completePayload.signatureData ? '[REDACTED]' : null,
+              beforePhotos: completePayload.beforePhotos?.length ? `[${completePayload.beforePhotos.length} photos]` : [],
+              afterPhotos: completePayload.afterPhotos?.length ? `[${completePayload.afterPhotos.length} photos]` : [],
             };
             console.log(`[syncPendingActions] Sending complete payload for WO ${serverWorkOrderId}:`, JSON.stringify(logPayload));
             
