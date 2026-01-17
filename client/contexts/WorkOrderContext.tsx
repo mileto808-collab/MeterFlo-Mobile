@@ -50,6 +50,7 @@ export interface WorkOrder {
   beforePhotos?: { base64: string; filename: string }[];
   afterPhotos?: { base64: string; filename: string }[];
   troublePhotos?: { base64: string; filename: string }[];
+  startTime?: string;
   completedAt?: string;
   completedBy?: string;
   completedByUsername?: string;

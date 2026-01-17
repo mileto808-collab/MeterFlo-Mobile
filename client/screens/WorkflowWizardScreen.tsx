@@ -165,12 +165,6 @@ export default function WorkflowWizardScreen() {
     }
   }, [projectConfig?.wizardMode]);
   
-  useEffect(() => {
-    if ((currentStep === "confirm" || currentStep === "readingConfirm" || currentStep === "troubleConfirm") && !startTime) {
-      setStartTime(new Date().toISOString());
-    }
-  }, [currentStep, startTime]);
-  
   const handleWorkflowModeSelect = (mode: "changeout" | "reading_only") => {
     setWorkflowMode(mode);
     setShowWorkflowModeModal(false);
@@ -219,13 +213,13 @@ export default function WorkflowWizardScreen() {
     if (isReadingOnlyMode) {
       const readingSteps: WizardStep[] = ["canChange"];
       
-      if (projectConfig?.wizardGpsMode !== "skip") {
+      if (projectConfig?.wizardGpsMode !== "disabled") {
         readingSteps.push("gps");
       }
       
       readingSteps.push("readingCapture");
       
-      if (projectConfig?.showNotes !== false) {
+      if (projectConfig?.wizardShowNotesStep !== false) {
         readingSteps.push("notes");
       }
       
@@ -263,8 +257,29 @@ export default function WorkflowWizardScreen() {
         setCaptureMode("module");
         setScannerTargetField("module");
       }
+
+      // Auto-launch scanner if only one capture method is enabled
+      const enabledMethods: string[] = [];
+      if (projectConfig.searchShowBarcodeScan) enabledMethods.push("barcode");
+      if (projectConfig.searchShowQrCodeScan) enabledMethods.push("qr");
+      if (projectConfig.searchShowManualEntry || projectConfig.searchShowHidScanner) enabledMethods.push("manual");
+      
+      if (enabledMethods.length === 1 && enabledMethods[0] !== "manual" && !showScanner) {
+        // Only one camera method enabled, auto-launch it
+        const targetField = hasSystem && !systemFilled ? "system" : "module";
+        setScannerTargetField(targetField);
+        setScannerType(enabledMethods[0] as "barcode" | "qr");
+        setShowScanner(true);
+      }
     }
   }, [currentStep]);
+
+  // Track startTime when entering confirmation steps
+  useEffect(() => {
+    if ((currentStep === "confirm" || currentStep === "readingConfirm" || currentStep === "troubleConfirm") && !startTime) {
+      setStartTime(new Date().toISOString());
+    }
+  }, [currentStep, startTime]);
 
   // Reset focus state when capture mode changes or scanner opens (input may unmount without blur)
   useEffect(() => {
@@ -1607,42 +1622,56 @@ export default function WorkflowWizardScreen() {
                   </ThemedText>
                 </View>
 
-                <View style={styles.scanButtonsRow}>
-                  <Pressable
-                    style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
-                    onPress={() => openScannerFor(captureMode as "system" | "module", "barcode")}
-                  >
-                    <Icon name="maximize" size={28} color={theme.primary} />
-                    <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>Barcode</ThemedText>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
-                    onPress={() => openScannerFor(captureMode as "system" | "module", "qr")}
-                  >
-                    <Icon name="grid" size={28} color={theme.primary} />
-                    <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>QR Code</ThemedText>
-                  </Pressable>
-                </View>
+                {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan) && (
+                  <View style={styles.scanButtonsRow}>
+                    {projectConfig.searchShowBarcodeScan && (
+                      <Pressable
+                        style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                        onPress={() => openScannerFor(captureMode as "system" | "module", "barcode")}
+                      >
+                        <Icon name="maximize" size={28} color={theme.primary} />
+                        <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>Barcode</ThemedText>
+                      </Pressable>
+                    )}
+                    {projectConfig.searchShowQrCodeScan && (
+                      <Pressable
+                        style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                        onPress={() => openScannerFor(captureMode as "system" | "module", "qr")}
+                      >
+                        <Icon name="grid" size={28} color={theme.primary} />
+                        <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>QR Code</ThemedText>
+                      </Pressable>
+                    )}
+                  </View>
+                )}
 
-                <ThemedText type="body" style={{ color: theme.textSecondary, marginVertical: Spacing.lg, textAlign: "center" }}>
-                  or enter manually
-                </ThemedText>
+                {(projectConfig.searchShowManualEntry || projectConfig.searchShowHidScanner) && (
+                  <>
+                    {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan) && (
+                      <ThemedText type="body" style={{ color: theme.textSecondary, marginVertical: Spacing.lg, textAlign: "center" }}>
+                        or enter manually
+                      </ThemedText>
+                    )}
 
-                <TextInput
-                  value={isCapturingSystem ? formData.newSystemId : formData.newModuleId}
-                  onChangeText={isCapturingSystem ? handleSystemIdChange : handleModuleIdChange}
-                  onFocus={() => setIsIdInputFocused(true)}
-                  onBlur={isCapturingSystem ? handleSystemIdBlur : handleModuleIdBlur}
-                  onSubmitEditing={isCapturingSystem ? handleSystemIdSubmit : handleModuleIdSubmit}
-                  placeholder="Type or use HID scanner"
-                  autoCapitalize="characters"
-                  returnKeyType="done"
-                  blurOnSubmit={true}
-                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
-                />
-                <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm, textAlign: "center" }}>
-                  Tap field and scan with Bluetooth/USB barcode gun
-                </ThemedText>
+                    <TextInput
+                      value={isCapturingSystem ? formData.newSystemId : formData.newModuleId}
+                      onChangeText={isCapturingSystem ? handleSystemIdChange : handleModuleIdChange}
+                      onFocus={() => setIsIdInputFocused(true)}
+                      onBlur={isCapturingSystem ? handleSystemIdBlur : handleModuleIdBlur}
+                      onSubmitEditing={isCapturingSystem ? handleSystemIdSubmit : handleModuleIdSubmit}
+                      placeholder="Type or use HID scanner"
+                      autoCapitalize="characters"
+                      returnKeyType="done"
+                      blurOnSubmit={true}
+                      style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                    />
+                    {projectConfig.searchShowHidScanner && (
+                      <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm, textAlign: "center" }}>
+                        Tap field and scan with Bluetooth/USB barcode gun
+                      </ThemedText>
+                    )}
+                  </>
+                )}
               </View>
             ) : null}
           </View>
