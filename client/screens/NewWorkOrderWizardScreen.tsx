@@ -318,10 +318,12 @@ export default function NewWorkOrderWizardScreen() {
     setShowWorkflowModeModal(false);
   };
   
-  // Derive whether module is needed based on captureType (only for changeout mode)
-  const hasOldModule = !isReadingOnlyMode && (captureType === "module" || captureType === "both");
+  // Derive whether module/system is needed based on captureType
+  // In reading-only mode, we still need to track equipment type for readings (old = existing equipment)
+  // In changeout mode, we track both old (existing) and new (replacement) equipment
+  const hasOldModule = captureType === "module" || captureType === "both";
   const hasNewModule = !isReadingOnlyMode && (captureType === "module" || captureType === "both");
-  const hasOldSystem = isReadingOnlyMode || captureType === "system" || captureType === "both";
+  const hasOldSystem = captureType === "system" || captureType === "both";
   const hasNewSystem = !isReadingOnlyMode && (captureType === "system" || captureType === "both");
   
   // Get trouble codes from reference data
