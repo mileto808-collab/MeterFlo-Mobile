@@ -22,6 +22,7 @@ import { SelectInput } from "@/components/SelectInput";
 import { SignaturePad } from "@/components/SignaturePad";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { WorkflowModeModal } from "@/components/WorkflowModeModal";
+import { HIDScannerModal } from "@/components/HIDScannerModal";
 import { Spacing, BorderRadius } from "@/constants/theme";
 import { checkWorkOrderConflict } from "@/lib/conflict-check";
 
@@ -135,6 +136,8 @@ export default function WorkflowWizardScreen() {
   const [isIdInputFocused, setIsIdInputFocused] = useState(false);
   const [workflowMode, setWorkflowMode] = useState<"changeout" | "reading_only" | null>(null);
   const [showWorkflowModeModal, setShowWorkflowModeModal] = useState(false);
+  const [showHidScannerModal, setShowHidScannerModal] = useState(false);
+  const [hidScannerLaunchedForStep, setHidScannerLaunchedForStep] = useState(false);
   
   const isReadingOnlyMode = workflowMode === "reading_only";
   
@@ -296,17 +299,29 @@ export default function WorkflowWizardScreen() {
       const enabledMethods: string[] = [];
       if (projectConfig.searchShowBarcodeScan) enabledMethods.push("barcode");
       if (projectConfig.searchShowQrCodeScan) enabledMethods.push("qr");
-      if (projectConfig.searchShowManualEntry || projectConfig.searchShowHidScanner) enabledMethods.push("manual");
+      if (projectConfig.searchShowManualEntry) enabledMethods.push("manual");
+      if (projectConfig.searchShowHidScanner) enabledMethods.push("hid");
       
-      if (enabledMethods.length === 1 && enabledMethods[0] !== "manual" && !showScanner) {
-        // Only one camera method enabled, auto-launch it
-        const targetField = hasSystem && !systemFilled ? "system" : "module";
-        setScannerTargetField(targetField);
-        setScannerType(enabledMethods[0] as "barcode" | "qr");
-        setShowScanner(true);
+      // Only auto-launch if we need to capture something (not in summary mode)
+      const needsCapture = (hasSystem && !systemFilled) || (hasModule && !moduleFilled);
+      
+      if (needsCapture && enabledMethods.length === 1 && !hidScannerLaunchedForStep) {
+        if (enabledMethods[0] === "barcode" || enabledMethods[0] === "qr") {
+          // Only one camera method enabled, auto-launch it
+          if (!showScanner) {
+            const targetField = hasSystem && !systemFilled ? "system" : "module";
+            setScannerTargetField(targetField);
+            setScannerType(enabledMethods[0] as "barcode" | "qr");
+            setShowScanner(true);
+          }
+        } else if (enabledMethods[0] === "hid") {
+          // Only HID enabled, auto-launch HID modal
+          setShowHidScannerModal(true);
+          setHidScannerLaunchedForStep(true);
+        }
       }
     }
-  }, [currentStep]);
+  }, [currentStep, hidScannerLaunchedForStep]);
 
   // Track startTime when entering confirmation steps
   useEffect(() => {
@@ -579,6 +594,36 @@ export default function WorkflowWizardScreen() {
   const handleCancelScanner = () => {
     setShowScanner(false);
     setDetectedBarcode(null);
+  };
+  
+  const handleHidScanResult = (scannedValue: string) => {
+    const hasSystem = Boolean(workOrder.oldSystemId);
+    const hasModule = Boolean(workOrder.oldModuleId);
+    const systemFilled = formData.newSystemId.trim().length > 0;
+    
+    if (captureMode === "module" || (systemFilled && hasModule)) {
+      // Capturing module ID
+      setFormData(prev => ({ ...prev, newModuleId: scannedValue }));
+      setCaptureMode("summary");
+    } else if (captureMode === "system" || hasSystem) {
+      // Capturing system ID
+      setFormData(prev => ({ ...prev, newSystemId: scannedValue }));
+      if (hasModule) {
+        // Move to module capture
+        setCaptureMode("module");
+        setScannerTargetField("module");
+        // Auto-launch HID again for module if HID is the only option
+        if (projectConfig.searchShowHidScanner && 
+            !projectConfig.searchShowBarcodeScan && 
+            !projectConfig.searchShowQrCodeScan && 
+            !projectConfig.searchShowManualEntry) {
+          setTimeout(() => setShowHidScannerModal(true), 300);
+        }
+      } else {
+        setCaptureMode("summary");
+      }
+    }
+    setIsIdInputFocused(false);
   };
 
   const captureGps = async () => {
@@ -1763,7 +1808,7 @@ export default function WorkflowWizardScreen() {
                   </ThemedText>
                 </View>
 
-                {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan) && (
+                {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan || projectConfig.searchShowHidScanner) && (
                   <View style={styles.scanButtonsRow}>
                     {projectConfig.searchShowBarcodeScan && (
                       <Pressable
@@ -1783,12 +1828,21 @@ export default function WorkflowWizardScreen() {
                         <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>QR Code</ThemedText>
                       </Pressable>
                     )}
+                    {projectConfig.searchShowHidScanner && (
+                      <Pressable
+                        style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                        onPress={() => setShowHidScannerModal(true)}
+                      >
+                        <Icon name="bluetooth" size={28} color={theme.primary} />
+                        <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>HID Scanner</ThemedText>
+                      </Pressable>
+                    )}
                   </View>
                 )}
 
-                {(projectConfig.searchShowManualEntry || projectConfig.searchShowHidScanner) && (
+                {projectConfig.searchShowManualEntry && (
                   <>
-                    {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan) && (
+                    {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan || projectConfig.searchShowHidScanner) && (
                       <ThemedText type="body" style={{ color: theme.textSecondary, marginVertical: Spacing.lg, textAlign: "center" }}>
                         or enter manually
                       </ThemedText>
@@ -1800,17 +1854,12 @@ export default function WorkflowWizardScreen() {
                       onFocus={() => setIsIdInputFocused(true)}
                       onBlur={isCapturingSystem ? handleSystemIdBlur : handleModuleIdBlur}
                       onSubmitEditing={isCapturingSystem ? handleSystemIdSubmit : handleModuleIdSubmit}
-                      placeholder="Type or use HID scanner"
+                      placeholder="Type ID manually"
                       autoCapitalize="characters"
                       returnKeyType="done"
                       blurOnSubmit={true}
                       style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                     />
-                    {projectConfig.searchShowHidScanner && (
-                      <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm, textAlign: "center" }}>
-                        Tap field and scan with Bluetooth/USB barcode gun
-                      </ThemedText>
-                    )}
                   </>
                 )}
               </View>
@@ -2539,6 +2588,15 @@ export default function WorkflowWizardScreen() {
           navigation.goBack();
         }}
         onSelectMode={handleWorkflowModeSelect}
+      />
+
+      <HIDScannerModal
+        visible={showHidScannerModal}
+        onClose={() => setShowHidScannerModal(false)}
+        onScan={handleHidScanResult}
+        submitButtonText="Use This ID"
+        instructionsText={`Point your external barcode scanner at the ${captureMode === "module" ? "module" : "system"} barcode. The scanned value will be used automatically.`}
+        autoSubmitOnScan={true}
       />
     </View>
   );

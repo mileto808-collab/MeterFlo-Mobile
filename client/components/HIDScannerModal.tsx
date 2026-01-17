@@ -10,9 +10,22 @@ interface HIDScannerModalProps {
   visible: boolean;
   onClose: () => void;
   onScan: (value: string) => void;
+  /** Button text for the submit button. Defaults to "Find Work Order" */
+  submitButtonText?: string;
+  /** Instructions text. Defaults to standard search instructions */
+  instructionsText?: string;
+  /** Auto-close and submit immediately on scan (no manual submit needed). Default false */
+  autoSubmitOnScan?: boolean;
 }
 
-export function HIDScannerModal({ visible, onClose, onScan }: HIDScannerModalProps) {
+export function HIDScannerModal({ 
+  visible, 
+  onClose, 
+  onScan, 
+  submitButtonText = "Find Work Order",
+  instructionsText = "Point your external barcode scanner at a system or module barcode. The scanned value will appear below.",
+  autoSubmitOnScan = false,
+}: HIDScannerModalProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
@@ -106,7 +119,7 @@ export function HIDScannerModal({ visible, onClose, onScan }: HIDScannerModalPro
           </View>
 
           <ThemedText type="body" style={[styles.instructions, { color: theme.textSecondary }]}>
-            Point your external barcode scanner at a system or module barcode. The scanned value will appear below.
+            {instructionsText}
           </ThemedText>
 
           <View style={[styles.inputContainer, { backgroundColor: theme.backgroundSecondary }]}>
@@ -159,7 +172,7 @@ export function HIDScannerModal({ visible, onClose, onScan }: HIDScannerModalPro
               ]}
             >
               <ThemedText style={{ color: value.length > 0 ? "#FFFFFF" : theme.textSecondary }}>
-                Find Work Order
+                {submitButtonText}
               </ThemedText>
             </Pressable>
           </View>
