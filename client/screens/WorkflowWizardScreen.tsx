@@ -756,6 +756,11 @@ export default function WorkflowWizardScreen() {
     const canChange = formData.canChange === true;
     const completedAt = new Date().toISOString();
     
+    // Determine if this is a Reading Only completion (not trouble)
+    const isReadingOnlyCompletion = isReadingOnlyMode && canChange;
+    
+    console.log(`[WorkflowWizard] Submit: workflowMode=${workflowMode}, isReadingOnlyMode=${isReadingOnlyMode}, canChange=${canChange}, isReadingOnlyCompletion=${isReadingOnlyCompletion}`);
+    
     const parseReading = (value: string): number | null => {
       if (!value.trim()) return null;
       const parsed = parseFloat(value);
@@ -846,7 +851,7 @@ export default function WorkflowWizardScreen() {
         }
       }
 
-      const patchPayload = isReadingOnlyMode ? {
+      const patchPayload = isReadingOnlyCompletion ? {
         status: "Completed",
         new_system_reading: workOrder.oldSystemId ? (parseReading(formData.newSystemReading) ?? 0) : null,
         new_system_id: workOrder.oldSystemId || null,
@@ -897,7 +902,7 @@ export default function WorkflowWizardScreen() {
       };
 
       if (isOnline && serverUrl && projectId) {
-        const endpoint = isReadingOnlyMode
+        const endpoint = isReadingOnlyCompletion
           ? `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}/system-changeout`
           : canChange 
             ? `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${workOrder.id}/complete`
@@ -916,7 +921,7 @@ export default function WorkflowWizardScreen() {
         const changeoutScope = workOrder.oldSystemId && workOrder.oldModuleId ? "both" 
           : workOrder.oldModuleId ? "module" : "system";
         
-        const mobilePayload = isReadingOnlyMode ? {
+        const mobilePayload = isReadingOnlyCompletion ? {
           canChange: true,
           isReadingOnly: true,
           changeoutScope,
@@ -1013,7 +1018,18 @@ export default function WorkflowWizardScreen() {
           completedBy: user?.id,
           completedByUsername: user?.displayName || user?.username,
           syncPending: false,
-          ...(canChange ? {
+          ...(isReadingOnlyCompletion ? {
+            newSystemId: workOrder.oldSystemId,
+            newSystemReading: formData.newSystemReading,
+            newModuleId: workOrder.oldModuleId,
+            newModuleRead: formData.newSystemReading,
+            newGps: formData.gpsCoordinates,
+            signatureData: formData.signatureData,
+            signatureName: formData.signatureName,
+            notes: formData.notes,
+            beforePhotos: onlineFormatPhotos(beforePhotosBase64, 'before'),
+            afterPhotos: onlineFormatPhotos(afterPhotosBase64, 'after'),
+          } : canChange ? {
             newSystemId: formData.newSystemId,
             newSystemReading: formData.newSystemReading,
             newModuleId: formData.newModuleId,
@@ -1044,7 +1060,7 @@ export default function WorkflowWizardScreen() {
         const offlineChangeoutScope = workOrder.oldSystemId && workOrder.oldModuleId ? "both" 
           : workOrder.oldModuleId ? "module" : "system";
         
-        const offlineMobilePayload = isReadingOnlyMode ? {
+        const offlineMobilePayload = isReadingOnlyCompletion ? {
           canChange: true,
           isReadingOnly: true,
           changeoutScope: offlineChangeoutScope,
@@ -1092,7 +1108,7 @@ export default function WorkflowWizardScreen() {
           workOrderTitle: workOrder.serviceAddress,
           data: offlineMobilePayload,
           photoCount: offlinePhotoCount,
-          completionMode: isReadingOnlyMode ? "readingOnly" : canChange ? "complete" : "trouble",
+          completionMode: isReadingOnlyCompletion ? "readingOnly" : canChange ? "complete" : "trouble",
         });
         
         updateWorkOrder(workOrder.id, {
@@ -1104,7 +1120,18 @@ export default function WorkflowWizardScreen() {
           completedAt: completedAt,
           completedBy: user?.id,
           completedByUsername: user?.displayName || user?.username,
-          ...(canChange ? {
+          ...(isReadingOnlyCompletion ? {
+            newSystemId: workOrder.oldSystemId,
+            newSystemReading: formData.newSystemReading,
+            newModuleId: workOrder.oldModuleId,
+            newModuleRead: formData.newSystemReading,
+            newGps: formData.gpsCoordinates,
+            signatureData: formData.signatureData,
+            signatureName: formData.signatureName,
+            notes: formData.notes,
+            beforePhotos: formatPhotosForOffline(beforePhotosBase64, 'before'),
+            afterPhotos: formatPhotosForOffline(afterPhotosBase64, 'after'),
+          } : canChange ? {
             newSystemId: formData.newSystemId,
             newSystemReading: formData.newSystemReading,
             newModuleId: formData.newModuleId,
