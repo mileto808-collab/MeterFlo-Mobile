@@ -848,11 +848,11 @@ export default function WorkflowWizardScreen() {
 
       const patchPayload = isReadingOnlyMode ? {
         status: "Completed",
-        old_system_reading: null,
+        old_system_reading: workOrder.oldSystemId ? 0 : null,
         new_system_reading: workOrder.oldSystemId ? (parseReading(formData.newSystemReading) ?? 0) : null,
         new_system_id: workOrder.oldSystemId || null,
         old_module_id: workOrder.oldModuleId || null,
-        old_module_read: null,
+        old_module_read: workOrder.oldModuleId ? 0 : null,
         new_module_id: workOrder.oldModuleId || null,
         new_module_read: workOrder.oldModuleId ? (parseReading(formData.newSystemReading) ?? 0) : null,
         new_gps: formData.gpsCoordinates || null,
@@ -916,9 +916,9 @@ export default function WorkflowWizardScreen() {
         
         const mobilePayload = isReadingOnlyMode ? {
           projectId: Number(projectId),
-          oldSystemReading: null,
+          oldSystemReading: workOrder.oldSystemId ? 0 : null,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: null,
+          oldModuleReading: workOrder.oldModuleId ? 0 : null,
           newSystemId: workOrder.oldSystemId || null,
           newSystemReading: workOrder.oldSystemId ? (parseReading(formData.newSystemReading) ?? 0) : null,
           newModuleId: workOrder.oldModuleId || null,
@@ -1044,9 +1044,9 @@ export default function WorkflowWizardScreen() {
         
         const offlineMobilePayload = isReadingOnlyMode ? {
           projectId: Number(projectId),
-          oldSystemReading: null,
+          oldSystemReading: workOrder.oldSystemId ? 0 : null,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: null,
+          oldModuleReading: workOrder.oldModuleId ? 0 : null,
           newSystemId: workOrder.oldSystemId || null,
           newSystemReading: workOrder.oldSystemId ? (parseReading(formData.newSystemReading) ?? 0) : null,
           newModuleId: workOrder.oldModuleId || null,
