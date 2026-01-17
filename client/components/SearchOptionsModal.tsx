@@ -12,6 +12,12 @@ interface SearchOptionsModalProps {
   visible: boolean;
   onClose: () => void;
   onSelectOption: (option: SearchOption) => void;
+  allowedOptions?: {
+    barcode?: boolean;
+    qrcode?: boolean;
+    hid?: boolean;
+    manual?: boolean;
+  };
 }
 
 interface OptionButtonProps {
@@ -46,9 +52,14 @@ function OptionButton({ icon, title, description, onPress }: OptionButtonProps) 
   );
 }
 
-export function SearchOptionsModal({ visible, onClose, onSelectOption }: SearchOptionsModalProps) {
+export function SearchOptionsModal({ visible, onClose, onSelectOption, allowedOptions }: SearchOptionsModalProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+
+  const showBarcode = allowedOptions?.barcode ?? true;
+  const showQrcode = allowedOptions?.qrcode ?? true;
+  const showHid = allowedOptions?.hid ?? false;
+  const showManual = allowedOptions?.manual ?? true;
 
   const handleSelect = (option: SearchOption) => {
     onClose();
@@ -81,30 +92,38 @@ export function SearchOptionsModal({ visible, onClose, onSelectOption }: SearchO
           </ThemedText>
 
           <View style={styles.options}>
-            <OptionButton
-              icon="maximize"
-              title="Scan Barcode"
-              description="Use camera to scan meter barcode"
-              onPress={() => handleSelect("barcode")}
-            />
-            <OptionButton
-              icon="grid"
-              title="Scan QR Code"
-              description="Use camera to scan QR code"
-              onPress={() => handleSelect("qrcode")}
-            />
-            <OptionButton
-              icon="bluetooth"
-              title="HID Scanner Input"
-              description="Use external barcode scanner"
-              onPress={() => handleSelect("hid")}
-            />
-            <OptionButton
-              icon="search"
-              title="Manual Search"
-              description="Type to search work orders"
-              onPress={() => handleSelect("manual")}
-            />
+            {showBarcode && (
+              <OptionButton
+                icon="maximize"
+                title="Scan Barcode"
+                description="Use camera to scan meter barcode"
+                onPress={() => handleSelect("barcode")}
+              />
+            )}
+            {showQrcode && (
+              <OptionButton
+                icon="grid"
+                title="Scan QR Code"
+                description="Use camera to scan QR code"
+                onPress={() => handleSelect("qrcode")}
+              />
+            )}
+            {showHid && (
+              <OptionButton
+                icon="bluetooth"
+                title="HID Scanner Input"
+                description="Use external barcode scanner"
+                onPress={() => handleSelect("hid")}
+              />
+            )}
+            {showManual && (
+              <OptionButton
+                icon="search"
+                title="Manual Search"
+                description="Type to search work orders"
+                onPress={() => handleSelect("manual")}
+              />
+            )}
           </View>
 
           <Pressable

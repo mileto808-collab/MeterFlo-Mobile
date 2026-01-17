@@ -41,7 +41,7 @@ export default function WorkOrdersScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { filters, setFilters, getFilteredWorkOrders, workOrders, isLoading, refreshWorkOrders, error, searchWorkOrdersByMeterIdOnServer } = useWorkOrders();
+  const { filters, setFilters, getFilteredWorkOrders, workOrders, isLoading, refreshWorkOrders, error, searchWorkOrdersByMeterIdOnServer, projectConfig } = useWorkOrders();
   const { isOnline } = useOffline();
   const { projectId, projects } = useAuth();
 
@@ -265,6 +265,22 @@ export default function WorkOrdersScreen() {
     }
   }, [navigation]);
 
+  const handleSearchPress = useCallback(() => {
+    const enabledOptions: SearchOption[] = [];
+    if (projectConfig.searchShowBarcodeScan) enabledOptions.push("barcode");
+    if (projectConfig.searchShowQrCodeScan) enabledOptions.push("qrcode");
+    if (projectConfig.searchShowHidScanner) enabledOptions.push("hid");
+    if (projectConfig.searchShowManualEntry) enabledOptions.push("manual");
+
+    if (enabledOptions.length === 1) {
+      handleSearchOptionSelect(enabledOptions[0]);
+    } else if (enabledOptions.length > 1) {
+      setShowSearchOptions(true);
+    } else {
+      setShowSearchOptions(true);
+    }
+  }, [projectConfig, handleSearchOptionSelect]);
+
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filters.status.length > 0) count++;
@@ -332,7 +348,7 @@ export default function WorkOrdersScreen() {
           value={filters.searchQuery}
           onChangeText={handleSearchChange}
           placeholder="Scan Asset ID..."
-          onSearchPress={() => setShowSearchOptions(true)}
+          onSearchPress={handleSearchPress}
         />
         <View style={styles.actionButtons}>
           <Pressable
@@ -394,6 +410,12 @@ export default function WorkOrdersScreen() {
         visible={showSearchOptions}
         onClose={() => setShowSearchOptions(false)}
         onSelectOption={handleSearchOptionSelect}
+        allowedOptions={{
+          barcode: projectConfig.searchShowBarcodeScan,
+          qrcode: projectConfig.searchShowQrCodeScan,
+          hid: projectConfig.searchShowHidScanner,
+          manual: projectConfig.searchShowManualEntry,
+        }}
       />
 
       <HIDScannerModal
