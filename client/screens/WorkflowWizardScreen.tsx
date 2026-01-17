@@ -923,16 +923,26 @@ export default function WorkflowWizardScreen() {
         const changeoutScope = workOrder.oldSystemId && workOrder.oldModuleId ? "both" 
           : workOrder.oldModuleId ? "module" : "system";
         
+        // For Reading Only: determine which equipment exists and map readings correctly
+        // - System only: newSystemId/Type/Reading from old, newModule* = null
+        // - Module only: newModuleId/Type/Reading from old, newSystem* = null
+        // - Both: both sets of data
+        const hasSystem = Boolean(workOrder.oldSystemId);
+        const hasModule = Boolean(workOrder.oldModuleId);
+        
         const mobilePayload = isReadingOnlyCompletion ? {
           canChange: true,
           isReadingOnly: true,
           changeoutScope,
-          newSystemId: workOrder.oldSystemId || null,
-          newSystemType: workOrder.oldSystemType || null,
-          newSystemReading: workOrder.oldSystemId ? (parseReading(formData.newSystemReading) ?? 0) : null,
-          newModuleId: workOrder.oldModuleId || null,
-          newModuleType: workOrder.oldModuleType || null,
-          newModuleReading: workOrder.oldModuleId ? (parseReading(formData.newSystemReading) ?? 0) : null,
+          // System fields - only populate if system exists
+          newSystemId: hasSystem ? workOrder.oldSystemId : null,
+          newSystemType: hasSystem ? (workOrder.oldSystemType || null) : null,
+          newSystemReading: hasSystem ? (parseReading(formData.newSystemReading) ?? 0) : null,
+          // Module fields - only populate if module exists
+          newModuleId: hasModule ? workOrder.oldModuleId : null,
+          newModuleType: hasModule ? (workOrder.oldModuleType || null) : null,
+          // For module reading: use newModuleRead if both exist, otherwise use newSystemReading (the single reading field)
+          newModuleReading: hasModule ? (parseReading(hasSystem ? formData.newModuleRead : formData.newSystemReading) ?? 0) : null,
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName || null,
@@ -1025,10 +1035,13 @@ export default function WorkflowWizardScreen() {
           completedByUsername: user?.displayName || user?.username,
           syncPending: false,
           ...(isReadingOnlyCompletion ? {
-            newSystemId: workOrder.oldSystemId,
-            newSystemReading: formData.newSystemReading,
-            newModuleId: workOrder.oldModuleId,
-            newModuleRead: formData.newSystemReading,
+            // Only populate system fields if system exists
+            newSystemId: hasSystem ? workOrder.oldSystemId : undefined,
+            newSystemReading: hasSystem ? formData.newSystemReading : undefined,
+            // Only populate module fields if module exists
+            newModuleId: hasModule ? workOrder.oldModuleId : undefined,
+            // For module reading: use newModuleRead if both exist, otherwise use newSystemReading
+            newModuleRead: hasModule ? (hasSystem ? formData.newModuleRead : formData.newSystemReading) : undefined,
             newGps: formData.gpsCoordinates,
             signatureData: formData.signatureData,
             signatureName: formData.signatureName,
@@ -1066,16 +1079,23 @@ export default function WorkflowWizardScreen() {
         const offlineChangeoutScope = workOrder.oldSystemId && workOrder.oldModuleId ? "both" 
           : workOrder.oldModuleId ? "module" : "system";
         
+        // For Reading Only: determine which equipment exists and map readings correctly
+        const offlineHasSystem = Boolean(workOrder.oldSystemId);
+        const offlineHasModule = Boolean(workOrder.oldModuleId);
+        
         const offlineMobilePayload = isReadingOnlyCompletion ? {
           canChange: true,
           isReadingOnly: true,
           changeoutScope: offlineChangeoutScope,
-          newSystemId: workOrder.oldSystemId || null,
-          newSystemType: workOrder.oldSystemType || null,
-          newSystemReading: workOrder.oldSystemId ? (parseReading(formData.newSystemReading) ?? 0) : null,
-          newModuleId: workOrder.oldModuleId || null,
-          newModuleType: workOrder.oldModuleType || null,
-          newModuleReading: workOrder.oldModuleId ? (parseReading(formData.newSystemReading) ?? 0) : null,
+          // System fields - only populate if system exists
+          newSystemId: offlineHasSystem ? workOrder.oldSystemId : null,
+          newSystemType: offlineHasSystem ? (workOrder.oldSystemType || null) : null,
+          newSystemReading: offlineHasSystem ? (parseReading(formData.newSystemReading) ?? 0) : null,
+          // Module fields - only populate if module exists
+          newModuleId: offlineHasModule ? workOrder.oldModuleId : null,
+          newModuleType: offlineHasModule ? (workOrder.oldModuleType || null) : null,
+          // For module reading: use newModuleRead if both exist, otherwise use newSystemReading (the single reading field)
+          newModuleReading: offlineHasModule ? (parseReading(offlineHasSystem ? formData.newModuleRead : formData.newSystemReading) ?? 0) : null,
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName || null,
@@ -1131,10 +1151,13 @@ export default function WorkflowWizardScreen() {
           completedBy: user?.id,
           completedByUsername: user?.displayName || user?.username,
           ...(isReadingOnlyCompletion ? {
-            newSystemId: workOrder.oldSystemId,
-            newSystemReading: formData.newSystemReading,
-            newModuleId: workOrder.oldModuleId,
-            newModuleRead: formData.newSystemReading,
+            // Only populate system fields if system exists
+            newSystemId: offlineHasSystem ? workOrder.oldSystemId : undefined,
+            newSystemReading: offlineHasSystem ? formData.newSystemReading : undefined,
+            // Only populate module fields if module exists
+            newModuleId: offlineHasModule ? workOrder.oldModuleId : undefined,
+            // For module reading: use newModuleRead if both exist, otherwise use newSystemReading
+            newModuleRead: offlineHasModule ? (offlineHasSystem ? formData.newModuleRead : formData.newSystemReading) : undefined,
             newGps: formData.gpsCoordinates,
             signatureData: formData.signatureData,
             signatureName: formData.signatureName,
