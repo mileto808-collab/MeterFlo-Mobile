@@ -2176,6 +2176,12 @@ export default function WorkflowWizardScreen() {
                 <Icon name="database" size={20} color={theme.primary} />
                 <ThemedText type="body">{workOrder.oldSystemId ? "System ID" : "Module ID"}: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemId || workOrder.oldModuleId}</ThemedText></ThemedText>
               </View>
+              {(workOrder.oldSystemId && workOrder.oldSystemType) || (workOrder.oldModuleId && workOrder.oldModuleType) ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="box" size={20} color={theme.primary} />
+                  <ThemedText type="body">{workOrder.oldSystemId ? "System Type" : "Module Type"}: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemType || workOrder.oldModuleType}</ThemedText></ThemedText>
+                </View>
+              ) : null}
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="activity" size={20} color={theme.primary} />
                 <ThemedText type="body">{workOrder.oldSystemId ? "System" : "Module"} Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
