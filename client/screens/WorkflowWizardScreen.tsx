@@ -1037,9 +1037,11 @@ export default function WorkflowWizardScreen() {
           ...(isReadingOnlyCompletion ? {
             // Only populate system fields if system exists
             newSystemId: hasSystem ? workOrder.oldSystemId : undefined,
+            newSystemType: hasSystem ? workOrder.oldSystemType : undefined,
             newSystemReading: hasSystem ? formData.newSystemReading : undefined,
             // Only populate module fields if module exists
             newModuleId: hasModule ? workOrder.oldModuleId : undefined,
+            newModuleType: hasModule ? workOrder.oldModuleType : undefined,
             // For module reading: use newModuleRead if both exist, otherwise use newSystemReading
             newModuleRead: hasModule ? (hasSystem ? formData.newModuleRead : formData.newSystemReading) : undefined,
             newGps: formData.gpsCoordinates,
@@ -1153,9 +1155,11 @@ export default function WorkflowWizardScreen() {
           ...(isReadingOnlyCompletion ? {
             // Only populate system fields if system exists
             newSystemId: offlineHasSystem ? workOrder.oldSystemId : undefined,
+            newSystemType: offlineHasSystem ? workOrder.oldSystemType : undefined,
             newSystemReading: offlineHasSystem ? formData.newSystemReading : undefined,
             // Only populate module fields if module exists
             newModuleId: offlineHasModule ? workOrder.oldModuleId : undefined,
+            newModuleType: offlineHasModule ? workOrder.oldModuleType : undefined,
             // For module reading: use newModuleRead if both exist, otherwise use newSystemReading
             newModuleRead: offlineHasModule ? (offlineHasSystem ? formData.newModuleRead : formData.newSystemReading) : undefined,
             newGps: formData.gpsCoordinates,
