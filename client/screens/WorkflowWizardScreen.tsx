@@ -146,11 +146,14 @@ export default function WorkflowWizardScreen() {
   
   useEffect(() => {
     const serverWizardMode = projectConfig?.wizardMode || "changeout";
+    console.log(`[WorkflowWizard] Setting workflowMode from projectConfig.wizardMode="${projectConfig?.wizardMode}", serverWizardMode="${serverWizardMode}"`);
     if (serverWizardMode === "user_choice") {
       setShowWorkflowModeModal(true);
     } else if (serverWizardMode === "reading_only") {
+      console.log(`[WorkflowWizard] Setting workflowMode to "reading_only"`);
       setWorkflowMode("reading_only");
     } else {
+      console.log(`[WorkflowWizard] Setting workflowMode to "changeout"`);
       setWorkflowMode("changeout");
     }
   }, [projectConfig?.wizardMode]);
@@ -759,7 +762,7 @@ export default function WorkflowWizardScreen() {
     // Determine if this is a Reading Only completion (not trouble)
     const isReadingOnlyCompletion = isReadingOnlyMode && canChange;
     
-    console.log(`[WorkflowWizard] Submit: workflowMode=${workflowMode}, isReadingOnlyMode=${isReadingOnlyMode}, canChange=${canChange}, isReadingOnlyCompletion=${isReadingOnlyCompletion}`);
+    console.log(`[WorkflowWizard] Submit: projectConfig.wizardMode="${projectConfig?.wizardMode}", workflowMode="${workflowMode}", isReadingOnlyMode=${isReadingOnlyMode}, canChange=${canChange}, isReadingOnlyCompletion=${isReadingOnlyCompletion}`);
     
     const parseReading = (value: string): number | null => {
       if (!value.trim()) return null;
