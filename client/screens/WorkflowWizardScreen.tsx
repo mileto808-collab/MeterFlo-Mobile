@@ -2178,7 +2178,7 @@ export default function WorkflowWizardScreen() {
               </View>
               {(workOrder.oldSystemId && workOrder.oldSystemType) || (workOrder.oldModuleId && workOrder.oldModuleType) ? (
                 <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                  <Icon name="box" size={20} color={theme.primary} />
+                  <Icon name="grid" size={20} color={theme.primary} />
                   <ThemedText type="body">{workOrder.oldSystemId ? "System Type" : "Module Type"}: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemType || workOrder.oldModuleType}</ThemedText></ThemedText>
                 </View>
               ) : null}
