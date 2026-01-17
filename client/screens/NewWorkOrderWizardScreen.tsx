@@ -11,7 +11,7 @@ import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-ca
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useTheme } from "@/hooks/useTheme";
-import { useWorkOrders } from "@/contexts/WorkOrderContext";
+import { useWorkOrders, WizardMode } from "@/contexts/WorkOrderContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOffline } from "@/contexts/OfflineContext";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
@@ -21,11 +21,13 @@ import { Button } from "@/components/Button";
 import { SelectInput } from "@/components/SelectInput";
 import { SignaturePad } from "@/components/SignaturePad";
 import { PhotoViewer } from "@/components/PhotoViewer";
+import { WorkflowModeModal, WorkflowModeChoice } from "@/components/WorkflowModeModal";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 type WizardStep = 
+  | "workflowMode"
   | "captureType"
   | "oldIds"
   | "canChange"
@@ -40,7 +42,11 @@ type WizardStep =
   | "signature"
   | "confirm"
   | "troubleCapture"
-  | "troubleConfirm";
+  | "troubleConfirm"
+  | "readingCapture"
+  | "readingConfirm";
+
+type SelectedWorkflowMode = "changeout" | "reading_only";
 
 type CaptureType = "system" | "module" | "both";
 
@@ -70,24 +76,66 @@ interface NewWorkOrderData {
   notes: string;
 }
 
-const getSuccessSteps = (captureType: CaptureType): WizardStep[] => {
-  return [
+const getChangeoutSteps = (captureType: CaptureType, projectConfig: { wizardShowBeforePhotosStep: boolean; wizardShowAfterPhotosStep: boolean; wizardShowGpsStep: boolean; wizardGpsMode: string; wizardShowNotesStep: boolean; wizardShowSignatureStep: boolean }): WizardStep[] => {
+  const steps: WizardStep[] = [
     "captureType",
     "oldIds",
     "canChange",
-    "oldReading", 
-    "beforePhotos",
-    "physicalChange",
-    "newIds",
-    "newReading",
-    "afterPhotos",
-    "gps",
-    "signature",
-    "confirm",
+    "oldReading",
   ];
+  
+  if (projectConfig.wizardShowBeforePhotosStep) {
+    steps.push("beforePhotos");
+  }
+  
+  steps.push("physicalChange", "newIds", "newReading");
+  
+  if (projectConfig.wizardShowAfterPhotosStep) {
+    steps.push("afterPhotos");
+  }
+  
+  if (projectConfig.wizardShowGpsStep && projectConfig.wizardGpsMode === "manual") {
+    steps.push("gps");
+  }
+  
+  if (projectConfig.wizardShowSignatureStep) {
+    steps.push("signature");
+  }
+  
+  steps.push("confirm");
+  
+  return steps;
 };
 
-const getTroubleSteps = (): WizardStep[] => {
+const getReadingOnlySteps = (projectConfig: { wizardShowGpsStep: boolean; wizardGpsMode: string; wizardShowNotesStep: boolean }): WizardStep[] => {
+  const steps: WizardStep[] = [
+    "oldIds",
+    "canChange",
+    "readingCapture",
+  ];
+  
+  if (projectConfig.wizardShowGpsStep && projectConfig.wizardGpsMode === "manual") {
+    steps.push("gps");
+  }
+  
+  if (projectConfig.wizardShowNotesStep) {
+    steps.push("notes");
+  }
+  
+  steps.push("readingConfirm");
+  
+  return steps;
+};
+
+const getTroubleSteps = (selectedMode: SelectedWorkflowMode): WizardStep[] => {
+  if (selectedMode === "reading_only") {
+    return [
+      "oldIds",
+      "canChange",
+      "troubleCapture",
+      "troubleConfirm",
+    ];
+  }
   return [
     "captureType",
     "oldIds",
@@ -98,8 +146,9 @@ const getTroubleSteps = (): WizardStep[] => {
 };
 
 const STEP_TITLES: Record<WizardStep, string> = {
+  workflowMode: "What would you like to do?",
   captureType: "What are you replacing?",
-  oldIds: "Capture Old System ID",
+  oldIds: "Capture System ID",
   canChange: "Can The Changeout Proceed?",
   oldReading: "Capture Old Reading",
   beforePhotos: "Before Photos",
@@ -113,6 +162,15 @@ const STEP_TITLES: Record<WizardStep, string> = {
   confirm: "Confirm & Submit",
   troubleCapture: "Report Issue",
   troubleConfirm: "Confirm & Submit",
+  readingCapture: "Capture Current Reading",
+  readingConfirm: "Confirm & Submit",
+};
+
+const READING_MODE_TITLES: Partial<Record<WizardStep, string>> = {
+  canChange: "Can You Proceed?",
+  oldIds: "Capture Meter ID",
+  readingCapture: "Capture Current Reading",
+  readingConfirm: "Confirm & Submit Reading",
 };
 
 export default function NewWorkOrderWizardScreen() {
@@ -120,7 +178,7 @@ export default function NewWorkOrderWizardScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const { projectId, user } = useAuth();
-  const { addOfflineWorkOrder } = useWorkOrders();
+  const { addOfflineWorkOrder, referenceData, projectConfig } = useWorkOrders();
   const { addPendingAction } = useOffline();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
@@ -131,7 +189,13 @@ export default function NewWorkOrderWizardScreen() {
   const [scannerTarget, setScannerTarget] = useState<"oldSystem" | "oldModule" | "newSystem" | "newModule">("oldSystem");
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [isCapturingGps, setIsCapturingGps] = useState(false);
-  const { referenceData } = useWorkOrders();
+  
+  const [showWorkflowModeModal, setShowWorkflowModeModal] = useState(projectConfig.wizardMode === "user_choice");
+  const [selectedWorkflowMode, setSelectedWorkflowMode] = useState<SelectedWorkflowMode>(
+    projectConfig.wizardMode === "reading_only" ? "reading_only" : "changeout"
+  );
+  
+  const isReadingOnlyMode = selectedWorkflowMode === "reading_only";
   
   // Capture type selection (system/module/both)
   const [captureType, setCaptureType] = useState<CaptureType>("both");
@@ -194,17 +258,41 @@ export default function NewWorkOrderWizardScreen() {
   });
 
   // Determine steps based on canChange decision
-  const steps = formData.canChange === false ? getTroubleSteps() : getSuccessSteps(captureType);
+  const getSteps = (): WizardStep[] => {
+    if (formData.canChange === false) {
+      return getTroubleSteps(selectedWorkflowMode);
+    }
+    
+    if (isReadingOnlyMode) {
+      return getReadingOnlySteps(projectConfig);
+    }
+    
+    return getChangeoutSteps(captureType, projectConfig);
+  };
+  
+  const steps = getSteps();
   const currentStep = steps[currentStepIndex];
   const totalSteps = steps.length;
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;
   
-  // Derive whether module is needed based on captureType
-  const hasOldModule = captureType === "module" || captureType === "both";
-  const hasNewModule = captureType === "module" || captureType === "both";
-  const hasOldSystem = captureType === "system" || captureType === "both";
-  const hasNewSystem = captureType === "system" || captureType === "both";
+  const getStepTitle = (step: WizardStep): string => {
+    if (isReadingOnlyMode && READING_MODE_TITLES[step]) {
+      return READING_MODE_TITLES[step]!;
+    }
+    return STEP_TITLES[step];
+  };
+  
+  const handleWorkflowModeSelect = (mode: WorkflowModeChoice) => {
+    setSelectedWorkflowMode(mode);
+    setShowWorkflowModeModal(false);
+  };
+  
+  // Derive whether module is needed based on captureType (only for changeout mode)
+  const hasOldModule = !isReadingOnlyMode && (captureType === "module" || captureType === "both");
+  const hasNewModule = !isReadingOnlyMode && (captureType === "module" || captureType === "both");
+  const hasOldSystem = isReadingOnlyMode || captureType === "system" || captureType === "both";
+  const hasNewSystem = !isReadingOnlyMode && (captureType === "system" || captureType === "both");
   
   // Get trouble codes from reference data
   const troubleCodes = referenceData?.troubleCodes || [];
@@ -494,6 +582,10 @@ export default function NewWorkOrderWizardScreen() {
         return formData.troubleCode.trim().length > 0 && formData.troublePhotos.length >= 1;
       case "troubleConfirm":
         return true;
+      case "readingCapture":
+        return isValidNumeric(formData.newSystemReading);
+      case "readingConfirm":
+        return true;
       default: 
         return true;
     }
@@ -598,6 +690,10 @@ export default function NewWorkOrderWizardScreen() {
       const includeNewSystem = hasNewSystem && formData.newSystemId.trim();
       const includeNewModule = hasNewModule && formData.newModuleId.trim();
       
+      // In reading-only mode, newIds = oldIds
+      const finalNewSystemId = isReadingOnlyMode ? formData.oldSystemId : (includeNewSystem ? formData.newSystemId : undefined);
+      const finalNewModuleId = isReadingOnlyMode ? formData.oldModuleId : (includeNewModule ? formData.newModuleId : undefined);
+      
       const offlineWorkOrderData = canChange ? {
         id: offlineWorkOrderId,
         projectId: Number(projectId),
@@ -605,10 +701,10 @@ export default function NewWorkOrderWizardScreen() {
         oldSystemReading: includeOldSystem ? (parseReading(formData.oldSystemReading) ?? 0) : undefined,
         oldModuleId: includeOldModule ? formData.oldModuleId : undefined,
         oldModuleReading: includeOldModule ? (parseReading(formData.oldModuleReading) ?? 0) : undefined,
-        newSystemId: includeNewSystem ? formData.newSystemId : undefined,
-        newSystemReading: includeNewSystem ? (parseReading(formData.newSystemReading) ?? 0) : undefined,
-        newModuleId: includeNewModule ? formData.newModuleId : undefined,
-        newModuleReading: includeNewModule ? (parseReading(formData.newModuleReading) ?? 0) : undefined,
+        newSystemId: finalNewSystemId,
+        newSystemReading: (isReadingOnlyMode || includeNewSystem) ? (parseReading(formData.newSystemReading) ?? 0) : undefined,
+        newModuleId: finalNewModuleId,
+        newModuleReading: (!isReadingOnlyMode && includeNewModule) ? (parseReading(formData.newModuleReading) ?? 0) : undefined,
         gpsCoordinates: formData.gpsCoordinates || null,
         signatureData: formData.signatureData || null,
         signatureName: formData.signatureName,
@@ -1809,13 +1905,82 @@ export default function NewWorkOrderWizardScreen() {
           </View>
         );
 
+      case "readingCapture":
+        return (
+          <View>
+            <View style={styles.iconHeader}>
+              <Icon name="activity" size={48} color={theme.primary} />
+            </View>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
+              Enter the current meter reading
+            </ThemedText>
+            
+            <View style={[styles.inputGroup, { marginBottom: Spacing.lg }]}>
+              <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
+                Current Reading
+              </ThemedText>
+              <TextInput
+                value={formData.newSystemReading}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: text }))}
+                placeholder="Enter reading value"
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+        );
+
+      case "readingConfirm":
+        return (
+          <View>
+            <View style={styles.iconHeader}>
+              <Icon name="check-circle" size={48} color={theme.success} />
+            </View>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
+              Please review the information below before submitting
+            </ThemedText>
+            
+            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
+              <View style={styles.summaryRow}>
+                <Icon name="database" size={20} color={theme.primary} />
+                <ThemedText type="body">Meter ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId}</ThemedText></ThemedText>
+              </View>
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Icon name="activity" size={20} color={theme.primary} />
+                <ThemedText type="body">Current Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
+              </View>
+              {formData.gpsCoordinates ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="map-pin" size={20} color={theme.primary} />
+                  <ThemedText type="body">GPS: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.gpsCoordinates}</ThemedText></ThemedText>
+                </View>
+              ) : null}
+              {formData.notes ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="file-text" size={20} color={theme.primary} />
+                  <ThemedText type="body" numberOfLines={2}>Notes: {formData.notes}</ThemedText>
+                </View>
+              ) : null}
+            </View>
+            
+            <View style={[styles.offlineNotice, { backgroundColor: theme.warning + "20", marginTop: Spacing.lg }]}>
+              <Icon name="wifi-off" size={20} color={theme.warning} />
+              <ThemedText type="body" style={{ marginLeft: Spacing.sm, flex: 1, color: theme.warning }}>
+                This reading will be saved locally and synced when you're back online.
+              </ThemedText>
+            </View>
+          </View>
+        );
+
       default:
         return null;
     }
   };
 
-  const getStepTitle = (): string => {
+  const getDisplayStepTitle = (): string => {
     if (currentStep === "oldIds") {
+      if (isReadingOnlyMode) {
+        return "Capture Meter ID";
+      }
       if (hasOldSystem && hasOldModule) {
         return "Capture Old System ID and Module ID";
       } else if (hasOldModule && !hasOldSystem) {
@@ -1831,6 +1996,15 @@ export default function NewWorkOrderWizardScreen() {
       }
       return "Capture New System ID";
     }
+    if (currentStep === "readingCapture") {
+      return "Capture Current Reading";
+    }
+    if (currentStep === "readingConfirm") {
+      return "Confirm & Submit Reading";
+    }
+    if (currentStep === "canChange" && isReadingOnlyMode) {
+      return "Can You Proceed?";
+    }
     return STEP_TITLES[currentStep];
   };
 
@@ -1838,6 +2012,7 @@ export default function NewWorkOrderWizardScreen() {
     switch (currentStep) {
       case "physicalChange":
       case "notes":
+      case "readingConfirm":
         return null;
       default:
         return (
@@ -1888,7 +2063,7 @@ export default function NewWorkOrderWizardScreen() {
         ]}
       >
         <View style={[styles.stepCard, { backgroundColor: theme.backgroundDefault }]}>
-          <ThemedText type="h3" style={styles.stepTitle}>{getStepTitle()}</ThemedText>
+          <ThemedText type="h3" style={styles.stepTitle}>{getDisplayStepTitle()}</ThemedText>
           {getStepRequiredLabel()}
           
           <View style={styles.inputContainer}>
@@ -1938,6 +2113,15 @@ export default function NewWorkOrderWizardScreen() {
         photoUri={viewingPhoto?.uri || null}
         onClose={() => setViewingPhoto(null)}
         onDelete={handleDeleteViewingPhoto}
+      />
+
+      <WorkflowModeModal
+        visible={showWorkflowModeModal}
+        onClose={() => {
+          setShowWorkflowModeModal(false);
+          navigation.goBack();
+        }}
+        onSelectMode={handleWorkflowModeSelect}
       />
     </View>
   );
