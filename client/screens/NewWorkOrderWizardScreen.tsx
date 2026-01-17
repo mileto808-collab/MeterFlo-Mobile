@@ -774,6 +774,7 @@ export default function NewWorkOrderWizardScreen() {
         status: "Completed",
         isOfflineCreated: true,
         syncPending: true,
+        isReadingOnly: isReadingOnlyMode,
       } : {
         id: offlineWorkOrderId,
         projectId: Number(projectId),
