@@ -12,7 +12,7 @@ interface PendingAction {
   data: any;
   timestamp: number;
   photoCount?: number;
-  completionMode?: "complete" | "trouble";
+  completionMode?: "complete" | "trouble" | "readingOnly";
   lookupKey?: string; // For offlineWorkOrder: the key used for offline storage (system ID or module ID)
   projectId?: number; // The project this action belongs to - actions only sync when matching current project
 }
@@ -398,9 +398,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               }
             }
             
-            const endpoint = action.completionMode === "complete"
-              ? `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${action.workOrderId}/complete`
-              : `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${action.workOrderId}/trouble`;
+            const endpoint = action.completionMode === "readingOnly"
+              ? `${serverUrl}/api/projects/${projectId}/work-orders/${action.workOrderId}/system-changeout`
+              : action.completionMode === "complete"
+                ? `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${action.workOrderId}/complete`
+                : `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${action.workOrderId}/trouble`;
             
             console.log(`[syncPendingActions] Syncing ${action.completionMode} for WO ${action.workOrderId} to ${endpoint}`);
             

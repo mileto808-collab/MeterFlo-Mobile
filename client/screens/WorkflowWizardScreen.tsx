@@ -848,11 +848,8 @@ export default function WorkflowWizardScreen() {
 
       const patchPayload = isReadingOnlyMode ? {
         status: "Completed",
-        old_system_reading: workOrder.oldSystemId ? 0 : null,
         new_system_reading: workOrder.oldSystemId ? (parseReading(formData.newSystemReading) ?? 0) : null,
         new_system_id: workOrder.oldSystemId || null,
-        old_module_id: workOrder.oldModuleId || null,
-        old_module_read: workOrder.oldModuleId ? 0 : null,
         new_module_id: workOrder.oldModuleId || null,
         new_module_read: workOrder.oldModuleId ? (parseReading(formData.newSystemReading) ?? 0) : null,
         new_gps: formData.gpsCoordinates || null,
@@ -900,9 +897,11 @@ export default function WorkflowWizardScreen() {
       };
 
       if (isOnline && serverUrl && projectId) {
-        const endpoint = canChange 
-          ? `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${workOrder.id}/complete`
-          : `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${workOrder.id}/trouble`;
+        const endpoint = isReadingOnlyMode
+          ? `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}/system-changeout`
+          : canChange 
+            ? `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${workOrder.id}/complete`
+            : `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${workOrder.id}/trouble`;
         
         console.log(`[WorkflowWizard] Submitting to endpoint: ${endpoint}`);
         
@@ -914,11 +913,13 @@ export default function WorkflowWizardScreen() {
           }));
         };
         
+        const changeoutScope = workOrder.oldSystemId && workOrder.oldModuleId ? "both" 
+          : workOrder.oldModuleId ? "module" : "system";
+        
         const mobilePayload = isReadingOnlyMode ? {
-          projectId: Number(projectId),
-          oldSystemReading: workOrder.oldSystemId ? 0 : null,
-          oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: workOrder.oldModuleId ? 0 : null,
+          canChange: true,
+          isReadingOnly: true,
+          changeoutScope,
           newSystemId: workOrder.oldSystemId || null,
           newSystemReading: workOrder.oldSystemId ? (parseReading(formData.newSystemReading) ?? 0) : null,
           newModuleId: workOrder.oldModuleId || null,
@@ -926,9 +927,7 @@ export default function WorkflowWizardScreen() {
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName || null,
-          startTime: startTime || completedAt,
-          completedAt: completedAt,
-          notes: formData.notes || null,
+          completionNotes: formData.notes || null,
           beforePhotos: formatPhotosForServer(beforePhotosBase64, 'before'),
           afterPhotos: formatPhotosForServer(afterPhotosBase64, 'after'),
         } : canChange ? {
@@ -1042,11 +1041,13 @@ export default function WorkflowWizardScreen() {
           }));
         };
         
+        const offlineChangeoutScope = workOrder.oldSystemId && workOrder.oldModuleId ? "both" 
+          : workOrder.oldModuleId ? "module" : "system";
+        
         const offlineMobilePayload = isReadingOnlyMode ? {
-          projectId: Number(projectId),
-          oldSystemReading: workOrder.oldSystemId ? 0 : null,
-          oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: workOrder.oldModuleId ? 0 : null,
+          canChange: true,
+          isReadingOnly: true,
+          changeoutScope: offlineChangeoutScope,
           newSystemId: workOrder.oldSystemId || null,
           newSystemReading: workOrder.oldSystemId ? (parseReading(formData.newSystemReading) ?? 0) : null,
           newModuleId: workOrder.oldModuleId || null,
@@ -1054,9 +1055,7 @@ export default function WorkflowWizardScreen() {
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName || null,
-          startTime: startTime || completedAt,
-          completedAt: completedAt,
-          notes: formData.notes || null,
+          completionNotes: formData.notes || null,
           beforePhotos: formatPhotosForOffline(beforePhotosBase64, 'before'),
           afterPhotos: formatPhotosForOffline(afterPhotosBase64, 'after'),
         } : canChange ? {
@@ -1093,7 +1092,7 @@ export default function WorkflowWizardScreen() {
           workOrderTitle: workOrder.serviceAddress,
           data: offlineMobilePayload,
           photoCount: offlinePhotoCount,
-          completionMode: canChange ? "complete" : "trouble",
+          completionMode: isReadingOnlyMode ? "readingOnly" : canChange ? "complete" : "trouble",
         });
         
         updateWorkOrder(workOrder.id, {
