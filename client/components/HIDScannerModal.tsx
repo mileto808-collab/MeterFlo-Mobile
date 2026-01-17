@@ -123,6 +123,8 @@ export function HIDScannerModal({ visible, onClose, onScan }: HIDScannerModalPro
               autoCorrect={false}
               returnKeyType="done"
               onSubmitEditing={() => handleSubmit()}
+              showSoftInputOnFocus={false}
+              caretHidden={true}
             />
             {value.length > 0 ? (
               <Icon name="check-circle" size={20} color={theme.success} />
