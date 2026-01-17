@@ -113,6 +113,7 @@ const getChangeoutSteps = (captureType: CaptureType, projectConfig: { wizardShow
 
 const getReadingOnlySteps = (projectConfig: { wizardShowBeforePhotosStep: boolean; wizardShowAfterPhotosStep: boolean; wizardShowGpsStep: boolean; wizardGpsMode: string; wizardShowNotesStep: boolean; wizardShowSignatureStep: boolean }): WizardStep[] => {
   const steps: WizardStep[] = [
+    "captureType",
     "oldIds",
     "canChange",
   ];
@@ -145,14 +146,7 @@ const getReadingOnlySteps = (projectConfig: { wizardShowBeforePhotosStep: boolea
 };
 
 const getTroubleSteps = (selectedMode: SelectedWorkflowMode): WizardStep[] => {
-  if (selectedMode === "reading_only") {
-    return [
-      "oldIds",
-      "canChange",
-      "troubleCapture",
-      "troubleConfirm",
-    ];
-  }
+  // Both reading-only and changeout modes need captureType selection
   return [
     "captureType",
     "oldIds",
@@ -184,6 +178,7 @@ const STEP_TITLES: Record<WizardStep, string> = {
 };
 
 const READING_MODE_TITLES: Partial<Record<WizardStep, string>> = {
+  captureType: "What are you reading?",
   canChange: "Can You Proceed?",
   oldIds: "Capture Meter ID",
   beforePhotos: "Before Photos",
