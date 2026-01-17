@@ -21,6 +21,7 @@ import { Button } from "@/components/Button";
 import { SelectInput } from "@/components/SelectInput";
 import { SignaturePad } from "@/components/SignaturePad";
 import { PhotoViewer } from "@/components/PhotoViewer";
+import { WorkflowModeModal } from "@/components/WorkflowModeModal";
 import { Spacing, BorderRadius } from "@/constants/theme";
 import { checkWorkOrderConflict } from "@/lib/conflict-check";
 
@@ -40,7 +41,9 @@ type WizardStep =
   | "notes"
   | "confirm"
   | "troubleCapture"
-  | "troubleConfirm";
+  | "troubleConfirm"
+  | "readingCapture"
+  | "readingConfirm";
 
 interface PhotoAsset {
   uri: string;
@@ -99,6 +102,8 @@ const STEP_TITLES: Record<WizardStep, string> = {
   confirm: "Confirm & Submit",
   troubleCapture: "Report Issue",
   troubleConfirm: "Confirm & Submit",
+  readingCapture: "Capture Current Reading",
+  readingConfirm: "Confirm & Submit Reading",
 };
 
 export default function WorkflowWizardScreen() {
@@ -106,7 +111,7 @@ export default function WorkflowWizardScreen() {
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { updateWorkOrder, referenceData, claimWorkOrder, deleteLocalWorkOrder, workOrders } = useWorkOrders();
+  const { updateWorkOrder, referenceData, claimWorkOrder, deleteLocalWorkOrder, workOrders, projectConfig } = useWorkOrders();
   const { serverUrl, projectId, user } = useAuth();
   const { isOnline, addPendingAction, addDirectSubmissionHistory } = useOffline();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -130,6 +135,7 @@ export default function WorkflowWizardScreen() {
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [isCapturingGps, setIsCapturingGps] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
+  const [startTime, setStartTime] = useState<string | null>(null);
   const [oldSystemReadingTouched, setOldSystemReadingTouched] = useState(false);
   const [oldModuleReadingTouched, setOldModuleReadingTouched] = useState(false);
   const [newSystemReadingTouched, setNewSystemReadingTouched] = useState(false);
@@ -137,12 +143,38 @@ export default function WorkflowWizardScreen() {
   const [scannerTargetField, setScannerTargetField] = useState<"system" | "module">("system");
   const [captureMode, setCaptureMode] = useState<"system" | "module" | "summary">("system");
   const [isIdInputFocused, setIsIdInputFocused] = useState(false);
+  const [workflowMode, setWorkflowMode] = useState<"changeout" | "reading_only" | null>(null);
+  const [showWorkflowModeModal, setShowWorkflowModeModal] = useState(false);
+  
+  const isReadingOnlyMode = workflowMode === "reading_only";
   
   useEffect(() => {
     if (showScanner && !cameraPermission) {
       requestCameraPermission();
     }
   }, [showScanner, cameraPermission, requestCameraPermission]);
+  
+  useEffect(() => {
+    const serverWizardMode = projectConfig?.wizardMode || "changeout";
+    if (serverWizardMode === "user_choice") {
+      setShowWorkflowModeModal(true);
+    } else if (serverWizardMode === "reading_only") {
+      setWorkflowMode("reading_only");
+    } else {
+      setWorkflowMode("changeout");
+    }
+  }, [projectConfig?.wizardMode]);
+  
+  useEffect(() => {
+    if ((currentStep === "confirm" || currentStep === "readingConfirm" || currentStep === "troubleConfirm") && !startTime) {
+      setStartTime(new Date().toISOString());
+    }
+  }, [currentStep, startTime]);
+  
+  const handleWorkflowModeSelect = (mode: "changeout" | "reading_only") => {
+    setWorkflowMode(mode);
+    setShowWorkflowModeModal(false);
+  };
 
   const [viewingPhoto, setViewingPhoto] = useState<{ uri: string; type: "before" | "after" | "trouble"; id: string } | null>(null);
   
@@ -179,8 +211,29 @@ export default function WorkflowWizardScreen() {
     };
   });
 
-  const getSteps = () => {
-    return formData.canChange === false ? TROUBLE_STEPS : SUCCESS_STEPS;
+  const getSteps = (): WizardStep[] => {
+    if (formData.canChange === false) {
+      return TROUBLE_STEPS;
+    }
+    
+    if (isReadingOnlyMode) {
+      const readingSteps: WizardStep[] = ["canChange"];
+      
+      if (projectConfig?.wizardGpsMode !== "skip") {
+        readingSteps.push("gps");
+      }
+      
+      readingSteps.push("readingCapture");
+      
+      if (projectConfig?.showNotes !== false) {
+        readingSteps.push("notes");
+      }
+      
+      readingSteps.push("readingConfirm");
+      return readingSteps;
+    }
+    
+    return SUCCESS_STEPS;
   };
   
   const steps = getSteps();
@@ -592,6 +645,12 @@ export default function WorkflowWizardScreen() {
         return formData.troubleCode.length > 0 && formData.troublePhotos.length >= 1;
       case "troubleConfirm":
         return true;
+      case "readingCapture":
+        return isValidNumeric(formData.newSystemReading);
+      case "readingConfirm":
+        return true;
+      case "notes":
+        return true;
       default: 
         return true;
     }
@@ -719,7 +778,27 @@ export default function WorkflowWizardScreen() {
         }
       }
 
-      const patchPayload = canChange ? {
+      const patchPayload = isReadingOnlyMode ? {
+        status: "Completed",
+        old_system_reading: null,
+        new_system_reading: parseReading(formData.newSystemReading) ?? 0,
+        new_system_id: workOrder.oldSystemId,
+        old_module_id: workOrder.oldModuleId || null,
+        old_module_read: null,
+        new_module_id: workOrder.oldModuleId || null,
+        new_module_read: null,
+        new_gps: formData.gpsCoordinates || null,
+        signature_data: null,
+        signature_name: null,
+        trouble: null,
+        notes: formData.notes || null,
+        start_time: startTime || completedAt,
+        completed_at: completedAt,
+        completed_by: user?.id || null,
+        updated_by: user?.username || null,
+        before_photos: null,
+        after_photos: null,
+      } : canChange ? {
         status: "Completed",
         old_system_reading: parseReading(formData.oldSystemReading) ?? 0,
         new_system_reading: parseReading(formData.newSystemReading) ?? 0,
@@ -733,6 +812,7 @@ export default function WorkflowWizardScreen() {
         signature_name: formData.signatureName,
         trouble: null,
         notes: formData.notes || null,
+        start_time: startTime || completedAt,
         completed_at: completedAt,
         completed_by: user?.id || null,
         updated_by: user?.username || null,
@@ -745,6 +825,7 @@ export default function WorkflowWizardScreen() {
         old_module_read: parseReading(formData.oldModuleRead),
         trouble: getTroubleCodeFromDisplay(formData.troubleCode),
         notes: formData.troubleNote || null,
+        start_time: startTime || completedAt,
         completed_at: completedAt,
         updated_by: user?.username || null,
         trouble_photos: troublePhotosBase64.length > 0 ? troublePhotosBase64 : null,
@@ -765,7 +846,24 @@ export default function WorkflowWizardScreen() {
           }));
         };
         
-        const mobilePayload = canChange ? {
+        const mobilePayload = isReadingOnlyMode ? {
+          projectId: Number(projectId),
+          oldSystemReading: null,
+          oldModuleId: workOrder.oldModuleId || null,
+          oldModuleReading: null,
+          newSystemId: workOrder.oldSystemId,
+          newSystemReading: parseReading(formData.newSystemReading) ?? 0,
+          newModuleId: workOrder.oldModuleId || null,
+          newModuleReading: null,
+          gpsCoordinates: formData.gpsCoordinates || null,
+          signatureData: null,
+          signatureName: null,
+          startTime: startTime || completedAt,
+          completedAt: completedAt,
+          notes: formData.notes || null,
+          beforePhotos: [],
+          afterPhotos: [],
+        } : canChange ? {
           projectId: Number(projectId),
           oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
           oldModuleId: workOrder.oldModuleId || null,
@@ -777,6 +875,7 @@ export default function WorkflowWizardScreen() {
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
+          startTime: startTime || completedAt,
           completedAt: completedAt,
           notes: formData.notes || null,
           beforePhotos: formatPhotosForServer(beforePhotosBase64, 'before'),
@@ -788,6 +887,7 @@ export default function WorkflowWizardScreen() {
           oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
           oldModuleId: workOrder.oldModuleId || null,
           oldModuleReading: workOrder.oldModuleId ? String(parseReading(formData.oldModuleRead) ?? 0) : null,
+          startTime: startTime || completedAt,
           photos: formatPhotosForServer(troublePhotosBase64, 'trouble'),
         };
         
@@ -886,6 +986,7 @@ export default function WorkflowWizardScreen() {
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
+          startTime: startTime || completedAt,
           completedAt: completedAt,
           notes: formData.notes || null,
           beforePhotos: formatPhotosForOffline(beforePhotosBase64, 'before'),
@@ -897,6 +998,7 @@ export default function WorkflowWizardScreen() {
           oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
           oldModuleId: workOrder.oldModuleId || null,
           oldModuleReading: workOrder.oldModuleId ? String(parseReading(formData.oldModuleRead) ?? 0) : null,
+          startTime: startTime || completedAt,
           photos: formatPhotosForOffline(troublePhotosBase64, 'trouble'),
         };
         
@@ -914,6 +1016,7 @@ export default function WorkflowWizardScreen() {
           syncPending: true,
           oldSystemReading: formData.oldSystemReading,
           oldModuleRead: formData.oldModuleRead,
+          startTime: startTime || completedAt,
           completedAt: completedAt,
           completedBy: user?.id,
           completedByUsername: user?.displayName || user?.username,
@@ -1952,6 +2055,85 @@ export default function WorkflowWizardScreen() {
           </View>
         );
 
+      case "readingCapture":
+        return (
+          <View>
+            <View style={styles.iconHeader}>
+              <Icon name="activity" size={48} color={theme.primary} />
+            </View>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
+              Enter the current meter reading
+            </ThemedText>
+            
+            <View style={{ marginBottom: Spacing.lg }}>
+              <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
+                Current Reading
+              </ThemedText>
+              <TextInput
+                value={formData.newSystemReading}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }))}
+                placeholder="Enter reading value"
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+        );
+
+      case "readingConfirm":
+        return (
+          <View>
+            <View style={styles.iconHeader}>
+              <Icon name="check-circle" size={48} color={theme.success} />
+            </View>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
+              Please review the information below before submitting
+            </ThemedText>
+            
+            <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
+              <View style={styles.summaryRow}>
+                <Icon name="database" size={20} color={theme.primary} />
+                <ThemedText type="body">Meter ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemId || workOrder.oldModuleId}</ThemedText></ThemedText>
+              </View>
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Icon name="activity" size={20} color={theme.primary} />
+                <ThemedText type="body">Current Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
+              </View>
+              {formData.gpsCoordinates ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="map-pin" size={20} color={theme.primary} />
+                  <ThemedText type="body">GPS: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.gpsCoordinates}</ThemedText></ThemedText>
+                </View>
+              ) : null}
+              {formData.notes ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="file-text" size={20} color={theme.primary} />
+                  <ThemedText type="body" numberOfLines={2}>Notes: {formData.notes}</ThemedText>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        );
+
+      case "notes":
+        return (
+          <View>
+            <View style={styles.iconHeader}>
+              <Icon name="file-text" size={48} color={theme.primary} />
+            </View>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
+              Add any additional notes (optional)
+            </ThemedText>
+            
+            <TextInput
+              value={formData.notes}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
+              placeholder="Enter notes here..."
+              multiline
+              numberOfLines={4}
+            />
+          </View>
+        );
+
       default:
         return null;
     }
@@ -1999,12 +2181,18 @@ export default function WorkflowWizardScreen() {
       }
       return "Capture New System ID";
     }
+    if (currentStep === "canChange" && isReadingOnlyMode) {
+      return "Can You Proceed?";
+    }
     return STEP_TITLES[currentStep];
   };
 
   const getStepRequiredLabel = () => {
     switch (currentStep) {
       case "physicalChange":
+      case "notes":
+      case "readingConfirm":
+        return null;
       default:
         return (
           <ThemedText type="caption" style={[styles.requiredText, { color: theme.error }]}>
@@ -2139,6 +2327,15 @@ export default function WorkflowWizardScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <WorkflowModeModal
+        visible={showWorkflowModeModal}
+        onClose={() => {
+          setShowWorkflowModeModal(false);
+          navigation.goBack();
+        }}
+        onSelectMode={handleWorkflowModeSelect}
+      />
     </View>
   );
 }

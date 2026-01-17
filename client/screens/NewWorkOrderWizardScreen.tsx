@@ -189,6 +189,7 @@ export default function NewWorkOrderWizardScreen() {
   const [scannerTarget, setScannerTarget] = useState<"oldSystem" | "oldModule" | "newSystem" | "newModule">("oldSystem");
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [isCapturingGps, setIsCapturingGps] = useState(false);
+  const [startTime, setStartTime] = useState<string | null>(null);
   
   const [showWorkflowModeModal, setShowWorkflowModeModal] = useState(projectConfig.wizardMode === "user_choice");
   const [selectedWorkflowMode, setSelectedWorkflowMode] = useState<SelectedWorkflowMode>(
@@ -233,6 +234,12 @@ export default function NewWorkOrderWizardScreen() {
       requestCameraPermission();
     }
   }, [showScanner, cameraPermission, requestCameraPermission]);
+  
+  useEffect(() => {
+    if ((currentStep === "confirm" || currentStep === "readingConfirm" || currentStep === "troubleConfirm") && !startTime) {
+      setStartTime(new Date().toISOString());
+    }
+  }, [currentStep, startTime]);
   
   const [viewingPhoto, setViewingPhoto] = useState<{ uri: string; type: "before" | "after" | "trouble"; id: string } | null>(null);
   
@@ -708,6 +715,7 @@ export default function NewWorkOrderWizardScreen() {
         gpsCoordinates: formData.gpsCoordinates || null,
         signatureData: formData.signatureData || null,
         signatureName: formData.signatureName,
+        startTime: startTime || completedAt,
         completedAt: completedAt,
         completedBy: user?.id || null,
         completedByUsername: user?.displayName || user?.username || null,
@@ -730,6 +738,7 @@ export default function NewWorkOrderWizardScreen() {
         status: "Trouble",
         isOfflineCreated: true,
         syncPending: true,
+        startTime: startTime || completedAt,
         completedAt: completedAt,
         completedBy: user?.id || null,
         completedByUsername: user?.displayName || user?.username || null,
