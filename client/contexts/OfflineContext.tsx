@@ -398,11 +398,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               }
             }
             
-            const endpoint = action.completionMode === "readingOnly"
-              ? `${serverUrl}/api/projects/${projectId}/work-orders/${action.workOrderId}/system-changeout`
-              : action.completionMode === "complete"
-                ? `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${action.workOrderId}/complete`
-                : `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${action.workOrderId}/trouble`;
+            // All completion modes use the /complete endpoint (readingOnly uses isReadingOnly flag)
+            // Only trouble mode uses the /trouble endpoint
+            const endpoint = action.completionMode === "trouble"
+              ? `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${action.workOrderId}/trouble`
+              : `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${action.workOrderId}/complete`;
             
             console.log(`[syncPendingActions] Syncing ${action.completionMode} for WO ${action.workOrderId} to ${endpoint}`);
             

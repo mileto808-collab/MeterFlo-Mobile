@@ -935,6 +935,8 @@ export default function WorkflowWizardScreen() {
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName || null,
           completionNotes: formData.notes || null,
+          startTime: startTime || completedAt,
+          endTime: completedAt,
           beforePhotos: formatPhotosForServer(beforePhotosBase64, 'before'),
           afterPhotos: formatPhotosForServer(afterPhotosBase64, 'after'),
         } : canChange ? {
@@ -1074,6 +1076,8 @@ export default function WorkflowWizardScreen() {
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName || null,
           completionNotes: formData.notes || null,
+          startTime: startTime || completedAt,
+          endTime: completedAt,
           beforePhotos: formatPhotosForOffline(beforePhotosBase64, 'before'),
           afterPhotos: formatPhotosForOffline(afterPhotosBase64, 'after'),
         } : canChange ? {
