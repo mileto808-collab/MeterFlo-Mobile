@@ -208,10 +208,22 @@ export default function WorkflowWizardScreen() {
         readingSteps.push("gps");
       }
       
+      if (projectConfig.wizardShowBeforePhotosStep) {
+        readingSteps.push("beforePhotos");
+      }
+      
       readingSteps.push("readingCapture");
+      
+      if (projectConfig.wizardShowAfterPhotosStep) {
+        readingSteps.push("afterPhotos");
+      }
       
       if (projectConfig.wizardShowNotesStep) {
         readingSteps.push("notes");
+      }
+      
+      if (projectConfig.wizardShowSignatureStep) {
+        readingSteps.push("signature");
       }
       
       readingSteps.push("readingConfirm");
