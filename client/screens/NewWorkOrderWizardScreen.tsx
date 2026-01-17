@@ -519,6 +519,27 @@ export default function NewWorkOrderWizardScreen() {
     }
   };
 
+  const captureGpsInBackground = async () => {
+    try {
+      const permResult = await Location.requestForegroundPermissionsAsync();
+      if (!permResult.granted) {
+        console.log("[NewWorkOrderWizard] Background GPS capture: permission denied");
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        mayShowUserSettingsDialog: false,
+      });
+
+      const coords = `${location.coords.latitude.toFixed(6)},${location.coords.longitude.toFixed(6)}`;
+      console.log(`[NewWorkOrderWizard] Background GPS captured: ${coords}`);
+      setFormData(prev => ({ ...prev, gpsCoordinates: coords }));
+    } catch (error) {
+      console.log("[NewWorkOrderWizard] Background GPS capture failed:", error);
+    }
+  };
+
   const getTroubleCodeFromDisplay = (displayValue: string): string => {
     const match = displayValue.match(/^([A-Z0-9]+)\s*-/);
     return match ? match[1] : displayValue;
@@ -605,6 +626,11 @@ export default function NewWorkOrderWizardScreen() {
         Alert.alert("Required Field", "Please complete this step before continuing.");
       }
       return;
+    }
+
+    // Trigger background GPS capture when user clicks "Yes - Proceed" and wizardGpsMode is automatic
+    if (currentStep === "canChange" && formData.canChange === true && projectConfig.wizardGpsMode === "automatic") {
+      captureGpsInBackground();
     }
 
     if (isLastStep) {
