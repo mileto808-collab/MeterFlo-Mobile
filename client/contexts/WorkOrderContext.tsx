@@ -163,6 +163,39 @@ export interface ReferenceData {
   };
 }
 
+export type WizardMode = "changeout" | "reading_only" | "user_choice";
+export type WizardGpsMode = "automatic" | "manual" | "disabled";
+
+export interface ProjectConfig {
+  wizardMode: WizardMode;
+  wizardGpsMode: WizardGpsMode;
+  wizardShowGpsStep: boolean;
+  wizardShowNotesStep: boolean;
+  wizardShowBeforePhotosStep: boolean;
+  wizardShowAfterPhotosStep: boolean;
+  wizardShowSignatureStep: boolean;
+  searchShowBarcodeScan: boolean;
+  searchShowQrCodeScan: boolean;
+  searchShowManualEntry: boolean;
+  searchShowHidScanner: boolean;
+  isActive: boolean;
+}
+
+export const defaultProjectConfig: ProjectConfig = {
+  wizardMode: "changeout",
+  wizardGpsMode: "manual",
+  wizardShowGpsStep: true,
+  wizardShowNotesStep: true,
+  wizardShowBeforePhotosStep: true,
+  wizardShowAfterPhotosStep: true,
+  wizardShowSignatureStep: true,
+  searchShowBarcodeScan: true,
+  searchShowQrCodeScan: true,
+  searchShowManualEntry: true,
+  searchShowHidScanner: false,
+  isActive: true,
+};
+
 export interface FilterConfig {
   status: string[];
   assignedTo: string;
@@ -407,6 +440,7 @@ export interface OfflineWorkOrderData {
 interface WorkOrderContextType {
   workOrders: WorkOrder[];
   referenceData: ReferenceData | null;
+  projectConfig: ProjectConfig;
   filters: FilterConfig;
   sort: SortConfig;
   isLoading: boolean;
@@ -459,6 +493,7 @@ const WorkOrderContext = createContext<WorkOrderContextType | undefined>(undefin
 const STORAGE_KEYS = {
   WORK_ORDERS: "meterflo_work_orders",
   REFERENCE_DATA: "meterflo_reference_data",
+  PROJECT_CONFIG: "meterflo_project_config",
   SORT: "meterflo_sort",
   LAST_SYNC: "meterflo_last_sync",
 };
@@ -475,6 +510,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
   const { serverUrl, projectId, isAuthenticated, user } = useAuth();
   const [workOrders, setWorkOrdersState] = useState<WorkOrder[]>([]);
   const [referenceData, setReferenceData] = useState<ReferenceData | null>(null);
+  const [projectConfig, setProjectConfig] = useState<ProjectConfig>(defaultProjectConfig);
   const [filters, setFiltersState] = useState<FilterConfig>(defaultFilters);
   const [sort, setSortState] = useState<SortConfig>(defaultSort);
   const [isLoading, setIsLoading] = useState(false);
@@ -533,11 +569,13 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.multiRemove([
       STORAGE_KEYS.WORK_ORDERS,
       STORAGE_KEYS.REFERENCE_DATA,
+      STORAGE_KEYS.PROJECT_CONFIG,
       STORAGE_KEYS.LAST_SYNC,
     ]);
     lastSyncTimeRef.current = null;
     setLastSyncTime(null);
     setReferenceData(null);
+    setProjectConfig(defaultProjectConfig);
     setWorkOrdersState([]);
     console.log("[WorkOrderContext] Cache cleared for session change");
   }, []);
@@ -577,9 +615,10 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
   const loadStoredData = async () => {
     try {
-      const [storedOrders, storedRefData, storedSort, storedLastSync] = await Promise.all([
+      const [storedOrders, storedRefData, storedProjectConfig, storedSort, storedLastSync] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.WORK_ORDERS),
         AsyncStorage.getItem(STORAGE_KEYS.REFERENCE_DATA),
+        AsyncStorage.getItem(STORAGE_KEYS.PROJECT_CONFIG),
         AsyncStorage.getItem(STORAGE_KEYS.SORT),
         AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC),
       ]);
@@ -652,6 +691,14 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         const normalizedRefData = normalizeStoredReferenceData(parsedRefData);
         setReferenceData(normalizedRefData);
         AsyncStorage.setItem(STORAGE_KEYS.REFERENCE_DATA, JSON.stringify(normalizedRefData));
+      }
+      if (storedProjectConfig) {
+        try {
+          const parsedConfig = JSON.parse(storedProjectConfig);
+          setProjectConfig({ ...defaultProjectConfig, ...parsedConfig });
+        } catch (e) {
+          console.warn("[WorkOrderContext] Failed to parse stored project config:", e);
+        }
       }
       if (storedSort) {
         const parsedSort = JSON.parse(storedSort);
@@ -896,6 +943,43 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       if (newReferenceData) {
         setReferenceData(newReferenceData);
         await AsyncStorage.setItem(STORAGE_KEYS.REFERENCE_DATA, JSON.stringify(newReferenceData));
+      }
+
+      // Fetch project configuration
+      try {
+        const projectConfigUrl = `${serverUrl}/api/projects/${projectId}`;
+        const configResponse = await fetch(projectConfigUrl, {
+          method: "GET",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "Origin": serverUrl,
+            "Referer": `${serverUrl}/`,
+          },
+          credentials: "include",
+        });
+
+        if (configResponse.ok) {
+          const projectData = await configResponse.json();
+          const newProjectConfig: ProjectConfig = {
+            wizardMode: projectData.wizardMode || defaultProjectConfig.wizardMode,
+            wizardGpsMode: projectData.wizardGpsMode || defaultProjectConfig.wizardGpsMode,
+            wizardShowGpsStep: projectData.wizardShowGpsStep ?? defaultProjectConfig.wizardShowGpsStep,
+            wizardShowNotesStep: projectData.wizardShowNotesStep ?? defaultProjectConfig.wizardShowNotesStep,
+            wizardShowBeforePhotosStep: projectData.wizardShowBeforePhotosStep ?? defaultProjectConfig.wizardShowBeforePhotosStep,
+            wizardShowAfterPhotosStep: projectData.wizardShowAfterPhotosStep ?? defaultProjectConfig.wizardShowAfterPhotosStep,
+            wizardShowSignatureStep: projectData.wizardShowSignatureStep ?? defaultProjectConfig.wizardShowSignatureStep,
+            searchShowBarcodeScan: projectData.searchShowBarcodeScan ?? defaultProjectConfig.searchShowBarcodeScan,
+            searchShowQrCodeScan: projectData.searchShowQrCodeScan ?? defaultProjectConfig.searchShowQrCodeScan,
+            searchShowManualEntry: projectData.searchShowManualEntry ?? defaultProjectConfig.searchShowManualEntry,
+            searchShowHidScanner: projectData.searchShowHidScanner ?? defaultProjectConfig.searchShowHidScanner,
+            isActive: projectData.isActive ?? defaultProjectConfig.isActive,
+          };
+          setProjectConfig(newProjectConfig);
+          await AsyncStorage.setItem(STORAGE_KEYS.PROJECT_CONFIG, JSON.stringify(newProjectConfig));
+          console.log("[refreshWorkOrders] Project config updated:", newProjectConfig.wizardMode);
+        }
+      } catch (configErr) {
+        console.warn("[refreshWorkOrders] Failed to fetch project config, using cached:", configErr);
       }
 
       if (newServerTimestamp) {
@@ -1381,6 +1465,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       value={{
         workOrders,
         referenceData,
+        projectConfig,
         filters,
         sort,
         isLoading,
