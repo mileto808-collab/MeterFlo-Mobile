@@ -583,10 +583,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             // For offline work orders, gpsCoordinates from wizard represents the work location (used for both old/new)
             const oldGpsValue = offlineData.oldGps ?? offlineData.gpsCoordinates ?? null;
             const newGpsValue = offlineData.newGps ?? offlineData.gpsCoordinates ?? null;
-            const completePayload = {
-              old_system_reading: oldSystemReading ?? 0,
-              old_module_id: offlineData.oldModuleId || null,
-              old_module_read: offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? "0") : null,
+            
+            // In Reading Only mode, omit old reading fields entirely - server preserves existing values
+            const isReadingOnly = offlineData.isReadingOnly === true;
+            
+            const completePayload: Record<string, any> = {
               new_system_id: newSystemId,
               new_system_reading: newSystemReading ?? 0,
               new_module_id: offlineData.newModuleId || null,
@@ -600,6 +601,13 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               before_photos: offlineData.beforePhotos || [],
               after_photos: offlineData.afterPhotos || [],
             };
+            
+            // Only include old reading fields in changeout mode (not Reading Only)
+            if (!isReadingOnly) {
+              completePayload.old_system_reading = oldSystemReading ?? 0;
+              completePayload.old_module_id = offlineData.oldModuleId || null;
+              completePayload.old_module_read = offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? "0") : null;
+            }
             
             // Log payload without sensitive data (photos/signature)
             const logPayload = {
