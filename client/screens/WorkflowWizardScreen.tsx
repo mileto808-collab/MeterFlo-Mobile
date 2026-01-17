@@ -2174,7 +2174,7 @@ export default function WorkflowWizardScreen() {
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.summaryRow}>
                 <Icon name="database" size={20} color={theme.primary} />
-                <ThemedText type="body">Meter ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemId || workOrder.oldModuleId}</ThemedText></ThemedText>
+                <ThemedText type="body">{workOrder.oldSystemId ? "System ID" : "Module ID"}: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemId || workOrder.oldModuleId}</ThemedText></ThemedText>
               </View>
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="activity" size={20} color={theme.primary} />

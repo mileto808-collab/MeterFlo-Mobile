@@ -88,7 +88,7 @@ export default function WorkOrderDetailScreen() {
   const { theme } = useTheme();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
-  const { workOrders, referenceData, updateWorkOrder, getStatusColor, getServiceTypeColor } = useWorkOrders();
+  const { workOrders, referenceData, updateWorkOrder, getStatusColor, getServiceTypeColor, projectConfig } = useWorkOrders();
   const { pendingActions } = useOffline();
   
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoItem | null>(null);
@@ -674,7 +674,7 @@ export default function WorkOrderDetailScreen() {
               fontWeight: "600",
             }}
           >
-            {isCompleted ? "Edit Completion" : isCancelled ? "Cancelled" : "Start Changeout"}
+            {isCompleted ? "Edit Completion" : isCancelled ? "Cancelled" : projectConfig.wizardMode === "reading_only" ? "Start Reading Capture" : "Start Changeout"}
           </ThemedText>
         </Button>
       </View>
