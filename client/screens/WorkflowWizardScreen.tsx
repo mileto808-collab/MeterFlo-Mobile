@@ -258,6 +258,10 @@ export default function WorkflowWizardScreen() {
       changeoutSteps.push("gps");
     }
     
+    if (projectConfig.wizardShowNotesStep) {
+      changeoutSteps.push("notes");
+    }
+    
     if (projectConfig.wizardShowSignatureStep) {
       changeoutSteps.push("signature");
     }
