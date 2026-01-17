@@ -180,7 +180,7 @@ const STEP_TITLES: Record<WizardStep, string> = {
 const READING_MODE_TITLES: Partial<Record<WizardStep, string>> = {
   captureType: "What are you reading?",
   canChange: "Can You Proceed?",
-  oldIds: "Capture Meter ID",
+  oldIds: "Capture ID",
   beforePhotos: "Before Photos",
   afterPhotos: "After Photos",
   gps: "Capture GPS",
@@ -2202,7 +2202,12 @@ export default function NewWorkOrderWizardScreen() {
   const getDisplayStepTitle = (): string => {
     if (currentStep === "oldIds") {
       if (isReadingOnlyMode) {
-        return "Capture Meter ID";
+        if (hasOldSystem && hasOldModule) {
+          return "Capture System ID and Module ID";
+        } else if (hasOldModule && !hasOldSystem) {
+          return "Capture Module ID";
+        }
+        return "Capture System ID";
       }
       if (hasOldSystem && hasOldModule) {
         return "Capture Old System ID and Module ID";
