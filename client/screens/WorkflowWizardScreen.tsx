@@ -2173,6 +2173,16 @@ export default function WorkflowWizardScreen() {
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.summaryRow}>
+                <Icon name="clipboard" size={20} color={theme.primary} />
+                <ThemedText type="body">Work Order: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.customerWoId || workOrder.id}</ThemedText></ThemedText>
+              </View>
+              {workOrder.serviceAddress ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="home" size={20} color={theme.primary} />
+                  <ThemedText type="body">Address: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.serviceAddress}</ThemedText></ThemedText>
+                </View>
+              ) : null}
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="database" size={20} color={theme.primary} />
                 <ThemedText type="body">{workOrder.oldSystemId ? "System ID" : "Module ID"}: <ThemedText type="body" style={{ fontWeight: "600" }}>{workOrder.oldSystemId || workOrder.oldModuleId}</ThemedText></ThemedText>
               </View>
@@ -2213,7 +2223,7 @@ export default function WorkflowWizardScreen() {
               {formData.signatureData ? (
                 <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                   <Icon name="edit-3" size={20} color={theme.primary} />
-                  <ThemedText type="body">Signature: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.signatureName}</ThemedText></ThemedText>
+                  <ThemedText type="body">Signed By: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.signatureName}</ThemedText></ThemedText>
                 </View>
               ) : null}
             </View>
