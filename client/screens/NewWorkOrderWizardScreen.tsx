@@ -98,6 +98,10 @@ const getChangeoutSteps = (captureType: CaptureType, projectConfig: { wizardShow
     steps.push("gps");
   }
   
+  if (projectConfig.wizardShowNotesStep) {
+    steps.push("notes");
+  }
+  
   if (projectConfig.wizardShowSignatureStep) {
     steps.push("signature");
   }
@@ -107,12 +111,21 @@ const getChangeoutSteps = (captureType: CaptureType, projectConfig: { wizardShow
   return steps;
 };
 
-const getReadingOnlySteps = (projectConfig: { wizardShowGpsStep: boolean; wizardGpsMode: string; wizardShowNotesStep: boolean }): WizardStep[] => {
+const getReadingOnlySteps = (projectConfig: { wizardShowBeforePhotosStep: boolean; wizardShowAfterPhotosStep: boolean; wizardShowGpsStep: boolean; wizardGpsMode: string; wizardShowNotesStep: boolean; wizardShowSignatureStep: boolean }): WizardStep[] => {
   const steps: WizardStep[] = [
     "oldIds",
     "canChange",
-    "readingCapture",
   ];
+  
+  if (projectConfig.wizardShowBeforePhotosStep) {
+    steps.push("beforePhotos");
+  }
+  
+  steps.push("readingCapture");
+  
+  if (projectConfig.wizardShowAfterPhotosStep) {
+    steps.push("afterPhotos");
+  }
   
   if (projectConfig.wizardShowGpsStep && projectConfig.wizardGpsMode === "manual") {
     steps.push("gps");
@@ -120,6 +133,10 @@ const getReadingOnlySteps = (projectConfig: { wizardShowGpsStep: boolean; wizard
   
   if (projectConfig.wizardShowNotesStep) {
     steps.push("notes");
+  }
+  
+  if (projectConfig.wizardShowSignatureStep) {
+    steps.push("signature");
   }
   
   steps.push("readingConfirm");
@@ -169,6 +186,11 @@ const STEP_TITLES: Record<WizardStep, string> = {
 const READING_MODE_TITLES: Partial<Record<WizardStep, string>> = {
   canChange: "Can You Proceed?",
   oldIds: "Capture Meter ID",
+  beforePhotos: "Before Photos",
+  afterPhotos: "After Photos",
+  gps: "Capture GPS",
+  notes: "Notes",
+  signature: "Capture Signature",
   readingCapture: "Capture Current Reading",
   readingConfirm: "Confirm & Submit Reading",
 };
@@ -1103,7 +1125,9 @@ export default function NewWorkOrderWizardScreen() {
         );
 
       case "oldIds": {
-        const oldIdHelpText = hasOldSystem && hasOldModule 
+        const oldIdHelpText = isReadingOnlyMode
+          ? "Capture the meter ID by scanning or entering manually."
+          : hasOldSystem && hasOldModule 
           ? "Capture the old system and module IDs by scanning or entering manually."
           : hasOldSystem
           ? "Capture the old system ID by scanning or entering manually."
@@ -1393,13 +1417,16 @@ export default function NewWorkOrderWizardScreen() {
       }
 
       case "beforePhotos":
+        const beforePhotosDescription = isReadingOnlyMode 
+          ? "Take photos of the meter before taking the reading (minimum 1 required)"
+          : "Take photos of the old system before removal (minimum 1 required)";
         return (
           <View>
             <View style={styles.iconHeader}>
               <Icon name="camera" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Take photos of the old system before removal (minimum 1 required)
+              {beforePhotosDescription}
             </ThemedText>
             
             <Button
@@ -1679,13 +1706,16 @@ export default function NewWorkOrderWizardScreen() {
       }
 
       case "afterPhotos":
+        const afterPhotosDescription = isReadingOnlyMode 
+          ? "Take photos after completing the reading (minimum 1 required)"
+          : "Take photos of the new system after installation (minimum 1 required)";
         return (
           <View>
             <View style={styles.iconHeader}>
               <Icon name="camera" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Take photos of the new system after installation (minimum 1 required)
+              {afterPhotosDescription}
             </ThemedText>
             
             <Button
@@ -1735,20 +1765,26 @@ export default function NewWorkOrderWizardScreen() {
                 <ThemedText type="body" style={{ marginLeft: Spacing.sm }}>{formData.gpsCoordinates}</ThemedText>
               </View>
             ) : null}
-            
-            <View style={{ marginTop: Spacing.lg, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: Spacing.lg }}>
-              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: Spacing.sm }}>
-                <Icon name="file-text" size={20} color={theme.primary} />
-                <ThemedText type="body" style={{ marginLeft: Spacing.sm, fontWeight: "600" }}>Notes (optional)</ThemedText>
-              </View>
-              <TextInput
-                value={formData.notes}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
-                placeholder="Enter notes here..."
-                multiline
-                style={{ minHeight: 80, maxHeight: 120 }}
-              />
+          </View>
+        );
+
+      case "notes":
+        return (
+          <View>
+            <View style={styles.iconHeader}>
+              <Icon name="file-text" size={48} color={theme.primary} />
             </View>
+            <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
+              Add any notes about this work order (optional)
+            </ThemedText>
+            
+            <TextInput
+              value={formData.notes}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
+              placeholder="Enter notes here..."
+              multiline
+              style={{ minHeight: 120, maxHeight: 200 }}
+            />
           </View>
         );
 
