@@ -634,7 +634,18 @@ export default function NewWorkOrderWizardScreen() {
       case "troubleConfirm":
         return true;
       case "readingCapture":
-        return isValidNumeric(formData.newSystemReading);
+        // Validate all readings based on equipment type
+        const hasSystemForValidation = Boolean(formData.oldSystemId?.trim());
+        const hasModuleForValidation = Boolean(formData.oldModuleId?.trim());
+        if (hasSystemForValidation && hasModuleForValidation) {
+          // Both: validate both readings
+          return isValidNumeric(formData.newSystemReading) && isValidNumeric(formData.newModuleReading);
+        } else if (hasSystemForValidation) {
+          return isValidNumeric(formData.newSystemReading);
+        } else {
+          // Module only: reading stored in newSystemReading field
+          return isValidNumeric(formData.newSystemReading);
+        }
       case "readingConfirm":
         return true;
       default: 
@@ -2045,27 +2056,65 @@ export default function NewWorkOrderWizardScreen() {
         );
 
       case "readingCapture":
+        const hasSystemEquipment = Boolean(formData.oldSystemId?.trim());
+        const hasModuleEquipment = Boolean(formData.oldModuleId?.trim());
+        const hasBothEquipment = hasSystemEquipment && hasModuleEquipment;
+        
         return (
           <View>
             <View style={styles.iconHeader}>
               <Icon name="activity" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Enter the current {formData.oldSystemId ? "system" : "module"} reading
+              {hasBothEquipment 
+                ? "Enter the current system and module readings"
+                : `Enter the current ${hasSystemEquipment ? "system" : "module"} reading`}
             </ThemedText>
             
-            <View style={{ marginBottom: Spacing.lg }}>
-              <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
-                {formData.oldSystemId ? "System" : "Module"} Reading
-              </ThemedText>
-              <TextInput
-                value={formData.newSystemReading}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: text }))}
-                placeholder="Enter reading value"
-                keyboardType="numeric"
-                style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
-              />
-            </View>
+            {hasSystemEquipment ? (
+              <View style={{ marginBottom: Spacing.lg }}>
+                <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
+                  System Reading {formData.oldSystemId ? `(${formData.oldSystemId})` : ""}
+                </ThemedText>
+                <TextInput
+                  value={formData.newSystemReading}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: text }))}
+                  placeholder="Enter system reading"
+                  keyboardType="numeric"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+              </View>
+            ) : null}
+            
+            {hasBothEquipment ? (
+              <View style={{ marginBottom: Spacing.lg }}>
+                <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
+                  Module Reading {formData.oldModuleId ? `(${formData.oldModuleId})` : ""}
+                </ThemedText>
+                <TextInput
+                  value={formData.newModuleReading}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, newModuleReading: text }))}
+                  placeholder="Enter module reading"
+                  keyboardType="numeric"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+              </View>
+            ) : null}
+            
+            {!hasSystemEquipment && hasModuleEquipment ? (
+              <View style={{ marginBottom: Spacing.lg }}>
+                <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
+                  Module Reading {formData.oldModuleId ? `(${formData.oldModuleId})` : ""}
+                </ThemedText>
+                <TextInput
+                  value={formData.newSystemReading}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: text }))}
+                  placeholder="Enter module reading"
+                  keyboardType="numeric"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
+                />
+              </View>
+            ) : null}
           </View>
         );
 
@@ -2080,14 +2129,30 @@ export default function NewWorkOrderWizardScreen() {
             </ThemedText>
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary }]}>
-              <View style={styles.summaryRow}>
-                <Icon name="database" size={20} color={theme.primary} />
-                <ThemedText type="body">{formData.oldSystemId ? "System ID" : "Module ID"}: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId || formData.oldModuleId}</ThemedText></ThemedText>
-              </View>
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="activity" size={20} color={theme.primary} />
-                <ThemedText type="body">{formData.oldSystemId ? "System" : "Module"} Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
-              </View>
+              {formData.oldSystemId ? (
+                <View style={styles.summaryRow}>
+                  <Icon name="database" size={20} color={theme.primary} />
+                  <ThemedText type="body">System ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId}</ThemedText></ThemedText>
+                </View>
+              ) : null}
+              {formData.oldSystemId ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="activity" size={20} color={theme.primary} />
+                  <ThemedText type="body">System Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.newSystemReading}</ThemedText></ThemedText>
+                </View>
+              ) : null}
+              {formData.oldModuleId ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="cpu" size={20} color={theme.primary} />
+                  <ThemedText type="body">Module ID: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldModuleId}</ThemedText></ThemedText>
+                </View>
+              ) : null}
+              {formData.oldModuleId ? (
+                <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                  <Icon name="activity" size={20} color={theme.primary} />
+                  <ThemedText type="body">Module Reading: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.oldSystemId && formData.oldModuleId ? formData.newModuleReading : formData.newSystemReading}</ThemedText></ThemedText>
+                </View>
+              ) : null}
               {formData.beforePhotos && formData.beforePhotos.length > 0 ? (
                 <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                   <Icon name="camera" size={20} color={theme.primary} />
