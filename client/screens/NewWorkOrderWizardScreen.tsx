@@ -1100,7 +1100,7 @@ export default function NewWorkOrderWizardScreen() {
               <Icon name="layers" size={48} color={theme.primary} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              What equipment are you replacing?
+              {isReadingOnlyMode ? "What equipment are you reading?" : "What equipment are you replacing?"}
             </ThemedText>
             
             <Pressable
