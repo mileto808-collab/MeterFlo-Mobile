@@ -905,11 +905,10 @@ export default function WorkflowWizardScreen() {
       };
 
       if (isOnline && serverUrl && projectId) {
-        const endpoint = isReadingOnlyCompletion
-          ? `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}/system-changeout`
-          : canChange 
-            ? `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${workOrder.id}/complete`
-            : `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${workOrder.id}/trouble`;
+        // Reading Only completion uses the same /complete endpoint with isReadingOnly flag
+        const endpoint = canChange 
+          ? `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${workOrder.id}/complete`
+          : `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${workOrder.id}/trouble`;
         
         console.log(`[WorkflowWizard] Submitting to endpoint: ${endpoint}`);
         
