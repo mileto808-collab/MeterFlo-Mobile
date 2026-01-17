@@ -428,7 +428,7 @@ export interface OfflineWorkOrderData {
   completedAt: string;
   completedBy: string | null;
   completedByUsername: string | null;
-  completionNotes: string | null;
+  notes: string | null;
   beforePhotos?: { base64: string; filename: string }[];
   afterPhotos?: { base64: string; filename: string }[];
   troubleCode?: string;
@@ -1182,7 +1182,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       serviceAddress: "Offline Work Order",
       signatureData: data.signatureData || undefined,
       signatureName: data.signatureName || undefined,
-      notes: data.completionNotes || undefined,
+      notes: data.notes || undefined,
       troubleCode: data.troubleCode,
       beforePhotos: data.beforePhotos,
       afterPhotos: data.afterPhotos,
