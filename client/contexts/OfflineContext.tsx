@@ -759,6 +759,36 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               throw new Error(errorText || `Failed to sync work order ${action.workOrderId}`);
             }
             
+            // Call time-tracking endpoint after successful sync if action has time data
+            if (action.data?.startTime) {
+              try {
+                const endTime = action.data.endTime || action.data.completedAt || new Date().toISOString();
+                const timeTrackingEndpoint = `${serverUrl}/api/projects/${projectId}/work-orders/${action.workOrderId}/time-tracking`;
+                console.log(`[syncPendingActions] Sending time-tracking for WO ${action.workOrderId}`);
+                const timeTrackingResponse = await fetch(timeTrackingEndpoint, {
+                  method: "POST",
+                  headers: { 
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Origin": serverUrl,
+                    "Referer": `${serverUrl}/`,
+                  },
+                  credentials: "include",
+                  body: JSON.stringify({
+                    startTime: action.data.startTime,
+                    endTime: endTime,
+                  }),
+                });
+                if (!timeTrackingResponse.ok) {
+                  console.warn(`[syncPendingActions] Time-tracking call failed for WO ${action.workOrderId}: ${timeTrackingResponse.status}`);
+                } else {
+                  console.log(`[syncPendingActions] Time-tracking recorded for WO ${action.workOrderId}`);
+                }
+              } catch (timeTrackingError) {
+                console.warn(`[syncPendingActions] Failed to record time-tracking for WO ${action.workOrderId}:`, timeTrackingError);
+              }
+            }
+            
             successfulActionIds.push(action.id);
           }
         } catch (actionError) {

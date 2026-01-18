@@ -294,12 +294,12 @@ export default function NewWorkOrderWizardScreen() {
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;
   
-  // Track startTime when entering confirmation steps
+  // Track startTime when user makes canChange decision (clicks Proceed or Report Issue)
   useEffect(() => {
-    if ((currentStep === "confirm" || currentStep === "readingConfirm" || currentStep === "troubleConfirm") && !startTime) {
+    if (formData.canChange !== null && !startTime) {
       setStartTime(new Date().toISOString());
     }
-  }, [currentStep, startTime]);
+  }, [formData.canChange, startTime]);
   
   const getStepTitle = (step: WizardStep): string => {
     if (isReadingOnlyMode && READING_MODE_TITLES[step]) {
