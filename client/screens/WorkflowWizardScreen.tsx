@@ -187,7 +187,7 @@ export default function WorkflowWizardScreen() {
       // When editing a completed work order, canChange was true; when editing trouble, it was false
       canChange: isEditingCompleted ? true : isEditingTroubleStatus ? false : null,
       troubleCode: workOrder.troubleCode || "",
-      troubleNote: isEditingStatus ? (workOrder.notes || workOrder.troubleNote || "") : "",
+      troubleNote: "",
       troublePhotos: isEditingStatus ? convertStoredPhotosToAssets(workOrder.troublePhotos) : [],
       oldSystemReading: workOrder.oldSystemReading || "",
       oldModuleRead: workOrder.oldModuleRead || "",
@@ -200,8 +200,8 @@ export default function WorkflowWizardScreen() {
       gpsCoordinates: workOrder.newGps || "",
       signatureData: workOrder.signatureData || "",
       signatureName: workOrder.signatureName || "",
-      // Load notes when editing (not just when hasUnsyncedDraft)
-      notes: isEditingStatus ? (workOrder.notes || "") : "",
+      // Notes always start empty - users add NEW notes only, not re-submit existing ones
+      notes: "",
     };
   });
 
