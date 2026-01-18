@@ -667,6 +667,34 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             }
             
             console.log(`[syncPendingActions] Successfully synced offline work order for system ${offlineData.oldSystemId} to server WO ${serverWorkOrderId}`);
+            
+            // Call time-tracking endpoint after successful offline work order sync
+            if (offlineData.startTime) {
+              try {
+                const endTime = offlineData.endTime || offlineData.completedAt || new Date().toISOString();
+                const timeTrackingEndpoint = `${serverUrl}/api/projects/${projectId}/work-orders/${serverWorkOrderId}/time-tracking`;
+                const timeTrackingResponse = await fetch(timeTrackingEndpoint, {
+                  method: "POST",
+                  headers: { 
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Origin": serverUrl,
+                    "Referer": `${serverUrl}/`,
+                  },
+                  credentials: "include",
+                  body: JSON.stringify({
+                    startTime: offlineData.startTime,
+                    endTime: endTime,
+                  }),
+                });
+                if (!timeTrackingResponse.ok) {
+                  console.warn(`[syncPendingActions] Time-tracking call failed for offline WO ${serverWorkOrderId}: ${timeTrackingResponse.status}`);
+                }
+              } catch (timeTrackingError) {
+                // Silently fail - time tracking is non-critical
+              }
+            }
+            
             successfulActionIds.push(action.id);
             offlineToServerIdMap.set(action.id, serverWorkOrderId);
             
@@ -764,7 +792,6 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               try {
                 const endTime = action.data.endTime || action.data.completedAt || new Date().toISOString();
                 const timeTrackingEndpoint = `${serverUrl}/api/projects/${projectId}/work-orders/${action.workOrderId}/time-tracking`;
-                console.log(`[syncPendingActions] Sending time-tracking for WO ${action.workOrderId}`);
                 const timeTrackingResponse = await fetch(timeTrackingEndpoint, {
                   method: "POST",
                   headers: { 
@@ -781,11 +808,9 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
                 });
                 if (!timeTrackingResponse.ok) {
                   console.warn(`[syncPendingActions] Time-tracking call failed for WO ${action.workOrderId}: ${timeTrackingResponse.status}`);
-                } else {
-                  console.log(`[syncPendingActions] Time-tracking recorded for WO ${action.workOrderId}`);
                 }
               } catch (timeTrackingError) {
-                console.warn(`[syncPendingActions] Failed to record time-tracking for WO ${action.workOrderId}:`, timeTrackingError);
+                // Silently fail - time tracking is non-critical
               }
             }
             
