@@ -615,70 +615,92 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             // In Reading Only mode, omit old reading fields entirely - server preserves existing values
             const isReadingOnly = offlineData.isReadingOnly === true;
             
+            // Detect if this is a trouble report
+            const isTroubleReport = !!(offlineData.troubleCode || offlineData.status === "Trouble");
+            
             // Determine if this is module-only (no system) for reading field handling
             const hasSystem = !!(newSystemId && newSystemId.trim());
             const hasModule = !!(offlineData.newModuleId && offlineData.newModuleId.trim());
             
-            // Use camelCase field names to match mobile endpoint expectations
-            const completePayload: Record<string, any> = {
-              oldGps: oldGpsValue,
-              newGps: newGpsValue,
-              signatureData: offlineData.signatureData || null,
-              signatureName: offlineData.signatureName,
-              completedAt: offlineData.completedAt,
-              notes: offlineData.notes || null,
-              beforePhotos: offlineData.beforePhotos || [],
-              afterPhotos: offlineData.afterPhotos || [],
-            };
+            let completePayload: Record<string, any>;
+            let completeEndpoint: string;
             
-            // Add Reading Only mode flags
-            if (isReadingOnly) {
-              completePayload.canChange = true;
-              completePayload.isReadingOnly = true;
-            }
-            
-            // Add system fields if system exists
-            if (hasSystem) {
-              completePayload.newSystemId = newSystemId;
-              completePayload.newSystemReading = newSystemReading ?? 0;
-            }
-            
-            // Add module fields if module exists
-            if (hasModule) {
-              completePayload.newModuleId = offlineData.newModuleId;
-              completePayload.newModuleReading = parseModuleReading(newModuleReadRaw) ?? "0";
-            }
-            
-            // Only include old reading fields in changeout mode (not Reading Only)
-            if (!isReadingOnly) {
-              completePayload.oldSystemReading = oldSystemReading ?? 0;
-              completePayload.oldModuleId = offlineData.oldModuleId || null;
-              completePayload.oldModuleRead = offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? "0") : null;
-            }
-            
-            // Log payload without sensitive data (photos/signature)
-            const logPayload = {
-              ...completePayload,
-              signatureData: completePayload.signatureData ? '[REDACTED]' : null,
-              beforePhotos: completePayload.beforePhotos?.length ? `[${completePayload.beforePhotos.length} photos]` : [],
-              afterPhotos: completePayload.afterPhotos?.length ? `[${completePayload.afterPhotos.length} photos]` : [],
-            };
-            console.log(`[syncPendingActions] Sending complete payload for WO ${serverWorkOrderId}:`, JSON.stringify(logPayload));
-            
-            const completeResponse = await fetch(
-              `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${serverWorkOrderId}/complete`,
-              {
-                method: "POST",
-                headers: { 
-                  "Content-Type": "application/json",
-                  "X-Requested-With": "XMLHttpRequest",
-                  "Origin": serverUrl,
-                  "Referer": `${serverUrl}/`,
-                },
-                credentials: "include",
-                body: JSON.stringify(completePayload),
+            if (isTroubleReport) {
+              // Trouble report - use /trouble endpoint with trouble-specific payload
+              completeEndpoint = `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${serverWorkOrderId}/trouble`;
+              completePayload = {
+                projectId: Number(projectId),
+                troubleCode: offlineData.troubleCode,
+                notes: offlineData.notes || offlineData.troubleNote || null,
+                oldSystemReading: oldSystemReading ?? 0,
+                oldModuleId: offlineData.oldModuleId || null,
+                oldModuleReading: offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? "0") : null,
+                startTime: offlineData.startTime || offlineData.completedAt,
+                photos: offlineData.troublePhotos || [],
+              };
+              console.log(`[syncPendingActions] Sending trouble payload for WO ${serverWorkOrderId}:`, JSON.stringify({
+                ...completePayload,
+                photos: completePayload.photos?.length ? `[${completePayload.photos.length} photos]` : [],
+              }));
+            } else {
+              // Regular completion - use /complete endpoint
+              completeEndpoint = `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${serverWorkOrderId}/complete`;
+              completePayload = {
+                oldGps: oldGpsValue,
+                newGps: newGpsValue,
+                signatureData: offlineData.signatureData || null,
+                signatureName: offlineData.signatureName,
+                completedAt: offlineData.completedAt,
+                notes: offlineData.notes || null,
+                beforePhotos: offlineData.beforePhotos || [],
+                afterPhotos: offlineData.afterPhotos || [],
+              };
+              
+              // Add Reading Only mode flags
+              if (isReadingOnly) {
+                completePayload.canChange = true;
+                completePayload.isReadingOnly = true;
               }
-            );
+              
+              // Add system fields if system exists
+              if (hasSystem) {
+                completePayload.newSystemId = newSystemId;
+                completePayload.newSystemReading = newSystemReading ?? 0;
+              }
+              
+              // Add module fields if module exists
+              if (hasModule) {
+                completePayload.newModuleId = offlineData.newModuleId;
+                completePayload.newModuleReading = parseModuleReading(newModuleReadRaw) ?? "0";
+              }
+              
+              // Only include old reading fields in changeout mode (not Reading Only)
+              if (!isReadingOnly) {
+                completePayload.oldSystemReading = oldSystemReading ?? 0;
+                completePayload.oldModuleId = offlineData.oldModuleId || null;
+                completePayload.oldModuleRead = offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? "0") : null;
+              }
+              
+              // Log payload without sensitive data (photos/signature)
+              console.log(`[syncPendingActions] Sending complete payload for WO ${serverWorkOrderId}:`, JSON.stringify({
+                ...completePayload,
+                signatureData: completePayload.signatureData ? '[REDACTED]' : null,
+                beforePhotos: completePayload.beforePhotos?.length ? `[${completePayload.beforePhotos.length} photos]` : [],
+                afterPhotos: completePayload.afterPhotos?.length ? `[${completePayload.afterPhotos.length} photos]` : [],
+              }));
+            }
+            
+            const completeResponse = await fetch(completeEndpoint, {
+              method: "POST",
+              headers: { 
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "Origin": serverUrl,
+                "Referer": `${serverUrl}/`,
+              },
+              credentials: "include",
+              body: JSON.stringify(completePayload),
+            });
             
             if (!completeResponse.ok) {
               const errorText = await completeResponse.text();
