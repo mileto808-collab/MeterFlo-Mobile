@@ -2244,38 +2244,25 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Icon name="alert-triangle" size={48} color={theme.warning} />
+              <Icon name="alert-triangle" size={48} color={theme.error} />
             </View>
             <ThemedText type="body" style={{ color: theme.textSecondary, marginBottom: Spacing.lg, textAlign: "center" }}>
-              Select a trouble code and take at least one photo
+              Report the issue that prevented the changeout
             </ThemedText>
             
+            <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+              Trouble Code (Required)
+            </ThemedText>
             <SelectInput
               value={formData.troubleCode}
               options={troubleCodeDisplayStrings}
               onSelect={(displayValue) => setFormData(prev => ({ ...prev, troubleCode: displayValue }))}
-              placeholder="Select trouble code"
+              placeholder="Select a trouble code"
             />
             
             <View style={{ marginTop: Spacing.lg }}>
-              <Button
-                onPress={() => takePhoto("trouble")}
-                style={{ backgroundColor: theme.primary, marginBottom: Spacing.md }}
-              >
-                <Icon name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
-                Take Photo
-              </Button>
-              
-              {formData.troublePhotos.length > 0 && renderPhotoGrid(formData.troublePhotos, "trouble")}
-              
-              <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>
-                {formData.troublePhotos.length} photo(s) captured (minimum 1 required)
-              </ThemedText>
-            </View>
-            
-            <View style={{ marginTop: Spacing.lg }}>
               <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
-                Additional Notes (Optional)
+                Trouble Note (Optional)
               </ThemedText>
               <TextInput
                 value={formData.troubleNote}
@@ -2284,6 +2271,25 @@ export default function WorkflowWizardScreen() {
                 multiline
               />
             </View>
+            
+            <View style={{ marginTop: Spacing.lg }}>
+              <ThemedText type="caption" style={{ color: theme.textSecondary, marginBottom: Spacing.sm }}>
+                Trouble Photos (Minimum 1 required)
+              </ThemedText>
+              <Button
+                onPress={() => takePhoto("trouble")}
+                style={{ backgroundColor: theme.error, marginBottom: Spacing.md }}
+              >
+                <Icon name="camera" size={18} color="#FFFFFF" style={{ marginRight: Spacing.sm }} />
+                Take Trouble Photo
+              </Button>
+              
+              {formData.troublePhotos.length > 0 && renderPhotoGrid(formData.troublePhotos, "trouble")}
+              
+              <ThemedText type="small" style={{ color: theme.textSecondary, marginTop: Spacing.sm }}>
+                {formData.troublePhotos.length} photo(s) captured
+              </ThemedText>
+            </View>
           </View>
         );
 
@@ -2291,25 +2297,25 @@ export default function WorkflowWizardScreen() {
         return (
           <View>
             <View style={styles.iconHeader}>
-              <Icon name="alert-triangle" size={48} color={theme.warning} />
+              <Icon name="alert-triangle" size={48} color={theme.error} />
             </View>
-            <ThemedText type="h3" style={{ marginBottom: Spacing.lg, textAlign: "center" }}>Review & Submit</ThemedText>
+            <ThemedText type="h3" style={{ marginBottom: Spacing.lg, textAlign: "center" }}>Review & Submit Trouble</ThemedText>
             
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.summaryRow}>
-                <Icon name="alert-triangle" size={20} color={theme.warning} />
-                <ThemedText type="body">Trouble: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.troubleCode}</ThemedText></ThemedText>
-              </View>
-              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
-                <Icon name="camera" size={20} color={theme.primary} />
-                <ThemedText type="body">{formData.troublePhotos.length} Photo(s) Captured</ThemedText>
+                <Icon name="alert-triangle" size={20} color={theme.error} />
+                <ThemedText type="body">Trouble Code: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.troubleCode}</ThemedText></ThemedText>
               </View>
               {formData.troubleNote ? (
                 <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                   <Icon name="file-text" size={20} color={theme.primary} />
-                  <ThemedText type="body" numberOfLines={2}>{formData.troubleNote}</ThemedText>
+                  <ThemedText type="body" numberOfLines={2}>Note: {formData.troubleNote}</ThemedText>
                 </View>
               ) : null}
+              <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
+                <Icon name="camera" size={20} color={theme.primary} />
+                <ThemedText type="body">{formData.troublePhotos.length} Trouble Photo(s)</ThemedText>
+              </View>
             </View>
           </View>
         );
