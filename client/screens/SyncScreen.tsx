@@ -12,7 +12,7 @@ import { useWorkOrders } from "@/contexts/WorkOrderContext";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
 import { Spacing, BorderRadius } from "@/constants/theme";
-import { createBackupZip, shareBackup, saveBackupToFolder, BackupProgress } from "@/lib/backup";
+import { createBackupZip, BackupProgress } from "@/lib/backup";
 
 export default function SyncScreen() {
   const insets = useSafeAreaInsets();
@@ -142,96 +142,14 @@ export default function SyncScreen() {
           setBackupProgress(null);
           
           if (Platform.OS !== "web") {
-            const isAndroid = Platform.OS === "android";
-            
-            const alertButtons = isAndroid 
-              ? [
-                  { text: "Cancel", style: "cancel" as const, onPress: () => "cancel" },
-                  { text: "Share", onPress: () => "share" },
-                  { text: "Save to Folder", onPress: () => "save" },
-                ]
-              : [
-                  { text: "Cancel", style: "cancel" as const, onPress: () => "cancel" },
-                  { text: "Share or Save", onPress: () => "share" },
-                ];
-            
-            const alertMessage = isAndroid
-              ? "Your backup has been created. What would you like to do with it?"
-              : "Your backup has been created. Tap 'Share or Save' to save to Files or share via other apps.";
-            
-            const userChoice = await new Promise<"save" | "share" | "cancel">((resolve) => {
+            await new Promise<void>((resolve) => {
               Alert.alert(
-                "Backup Ready",
-                alertMessage,
-                alertButtons.map(btn => ({
-                  ...btn,
-                  onPress: () => resolve(btn.onPress() as "save" | "share" | "cancel")
-                })),
+                "Backup Created",
+                "Your backup has been saved. You can view and manage it in the Files tab.",
+                [{ text: "OK", onPress: () => resolve() }],
                 { cancelable: false }
               );
             });
-            
-            if (userChoice === "cancel") {
-              setIsClearing(false);
-              return;
-            }
-            
-            let savedLocation: string | null = null;
-            
-            if (userChoice === "save" && isAndroid) {
-              savedLocation = await saveBackupToFolder(backupPath);
-              if (!savedLocation) {
-                const tryAgain = await new Promise<boolean>((resolve) => {
-                  Alert.alert(
-                    "Save Cancelled",
-                    "No folder was selected. Would you like to try again?",
-                    [
-                      { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-                      { text: "Try Again", onPress: () => resolve(true) },
-                    ],
-                    { cancelable: false }
-                  );
-                });
-                if (tryAgain) {
-                  savedLocation = await saveBackupToFolder(backupPath);
-                }
-                if (!savedLocation) {
-                  setIsClearing(false);
-                  return;
-                }
-              }
-            } else {
-              await shareBackup(backupPath);
-            }
-            
-            const confirmMessage = savedLocation 
-              ? `Your backup has been saved to "${savedLocation}". Proceed to clear data and refresh?`
-              : "Make sure you saved the backup file. Proceed to clear data and refresh?";
-            
-            const shouldProceed = await new Promise<boolean>((resolve) => {
-              Alert.alert(
-                "Backup Complete",
-                confirmMessage,
-                [
-                  { 
-                    text: "Cancel", 
-                    style: "cancel",
-                    onPress: () => resolve(false)
-                  },
-                  { 
-                    text: "Clear & Refresh", 
-                    style: "destructive", 
-                    onPress: () => resolve(true)
-                  },
-                ],
-                { cancelable: false }
-              );
-            });
-            
-            if (!shouldProceed) {
-              setIsClearing(false);
-              return;
-            }
           }
         }
         
