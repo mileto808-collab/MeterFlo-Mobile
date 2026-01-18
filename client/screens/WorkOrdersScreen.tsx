@@ -372,9 +372,7 @@ export default function WorkOrdersScreen() {
               { backgroundColor: theme.backgroundSecondary, opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <View style={{ transform: [{ rotate: "-90deg" }] }}>
-              <Icon name="bar-chart-2" size={20} color={theme.text} />
-            </View>
+            <Icon name="folder" size={20} color={theme.text} />
           </Pressable>
         </View>
       </View>
