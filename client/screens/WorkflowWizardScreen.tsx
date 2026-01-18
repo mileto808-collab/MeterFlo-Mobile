@@ -2344,8 +2344,10 @@ export default function WorkflowWizardScreen() {
                 <TextInput
                   value={formData.newSystemReading}
                   onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }))}
+                  onFocus={() => setFormData(prev => ({ ...prev, newSystemReading: "" }))}
                   placeholder="Enter system reading"
                   keyboardType="numeric"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
               </View>
             ) : null}
@@ -2358,8 +2360,10 @@ export default function WorkflowWizardScreen() {
                 <TextInput
                   value={formData.newModuleRead}
                   onChangeText={(text) => setFormData(prev => ({ ...prev, newModuleRead: filterNumericInput(text) }))}
+                  onFocus={() => setFormData(prev => ({ ...prev, newModuleRead: "" }))}
                   placeholder="Enter module reading"
                   keyboardType="numeric"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
               </View>
             ) : null}
@@ -2372,8 +2376,10 @@ export default function WorkflowWizardScreen() {
                 <TextInput
                   value={formData.newSystemReading}
                   onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }))}
+                  onFocus={() => setFormData(prev => ({ ...prev, newSystemReading: "" }))}
                   placeholder="Enter module reading"
                   keyboardType="numeric"
+                  style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
               </View>
             ) : null}
