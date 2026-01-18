@@ -1088,13 +1088,14 @@ export default function WorkflowWizardScreen() {
         }
         
         // Call time-tracking endpoint after successful completion
+        console.log(`[WorkflowWizard] About to call time-tracking endpoint, startTime=${startTime}, completedAt=${completedAt}`);
         try {
           const timeTrackingEndpoint = `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}/time-tracking`;
           const timeTrackingPayload = {
             startTime: startTime || completedAt,
             endTime: completedAt,
           };
-          console.log(`[WorkflowWizard] Sending time-tracking to ${timeTrackingEndpoint}`);
+          console.log(`[WorkflowWizard] Sending time-tracking to ${timeTrackingEndpoint}`, JSON.stringify(timeTrackingPayload));
           const timeTrackingResponse = await fetch(timeTrackingEndpoint, {
             method: "POST",
             headers: { 
@@ -1106,13 +1107,15 @@ export default function WorkflowWizardScreen() {
             credentials: "include",
             body: JSON.stringify(timeTrackingPayload),
           });
+          console.log(`[WorkflowWizard] Time-tracking response status: ${timeTrackingResponse.status}`);
           if (!timeTrackingResponse.ok) {
-            console.warn(`[WorkflowWizard] Time-tracking call failed: ${timeTrackingResponse.status}`);
+            const errorBody = await timeTrackingResponse.text();
+            console.warn(`[WorkflowWizard] Time-tracking call failed: ${timeTrackingResponse.status}`, errorBody);
           } else {
             console.log(`[WorkflowWizard] Time-tracking recorded successfully`);
           }
         } catch (timeTrackingError) {
-          console.warn("[WorkflowWizard] Failed to record time-tracking:", timeTrackingError);
+          console.error("[WorkflowWizard] Failed to record time-tracking:", timeTrackingError);
         }
         
         const onlineFormatPhotos = (photos: string[], prefix: string) => {
