@@ -1,0 +1,118 @@
+{
+  "id": "2c3ce3de-b60e-4292-b083-719190e9563e",
+  "createdAt": "2026-01-18T19:42:37.261Z",
+  "runtimeVersion": "exposdk:54.0.0",
+  "launchAsset": {
+    "key": "bundle-1768765357261-12958",
+    "contentType": "application/javascript",
+    "url": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/1768765357261-12958/_expo/static/js/ios/bundle.js"
+  },
+  "assets": [],
+  "metadata": {},
+  "extra": {
+    "eas": {
+      "projectId": "70dbb63a-548f-4405-b28c-3e44f5e78dfa"
+    },
+    "expoClient": {
+      "name": "MeterFlo Mobile",
+      "slug": "meterflo-mobile",
+      "version": "1.2.4",
+      "orientation": "default",
+      "icon": "./assets/images/icon.png",
+      "scheme": "meterflo",
+      "userInterfaceStyle": "automatic",
+      "ios": {
+        "supportsTablet": true,
+        "bundleIdentifier": "com.meterflo.mobile"
+      },
+      "android": {
+        "adaptiveIcon": {
+          "backgroundColor": "#1a1a2e",
+          "foregroundImage": "./assets/images/android-icon-foreground.png",
+          "backgroundImage": "./assets/images/android-icon-background.png",
+          "foregroundImageUrl": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/assets/./assets/images/android-icon-foreground.png",
+          "backgroundImageUrl": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/assets/./assets/images/android-icon-background.png"
+        },
+        "edgeToEdgeEnabled": true,
+        "predictiveBackGestureEnabled": false,
+        "package": "com.meterflo.mobile",
+        "permissions": [
+          "android.permission.INTERNET",
+          "android.permission.REQUEST_INSTALL_PACKAGES"
+        ]
+      },
+      "web": {
+        "output": "single",
+        "favicon": "./assets/images/favicon.png"
+      },
+      "plugins": [
+        [
+          "expo-splash-screen",
+          {
+            "image": "./assets/images/splash-icon.png",
+            "imageWidth": 280,
+            "resizeMode": "contain",
+            "backgroundColor": "#0a0a14",
+            "dark": {
+              "backgroundColor": "#0a0a14"
+            }
+          }
+        ],
+        "expo-web-browser",
+        "expo-secure-store"
+      ],
+      "experiments": {
+        "reactCompiler": true
+      },
+      "extra": {
+        "eas": {
+          "projectId": "70dbb63a-548f-4405-b28c-3e44f5e78dfa"
+        }
+      },
+      "_internal": {
+        "isDebug": false,
+        "projectRoot": "/home/runner/workspace",
+        "dynamicConfigPath": {},
+        "staticConfigPath": "/home/runner/workspace/app.json",
+        "packageJsonPath": "/home/runner/workspace/package.json",
+        "pluginHistory": {
+          "expo-splash-screen": {
+            "name": "expo-splash-screen",
+            "version": "31.0.13"
+          },
+          "expo-web-browser": {
+            "name": "expo-web-browser",
+            "version": "15.0.10"
+          },
+          "expo-secure-store": {
+            "name": "expo-secure-store",
+            "version": "15.0.8"
+          }
+        }
+      },
+      "sdkVersion": "54.0.0",
+      "platforms": [
+        "ios",
+        "android",
+        "web"
+      ],
+      "androidStatusBar": {
+        "backgroundColor": "#0a0a14"
+      },
+      "iconUrl": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/assets/./assets/images/icon.png",
+      "hostUri": "50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/ios"
+    },
+    "expoGo": {
+      "debuggerHost": "50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/ios",
+      "developer": {
+        "tool": "expo-cli",
+        "projectRoot": "/home/runner/workspace"
+      },
+      "packagerOpts": {
+        "dev": false
+      },
+      "mainModuleName": "client/index"
+    },
+    "scopeKey": "@anonymous/meterflo-mobile-cae0fb3f-b246-447f-9fe6-7edf116612e3"
+  }
+}
