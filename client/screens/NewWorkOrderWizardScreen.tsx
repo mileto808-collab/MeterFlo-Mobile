@@ -571,11 +571,19 @@ export default function NewWorkOrderWizardScreen() {
   const filterNumericInput = (value: string): string => {
     let result = "";
     let hasDecimal = false;
+    let decimalPlaces = 0;
     for (const char of value) {
       if (char >= "0" && char <= "9") {
-        result += char;
-      } else if (char === "." && !hasDecimal) {
-        result += char;
+        if (hasDecimal) {
+          if (decimalPlaces < 3) {
+            result += char;
+            decimalPlaces++;
+          }
+        } else {
+          result += char;
+        }
+      } else if ((char === "." || char === ",") && !hasDecimal) {
+        result += ".";
         hasDecimal = true;
       }
     }
