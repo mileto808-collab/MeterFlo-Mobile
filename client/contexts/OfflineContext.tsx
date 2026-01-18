@@ -440,6 +440,34 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             }
             
             console.log(`[syncPendingActions] Successfully synced WO ${action.workOrderId}`);
+            
+            // Call time-tracking endpoint after successful offline completion sync
+            if (action.data?.startTime) {
+              try {
+                const endTime = action.data.endTime || action.data.completedAt || new Date().toISOString();
+                const timeTrackingEndpoint = `${serverUrl}/api/projects/${projectId}/work-orders/${action.workOrderId}/time-tracking`;
+                const timeTrackingResponse = await fetch(timeTrackingEndpoint, {
+                  method: "POST",
+                  headers: { 
+                    "Content-Type": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Origin": serverUrl,
+                    "Referer": `${serverUrl}/`,
+                  },
+                  credentials: "include",
+                  body: JSON.stringify({
+                    startTime: action.data.startTime,
+                    endTime: endTime,
+                  }),
+                });
+                if (!timeTrackingResponse.ok) {
+                  console.warn(`[syncPendingActions] Time-tracking call failed for WO ${action.workOrderId}: ${timeTrackingResponse.status}`);
+                }
+              } catch (timeTrackingError) {
+                // Silently fail - time tracking is non-critical
+              }
+            }
+            
             successfulActionIds.push(action.id);
           } else if (action.type === "offlineWorkOrder") {
             const offlineData = action.data;
