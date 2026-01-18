@@ -6,6 +6,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Icon } from "@/components/Icons";
 
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/contexts/AuthContext";
 import { useOffline, SyncHistoryEntry } from "@/contexts/OfflineContext";
 import { useWorkOrders } from "@/contexts/WorkOrderContext";
 import { ThemedText } from "@/components/ThemedText";
@@ -18,6 +19,7 @@ export default function SyncScreen() {
   const headerHeight = useHeaderHeight();
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const { isOnline, pendingActionsForCurrentProject, pendingActionsForOtherProjects, syncHistory, isSyncing, syncPendingActions, clearAllPending, clearPendingForCurrentProject, clearSyncHistory, removePendingAction } = useOffline();
   const { lastSyncTime, isLoading, refreshWorkOrders, clearAllData, workOrders, updateWorkOrder, deleteLocalWorkOrder } = useWorkOrders();
   const [isClearing, setIsClearing] = useState(false);
@@ -134,7 +136,7 @@ export default function SyncScreen() {
             message: "Preparing backup...",
           });
           
-          const backupPath = await createBackupZip(workOrders, setBackupProgress);
+          const backupPath = await createBackupZip(workOrders, user?.username || "unknown", setBackupProgress);
           
           setShowBackupModal(false);
           setBackupProgress(null);

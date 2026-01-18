@@ -85,8 +85,25 @@ export interface BackupProgress {
   message: string;
 }
 
+function formatReadableTimestamp(date: Date): string {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = months[date.getMonth()];
+  const day = date.getDate();
+  const year = date.getFullYear();
+  let hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+  return `${month}${day}_${year}_${hours}${minutes}${ampm}`;
+}
+
+function sanitizeUsername(username: string): string {
+  return username.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+}
+
 export async function createBackupZip(
   workOrders: WorkOrder[],
+  username: string,
   onProgress?: (progress: BackupProgress) => void
 ): Promise<string> {
   const zip = new JSZip();
@@ -100,7 +117,9 @@ export async function createBackupZip(
   });
 
   const csvContent = generateCSV(workOrders);
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const now = new Date();
+  const timestamp = formatReadableTimestamp(now);
+  const safeUsername = sanitizeUsername(username || "unknown");
   projectFilesFolder.file(`work_orders_backup_${timestamp}.csv`, csvContent);
 
   onProgress?.({
@@ -179,7 +198,7 @@ export async function createBackupZip(
     message: "Saving backup to device...",
   });
 
-  const backupFilename = `MeterFlo_Backup_${timestamp}.zip`;
+  const backupFilename = `mobile_backup_${timestamp}_${safeUsername}.zip`;
   
   if (Platform.OS === "web") {
     const link = document.createElement("a");
@@ -338,7 +357,7 @@ export async function saveBackupToFolder(backupPath: string): Promise<string | n
       encoding: FileSystem.EncodingType.Base64,
     });
     
-    const filename = backupPath.split("/").pop() || "MeterFlo_Backup.zip";
+    const filename = backupPath.split("/").pop() || "mobile_backup.zip";
     
     const newFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
       directoryUri,
