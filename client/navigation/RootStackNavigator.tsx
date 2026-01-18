@@ -10,7 +10,7 @@ import WorkOrderDetailScreen from "@/screens/WorkOrderDetailScreen";
 import WorkflowWizardScreen from "@/screens/WorkflowWizardScreen";
 import NewWorkOrderWizardScreen from "@/screens/NewWorkOrderWizardScreen";
 import FilterScreen from "@/screens/FilterScreen";
-import SortScreen from "@/screens/SortScreen";
+import FilesScreen from "@/screens/FilesScreen";
 import TapToCaptureScanScreen from "@/screens/TapToCaptureScanScreen";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
 import { WorkOrder } from "@/contexts/WorkOrderContext";
@@ -23,7 +23,7 @@ export type RootStackParamList = {
   WorkflowWizard: { workOrder: WorkOrder };
   NewWorkOrderWizard: undefined;
   Filter: undefined;
-  Sort: undefined;
+  Files: undefined;
   TapToCaptureScan: { scanType: "barcode" | "qrcode" };
 };
 
@@ -104,10 +104,10 @@ export default function RootStackNavigator() {
             }}
           />
           <Stack.Screen
-            name="Sort"
-            component={SortScreen}
+            name="Files"
+            component={FilesScreen}
             options={{
-              headerTitle: "Sort",
+              headerTitle: "Files",
               presentation: "modal",
             }}
           />

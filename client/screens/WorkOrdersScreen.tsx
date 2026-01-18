@@ -366,7 +366,7 @@ export default function WorkOrdersScreen() {
             ) : null}
           </Pressable>
           <Pressable
-            onPress={() => navigation.navigate("Sort")}
+            onPress={() => navigation.navigate("Files")}
             style={({ pressed }) => [
               styles.iconButton,
               { backgroundColor: theme.backgroundSecondary, opacity: pressed ? 0.7 : 1 },

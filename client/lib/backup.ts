@@ -238,6 +238,88 @@ export async function shareBackup(backupPath: string): Promise<void> {
   }
 }
 
+export interface BackupFile {
+  name: string;
+  path: string;
+  size: number;
+  modifiedTime: number;
+}
+
+export async function listBackupFiles(): Promise<BackupFile[]> {
+  if (Platform.OS === "web") {
+    return [];
+  }
+  
+  const documentDir = FileSystem.documentDirectory;
+  if (!documentDir) {
+    return [];
+  }
+  
+  const projectFilesDir = `${documentDir}MeterFlo/Project Files/`;
+  
+  try {
+    await FileSystem.makeDirectoryAsync(projectFilesDir, { intermediates: true }).catch(() => {});
+    
+    const files = await FileSystem.readDirectoryAsync(projectFilesDir);
+    const backupFiles: BackupFile[] = [];
+    
+    for (const file of files) {
+      if (file.endsWith(".zip")) {
+        const filePath = `${projectFilesDir}${file}`;
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(filePath);
+          if (fileInfo.exists && !fileInfo.isDirectory) {
+            backupFiles.push({
+              name: file,
+              path: filePath,
+              size: fileInfo.size || 0,
+              modifiedTime: fileInfo.modificationTime || Date.now(),
+            });
+          }
+        } catch (err) {
+          console.warn(`[Backup] Failed to get info for ${file}:`, err);
+        }
+      }
+    }
+    
+    backupFiles.sort((a, b) => b.modifiedTime - a.modifiedTime);
+    return backupFiles;
+  } catch (err) {
+    console.error("[Backup] Error listing backup files:", err);
+    return [];
+  }
+}
+
+export async function deleteBackupFile(filePath: string): Promise<boolean> {
+  if (Platform.OS === "web") {
+    return false;
+  }
+  
+  try {
+    await FileSystem.deleteAsync(filePath, { idempotent: true });
+    return true;
+  } catch (err) {
+    console.error("[Backup] Error deleting backup file:", err);
+    return false;
+  }
+}
+
+export async function getBackupBase64(filePath: string): Promise<string | null> {
+  if (Platform.OS === "web") {
+    return null;
+  }
+  
+  try {
+    const base64Content = await FileSystem.readAsStringAsync(filePath, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    return base64Content;
+  } catch (err) {
+    console.error("[Backup] Error reading backup file:", err);
+    return null;
+  }
+}
+
 export async function saveBackupToFolder(backupPath: string): Promise<string | null> {
   if (Platform.OS === "web") {
     return null;
