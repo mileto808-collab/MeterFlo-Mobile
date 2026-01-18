@@ -213,7 +213,7 @@ export default function FilesScreen() {
           ]}
         >
           <Icon name="share-2" size={18} color={theme.primary} />
-          <ThemedText type="small" style={{ color: theme.primary }}>View</ThemedText>
+          <ThemedText type="small" style={{ color: theme.primary }}>Share</ThemedText>
         </Pressable>
 
         <Pressable
