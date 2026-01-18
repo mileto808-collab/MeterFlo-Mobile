@@ -15,8 +15,7 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { 
   listBackupFiles, 
   deleteBackupFile, 
-  shareBackup, 
-  getBackupBase64,
+  shareBackup,
   BackupFile 
 } from "@/lib/backup";
 
@@ -125,30 +124,32 @@ export default function FilesScreen() {
     try {
       setActionInProgress(file.path);
       
-      const base64Content = await getBackupBase64(file.path);
-      if (!base64Content) {
-        throw new Error("Failed to read backup file");
-      }
+      const formData = new FormData();
+      formData.append("file", {
+        uri: file.path,
+        type: "application/zip",
+        name: file.name,
+      } as any);
 
-      const response = await fetch(`${serverUrl}/api/projects/${projectId}/documents/upload`, {
+      const response = await fetch(`${serverUrl}/api/projects/${projectId}/files`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
           "Origin": serverUrl,
           "Referer": `${serverUrl}/`,
         },
         credentials: "include",
-        body: JSON.stringify({
-          filename: file.name,
-          contentBase64: base64Content,
-          mimeType: "application/zip",
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+        if (response.status === 403) {
+          throw new Error("You don't have permission to upload files to this project");
+        } else if (response.status === 404) {
+          throw new Error("Project not found");
+        }
+        throw new Error(errorData.message || `Upload failed with status ${response.status}`);
       }
 
       Alert.alert("Success", `"${file.name}" has been uploaded to Project Documents.`);
