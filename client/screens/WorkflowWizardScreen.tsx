@@ -327,12 +327,12 @@ export default function WorkflowWizardScreen() {
     }
   }, [currentStep, hidScannerLaunchedForStep]);
 
-  // Track startTime when entering confirmation steps
+  // Track startTime when user makes canChange decision (clicks Proceed or Report Issue)
   useEffect(() => {
-    if ((currentStep === "confirm" || currentStep === "readingConfirm" || currentStep === "troubleConfirm") && !startTime) {
+    if (formData.canChange !== null && !startTime) {
       setStartTime(new Date().toISOString());
     }
-  }, [currentStep, startTime]);
+  }, [formData.canChange, startTime]);
 
   // Reset focus state when capture mode changes or scanner opens (input may unmount without blur)
   useEffect(() => {
@@ -1085,6 +1085,34 @@ export default function WorkflowWizardScreen() {
           });
         } catch (historyError) {
           console.warn("[WorkflowWizard] Failed to record sync history:", historyError);
+        }
+        
+        // Call time-tracking endpoint after successful completion
+        try {
+          const timeTrackingEndpoint = `${serverUrl}/api/projects/${projectId}/work-orders/${workOrder.id}/time-tracking`;
+          const timeTrackingPayload = {
+            startTime: startTime || completedAt,
+            endTime: completedAt,
+          };
+          console.log(`[WorkflowWizard] Sending time-tracking to ${timeTrackingEndpoint}`);
+          const timeTrackingResponse = await fetch(timeTrackingEndpoint, {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "X-Requested-With": "XMLHttpRequest",
+              "Origin": serverUrl,
+              "Referer": `${serverUrl}/`,
+            },
+            credentials: "include",
+            body: JSON.stringify(timeTrackingPayload),
+          });
+          if (!timeTrackingResponse.ok) {
+            console.warn(`[WorkflowWizard] Time-tracking call failed: ${timeTrackingResponse.status}`);
+          } else {
+            console.log(`[WorkflowWizard] Time-tracking recorded successfully`);
+          }
+        } catch (timeTrackingError) {
+          console.warn("[WorkflowWizard] Failed to record time-tracking:", timeTrackingError);
         }
         
         const onlineFormatPhotos = (photos: string[], prefix: string) => {
