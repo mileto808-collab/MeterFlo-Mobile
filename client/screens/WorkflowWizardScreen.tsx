@@ -2338,49 +2338,82 @@ export default function WorkflowWizardScreen() {
             
             {hasSystemEquipment ? (
               <View style={{ marginBottom: Spacing.lg }}>
-                <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
+                <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
                   System Reading {workOrder.oldSystemId ? `(${workOrder.oldSystemId})` : ""}
                 </ThemedText>
                 <TextInput
                   value={formData.newSystemReading}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }))}
-                  onFocus={() => setFormData(prev => ({ ...prev, newSystemReading: "" }))}
+                  onChangeText={(text) => {
+                    setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }));
+                    setNewSystemReadingTouched(true);
+                  }}
+                  onFocus={() => {
+                    setFormData(prev => ({ ...prev, newSystemReading: "" }));
+                    setNewSystemReadingTouched(false);
+                  }}
                   placeholder="Enter system reading"
                   keyboardType="numeric"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
+                {!newSystemReadingTouched && formData.newSystemReading.trim().length > 0 ? (
+                  <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
+                    Tap to clear and re-enter the reading
+                  </ThemedText>
+                ) : null}
               </View>
             ) : null}
             
             {hasBothEquipment ? (
               <View style={{ marginBottom: Spacing.lg }}>
-                <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
+                <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
                   Module Reading {workOrder.oldModuleId ? `(${workOrder.oldModuleId})` : ""}
                 </ThemedText>
                 <TextInput
                   value={formData.newModuleRead}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, newModuleRead: filterNumericInput(text) }))}
-                  onFocus={() => setFormData(prev => ({ ...prev, newModuleRead: "" }))}
+                  onChangeText={(text) => {
+                    setFormData(prev => ({ ...prev, newModuleRead: filterNumericInput(text) }));
+                    setNewModuleReadingTouched(true);
+                  }}
+                  onFocus={() => {
+                    setFormData(prev => ({ ...prev, newModuleRead: "" }));
+                    setNewModuleReadingTouched(false);
+                  }}
                   placeholder="Enter module reading"
                   keyboardType="numeric"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
+                {!newModuleReadingTouched && formData.newModuleRead.trim().length > 0 ? (
+                  <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
+                    Tap to clear and re-enter the reading
+                  </ThemedText>
+                ) : null}
               </View>
             ) : null}
             
             {!hasSystemEquipment && hasModuleEquipment ? (
               <View style={{ marginBottom: Spacing.lg }}>
-                <ThemedText type="small" style={{ color: theme.textSecondary, marginBottom: Spacing.xs }}>
+                <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
                   Module Reading {workOrder.oldModuleId ? `(${workOrder.oldModuleId})` : ""}
                 </ThemedText>
                 <TextInput
                   value={formData.newSystemReading}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }))}
-                  onFocus={() => setFormData(prev => ({ ...prev, newSystemReading: "" }))}
+                  onChangeText={(text) => {
+                    setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }));
+                    setNewSystemReadingTouched(true);
+                  }}
+                  onFocus={() => {
+                    setFormData(prev => ({ ...prev, newSystemReading: "" }));
+                    setNewSystemReadingTouched(false);
+                  }}
                   placeholder="Enter module reading"
                   keyboardType="numeric"
                   style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                 />
+                {!newSystemReadingTouched && formData.newSystemReading.trim().length > 0 ? (
+                  <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
+                    Tap to clear and re-enter the reading
+                  </ThemedText>
+                ) : null}
               </View>
             ) : null}
           </View>
