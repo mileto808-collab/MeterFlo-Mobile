@@ -233,37 +233,69 @@ export function ScanConfirmModal({
                     {workOrder.serviceAddress || "No address"}
                   </ThemedText>
                 </View>
-                {(workOrder.oldSystemId?.trim() || workOrder.newSystemId?.trim()) ? (
-                  <>
-                    <View style={styles.infoRow}>
-                      <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID:</ThemedText>
-                      <ThemedText type="body" style={{ fontWeight: "600" }}>
-                        {workOrder.oldSystemId || "N/A"}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <ThemedText type="body" style={{ color: theme.textSecondary }}>New System ID:</ThemedText>
-                      <ThemedText type="body" style={{ fontWeight: "600" }}>
-                        {workOrder.newSystemId || "N/A"}
-                      </ThemedText>
-                    </View>
-                  </>
+                {workOrder.oldSystemId?.trim() ? (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System ID:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {workOrder.oldSystemId}
+                    </ThemedText>
+                  </View>
                 ) : null}
-                {(workOrder.oldModuleId?.trim() || workOrder.newModuleId?.trim()) ? (
-                  <>
-                    <View style={styles.infoRow}>
-                      <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Module ID:</ThemedText>
-                      <ThemedText type="body" style={{ fontWeight: "600" }}>
-                        {workOrder.oldModuleId || "N/A"}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <ThemedText type="body" style={{ color: theme.textSecondary }}>New Module ID:</ThemedText>
-                      <ThemedText type="body" style={{ fontWeight: "600" }}>
-                        {workOrder.newModuleId || "N/A"}
-                      </ThemedText>
-                    </View>
-                  </>
+                {workOrder.oldSystemType?.trim() ? (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>Old System Type:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {workOrder.oldSystemType}
+                    </ThemedText>
+                  </View>
+                ) : null}
+                {workOrder.newSystemId?.trim() ? (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>New System ID:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {workOrder.newSystemId}
+                    </ThemedText>
+                  </View>
+                ) : null}
+                {workOrder.newSystemType?.trim() ? (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>New System Type:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {workOrder.newSystemType}
+                    </ThemedText>
+                  </View>
+                ) : null}
+                {workOrder.oldModuleId?.trim() ? (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Module ID:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {workOrder.oldModuleId}
+                    </ThemedText>
+                  </View>
+                ) : null}
+                {workOrder.oldModuleType?.trim() ? (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>Old Module Type:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {workOrder.oldModuleType}
+                    </ThemedText>
+                  </View>
+                ) : null}
+                {workOrder.newModuleId?.trim() ? (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>New Module ID:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {workOrder.newModuleId}
+                    </ThemedText>
+                  </View>
+                ) : null}
+                {workOrder.newModuleType?.trim() ? (
+                  <View style={styles.infoRow}>
+                    <ThemedText type="body" style={{ color: theme.textSecondary }}>New Module Type:</ThemedText>
+                    <ThemedText type="body" style={{ fontWeight: "600" }}>
+                      {workOrder.newModuleType}
+                    </ThemedText>
+                  </View>
                 ) : null}
                 <View style={styles.infoRow}>
                   <ThemedText type="body" style={{ color: theme.textSecondary }}>Status:</ThemedText>
