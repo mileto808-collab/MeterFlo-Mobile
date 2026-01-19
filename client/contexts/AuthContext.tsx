@@ -17,6 +17,8 @@ export interface Project {
   description: string;
 }
 
+type IosUpdateSource = "appstore" | "eas" | null;
+
 interface AuthState {
   user: User | null;
   serverUrl: string;
@@ -27,6 +29,8 @@ interface AuthState {
   needsProjectSelection: boolean;
   isOfflineSession: boolean;
   updateUrl: string | null;
+  iosUpdateSource: IosUpdateSource;
+  appStoreId: string | null;
 }
 
 interface AuthContextType extends AuthState {
@@ -48,6 +52,8 @@ const STORAGE_KEYS = {
   PROJECTS: "meterflo_projects",
   CREDENTIALS: "meterflo_credentials",
   UPDATE_URL: "meterflo_update_url",
+  IOS_UPDATE_SOURCE: "meterflo_ios_update_source",
+  APP_STORE_ID: "meterflo_app_store_id",
 };
 
 interface StoredCredentials {
@@ -156,6 +162,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     needsProjectSelection: false,
     isOfflineSession: false,
     updateUrl: null,
+    iosUpdateSource: null,
+    appStoreId: null,
   });
 
   useEffect(() => {
@@ -164,12 +172,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadStoredAuth = async () => {
     try {
-      const [storedUser, storedServerUrl, storedProjectId, storedProjects, storedUpdateUrl] = await Promise.all([
+      const [storedUser, storedServerUrl, storedProjectId, storedProjects, storedUpdateUrl, storedIosUpdateSource, storedAppStoreId] = await Promise.all([
         secureGet(STORAGE_KEYS.USER),
         secureGet(STORAGE_KEYS.SERVER_URL),
         secureGet(STORAGE_KEYS.PROJECT_ID),
         secureGet(STORAGE_KEYS.PROJECTS),
         secureGet(STORAGE_KEYS.UPDATE_URL),
+        secureGet(STORAGE_KEYS.IOS_UPDATE_SOURCE),
+        secureGet(STORAGE_KEYS.APP_STORE_ID),
       ]);
 
       if (storedUser && storedServerUrl && storedProjectId) {
@@ -183,6 +193,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           needsProjectSelection: false,
           isOfflineSession: false,
           updateUrl: storedUpdateUrl || null,
+          iosUpdateSource: (storedIosUpdateSource as IosUpdateSource) || null,
+          appStoreId: storedAppStoreId || null,
         });
       } else if (storedUser && storedServerUrl && storedProjects) {
         setState({
@@ -195,6 +207,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           needsProjectSelection: true,
           isOfflineSession: false,
           updateUrl: storedUpdateUrl || null,
+          iosUpdateSource: (storedIosUpdateSource as IosUpdateSource) || null,
+          appStoreId: storedAppStoreId || null,
         });
       } else {
         setState(prev => ({
@@ -272,8 +286,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           secureSet(STORAGE_KEYS.PROJECTS, JSON.stringify(projects)),
         ]);
 
-        // Get stored update URL for offline login
-        const storedUpdateUrl = await secureGet(STORAGE_KEYS.UPDATE_URL);
+        // Get stored update config for offline login
+        const [storedUpdateUrl, storedIosUpdateSource, storedAppStoreId] = await Promise.all([
+          secureGet(STORAGE_KEYS.UPDATE_URL),
+          secureGet(STORAGE_KEYS.IOS_UPDATE_SOURCE),
+          secureGet(STORAGE_KEYS.APP_STORE_ID),
+        ]);
         
         if (projectId) {
           await secureSet(STORAGE_KEYS.PROJECT_ID, String(projectId));
@@ -287,6 +305,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             needsProjectSelection: false,
             isOfflineSession: true,
             updateUrl: storedUpdateUrl || null,
+            iosUpdateSource: (storedIosUpdateSource as IosUpdateSource) || null,
+            appStoreId: storedAppStoreId || null,
           });
         } else if (projects && projects.length === 1) {
           await secureSet(STORAGE_KEYS.PROJECT_ID, String(projects[0].id));
@@ -300,6 +320,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             needsProjectSelection: false,
             isOfflineSession: true,
             updateUrl: storedUpdateUrl || null,
+            iosUpdateSource: (storedIosUpdateSource as IosUpdateSource) || null,
+            appStoreId: storedAppStoreId || null,
           });
         } else {
           setState({
@@ -312,6 +334,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             needsProjectSelection: true,
             isOfflineSession: true,
             updateUrl: storedUpdateUrl || null,
+            iosUpdateSource: (storedIosUpdateSource as IosUpdateSource) || null,
+            appStoreId: storedAppStoreId || null,
           });
         }
         return;
@@ -366,8 +390,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const projectsData = await projectsResponse.json();
       const projects: Project[] = Array.isArray(projectsData) ? projectsData : projectsData.projects || [];
       
-      // Extract mobileConfig.updateUrl if provided by server
-      const updateUrl: string | null = projectsData?.mobileConfig?.updateUrl || null;
+      // Extract mobileConfig update settings if provided by server
+      const mobileConfig = projectsData?.mobileConfig;
+      const updateUrl: string | null = mobileConfig?.updateUrl || null;
+      const iosUpdateSource: IosUpdateSource = mobileConfig?.iosUpdateSource || null;
+      const appStoreId: string | null = mobileConfig?.appStoreId || null;
 
       const salt = await generateSalt();
       const passwordHash = await hashPassword(password, salt);
@@ -389,11 +416,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         secureSet(STORAGE_KEYS.PROJECTS, JSON.stringify(projects)),
       ];
       
-      // Store or clear update URL
+      // Store or clear update config
       if (updateUrl) {
         storagePromises.push(secureSet(STORAGE_KEYS.UPDATE_URL, updateUrl));
       } else {
         storagePromises.push(secureDelete(STORAGE_KEYS.UPDATE_URL));
+      }
+      
+      if (iosUpdateSource) {
+        storagePromises.push(secureSet(STORAGE_KEYS.IOS_UPDATE_SOURCE, iosUpdateSource));
+      } else {
+        storagePromises.push(secureDelete(STORAGE_KEYS.IOS_UPDATE_SOURCE));
+      }
+      
+      if (appStoreId) {
+        storagePromises.push(secureSet(STORAGE_KEYS.APP_STORE_ID, appStoreId));
+      } else {
+        storagePromises.push(secureDelete(STORAGE_KEYS.APP_STORE_ID));
       }
       
       await Promise.all(storagePromises);
@@ -416,6 +455,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           needsProjectSelection: false,
           isOfflineSession: false,
           updateUrl,
+          iosUpdateSource,
+          appStoreId,
         });
       } else {
         setState({
@@ -428,6 +469,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           needsProjectSelection: true,
           isOfflineSession: false,
           updateUrl,
+          iosUpdateSource,
+          appStoreId,
         });
       }
     } catch (error) {
