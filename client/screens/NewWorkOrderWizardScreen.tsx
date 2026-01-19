@@ -1406,7 +1406,7 @@ export default function NewWorkOrderWizardScreen() {
                   </ThemedText>
                 </View>
 
-                {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan) && (
+                {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan || projectConfig.searchShowHidScanner) && (
                   <View style={styles.scanButtonsRow}>
                     {projectConfig.searchShowBarcodeScan && (
                       <Pressable
@@ -1426,12 +1426,24 @@ export default function NewWorkOrderWizardScreen() {
                         <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>QR Code</ThemedText>
                       </Pressable>
                     )}
+                    {projectConfig.searchShowHidScanner && (
+                      <Pressable
+                        style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                        onPress={() => { 
+                          setHidScannerTarget(isCapturingOldSystem ? "oldSystem" : "oldModule"); 
+                          setShowHidScannerModal(true); 
+                        }}
+                      >
+                        <Icon name="bluetooth" size={28} color={theme.primary} />
+                        <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>HID Scanner</ThemedText>
+                      </Pressable>
+                    )}
                   </View>
                 )}
 
-                {(projectConfig.searchShowManualEntry || projectConfig.searchShowHidScanner) && (
+                {projectConfig.searchShowManualEntry && (
                   <>
-                    {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan) && (
+                    {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan || projectConfig.searchShowHidScanner) && (
                       <ThemedText type="body" style={{ color: theme.textSecondary, marginVertical: Spacing.lg, textAlign: "center" }}>
                         or enter manually
                       </ThemedText>
@@ -1443,17 +1455,12 @@ export default function NewWorkOrderWizardScreen() {
                       onFocus={() => setIsIdInputFocused(true)}
                       onBlur={isCapturingOldSystem ? handleOldSystemIdBlur : handleOldModuleIdBlur}
                       onSubmitEditing={isCapturingOldSystem ? handleOldSystemIdSubmit : handleOldModuleIdSubmit}
-                      placeholder="Type or use HID scanner"
+                      placeholder="Enter ID manually"
                       autoCapitalize="characters"
                       returnKeyType="done"
                       blurOnSubmit={true}
                       style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                     />
-                    {projectConfig.searchShowHidScanner && (
-                      <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm, textAlign: "center" }}>
-                        Tap field and scan with Bluetooth/USB barcode gun
-                      </ThemedText>
-                    )}
                   </>
                 )}
               </View>
@@ -1736,7 +1743,7 @@ export default function NewWorkOrderWizardScreen() {
                   </ThemedText>
                 </View>
 
-                {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan) && (
+                {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan || projectConfig.searchShowHidScanner) && (
                   <View style={styles.scanButtonsRow}>
                     {projectConfig.searchShowBarcodeScan && (
                       <Pressable
@@ -1756,12 +1763,24 @@ export default function NewWorkOrderWizardScreen() {
                         <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>QR Code</ThemedText>
                       </Pressable>
                     )}
+                    {projectConfig.searchShowHidScanner && (
+                      <Pressable
+                        style={[styles.scanButton, { backgroundColor: theme.backgroundSecondary }]}
+                        onPress={() => { 
+                          setHidScannerTarget(isCapturingNewSystem ? "newSystem" : "newModule"); 
+                          setShowHidScannerModal(true); 
+                        }}
+                      >
+                        <Icon name="bluetooth" size={28} color={theme.primary} />
+                        <ThemedText type="small" style={{ marginTop: Spacing.xs, fontWeight: "500" }}>HID Scanner</ThemedText>
+                      </Pressable>
+                    )}
                   </View>
                 )}
 
-                {(projectConfig.searchShowManualEntry || projectConfig.searchShowHidScanner) && (
+                {projectConfig.searchShowManualEntry && (
                   <>
-                    {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan) && (
+                    {(projectConfig.searchShowBarcodeScan || projectConfig.searchShowQrCodeScan || projectConfig.searchShowHidScanner) && (
                       <ThemedText type="body" style={{ color: theme.textSecondary, marginVertical: Spacing.lg, textAlign: "center" }}>
                         or enter manually
                       </ThemedText>
@@ -1779,15 +1798,10 @@ export default function NewWorkOrderWizardScreen() {
                           handleNewModuleIdBlur();
                         }
                       }}
-                      placeholder="Type or use HID scanner"
+                      placeholder="Enter ID manually"
                       autoCapitalize="characters"
                       style={{ fontSize: 24, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
                     />
-                    {projectConfig.searchShowHidScanner && (
-                      <ThemedText type="body" style={{ color: theme.textSecondary, marginTop: Spacing.sm, textAlign: "center" }}>
-                        Tap field and scan with Bluetooth/USB barcode gun
-                      </ThemedText>
-                    )}
                   </>
                 )}
               </View>
