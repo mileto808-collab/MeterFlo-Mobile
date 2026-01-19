@@ -1107,7 +1107,6 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json();
-      console.log("[searchWorkOrdersByMeterIdOnServer] Raw server response:", JSON.stringify(data, null, 2));
       // Handle different response formats: array, { workOrders: [...] }, { workOrder: {...} }, or null
       let serverWorkOrders: ServerWorkOrder[];
       if (!data || typeof data !== 'object') {
@@ -1129,14 +1128,6 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
       const mappedWorkOrders = serverWorkOrders.map(mapServerWorkOrder);
       
       console.log("[searchWorkOrdersByMeterIdOnServer] Found", mappedWorkOrders.length, "work orders");
-      if (mappedWorkOrders.length > 0) {
-        console.log("[searchWorkOrdersByMeterIdOnServer] First work order types:", {
-          oldSystemType: mappedWorkOrders[0].oldSystemType,
-          newSystemType: mappedWorkOrders[0].newSystemType,
-          oldModuleType: mappedWorkOrders[0].oldModuleType,
-          newModuleType: mappedWorkOrders[0].newModuleType,
-        });
-      }
       return mappedWorkOrders;
     } catch (err) {
       console.error("[searchWorkOrdersByMeterIdOnServer] Failed to search:", err);
