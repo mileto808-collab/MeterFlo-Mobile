@@ -3,7 +3,7 @@ import { View, FlatList, StyleSheet, Pressable, RefreshControl, TextInput } from
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { useTheme } from "@/hooks/useTheme";
@@ -64,14 +64,38 @@ export default function WorkOrdersScreen() {
 
   const isHidScannerEnabled = projectConfig.searchShowHidScanner;
   const isAnyModalOpen = showSearchOptions || showHIDScanner || showManualSearch || scanConfirmResult !== null;
+  const isAnyModalOpenRef = useRef(isAnyModalOpen);
+  isAnyModalOpenRef.current = isAnyModalOpen;
+
+  const focusHiddenInput = useCallback(() => {
+    if (isHidScannerEnabled && !isAnyModalOpenRef.current) {
+      setTimeout(() => {
+        hiddenInputRef.current?.focus();
+      }, 50);
+    }
+  }, [isHidScannerEnabled]);
+
+  useFocusEffect(
+    useCallback(() => {
+      focusHiddenInput();
+    }, [focusHiddenInput])
+  );
 
   useEffect(() => {
     if (isHidScannerEnabled && !isAnyModalOpen) {
+      focusHiddenInput();
+    }
+  }, [isHidScannerEnabled, isAnyModalOpen, focusHiddenInput]);
+
+  const handleHiddenInputBlur = useCallback(() => {
+    if (isHidScannerEnabled && !isAnyModalOpenRef.current) {
       setTimeout(() => {
-        hiddenInputRef.current?.focus();
+        if (!isAnyModalOpenRef.current) {
+          hiddenInputRef.current?.focus();
+        }
       }, 100);
     }
-  }, [isHidScannerEnabled, isAnyModalOpen]);
+  }, [isHidScannerEnabled]);
 
   const handleHiddenInputChange = useCallback((text: string) => {
     if (!isHidScannerEnabled) return;
@@ -494,12 +518,14 @@ export default function WorkOrdersScreen() {
           ref={hiddenInputRef}
           onChangeText={handleHiddenInputChange}
           onKeyPress={handleHiddenInputKeyPress}
+          onBlur={handleHiddenInputBlur}
           style={styles.hiddenInput}
           autoCapitalize="none"
           autoCorrect={false}
           showSoftInputOnFocus={false}
           caretHidden={true}
           blurOnSubmit={false}
+          autoFocus={true}
         />
       ) : null}
 
