@@ -16,7 +16,14 @@ import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
-import { getCurrentAppVersion, checkForUpdate, UpdateInfo } from "@/lib/github-update-service";
+import { 
+  getCurrentAppVersion, 
+  checkForUpdate, 
+  buildUpdateConfig,
+  getUpdateSourceLabel,
+  UpdateInfo,
+  UpdateConfig,
+} from "@/lib/update-service";
 import { UpdateAvailableModal } from "@/components/UpdateAvailableModal";
 
 const STORAGE_KEYS = {
@@ -47,7 +54,7 @@ export default function AccountScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
-  const { user, serverUrl, projectId, projects, logout, isOfflineSession, getUpdateUrl, updateUrl } = useAuth();
+  const { user, serverUrl, projectId, projects, logout, isOfflineSession, updateUrl, iosUpdateSource, appStoreId } = useAuth();
   const { isOnline } = useOffline();
   const { lastSyncTime } = useWorkOrders();
 
@@ -72,16 +79,29 @@ export default function AccountScreen() {
     await secureSet(STORAGE_KEYS.UPDATE_CHECK_ENABLED, value ? "true" : "false");
   }, []);
 
+  const getUpdateConfig = useCallback((): UpdateConfig | null => {
+    const config = buildUpdateConfig(updateUrl, iosUpdateSource, appStoreId);
+    
+    if (Platform.OS === "android" && !config.android) {
+      return null;
+    }
+    if (Platform.OS === "ios" && !config.ios) {
+      return null;
+    }
+    
+    return config;
+  }, [updateUrl, iosUpdateSource, appStoreId]);
+
   const handleCheckForUpdates = useCallback(async () => {
-    const url = await getUpdateUrl();
-    if (!url) {
-      Alert.alert("No Update Source", "No update source has been configured by your server administrator.");
+    const config = getUpdateConfig();
+    if (!config) {
+      Alert.alert("No Update Source", "No update source has been configured by your server administrator for this platform.");
       return;
     }
 
     setIsCheckingUpdate(true);
     try {
-      const info = await checkForUpdate(url);
+      const info = await checkForUpdate(config);
       if (!info) {
         Alert.alert("Check Failed", "Could not reach the update server. Please check your connection and try again.");
         return;
@@ -97,7 +117,7 @@ export default function AccountScreen() {
     } finally {
       setIsCheckingUpdate(false);
     }
-  }, [getUpdateUrl, appVersion]);
+  }, [getUpdateConfig, appVersion]);
 
   const handleSkipVersion = useCallback(async () => {
     if (updateInfo) {
@@ -297,33 +317,48 @@ export default function AccountScreen() {
           />
         </View>
 
-        {updateUrl ? (
-          <View style={styles.infoRow}>
-            <View style={styles.infoLabel}>
-              <Icon name="server" size={16} color={theme.textSecondary} />
-              <ThemedText type="small" style={{ color: theme.textSecondary }}>Update source</ThemedText>
+        {(() => {
+          const config = getUpdateConfig();
+          const hasConfig = config !== null;
+          const sourceLabel = Platform.OS === "android" && config?.android 
+            ? getUpdateSourceLabel("github")
+            : Platform.OS === "ios" && config?.ios
+              ? getUpdateSourceLabel(config.ios.source)
+              : null;
+          
+          return (
+            <View style={styles.infoRow}>
+              <View style={styles.infoLabel}>
+                <Icon name="server" size={16} color={theme.textSecondary} />
+                <ThemedText type="small" style={{ color: theme.textSecondary }}>Update source</ThemedText>
+              </View>
+              {hasConfig ? (
+                <View style={[styles.statusIndicator, { backgroundColor: theme.success + "20" }]}>
+                  <ThemedText type="small" style={{ color: theme.success }}>{sourceLabel}</ThemedText>
+                </View>
+              ) : (
+                <View style={[styles.statusIndicator, { backgroundColor: theme.warning + "20" }]}>
+                  <ThemedText type="small" style={{ color: theme.warning }}>Not configured</ThemedText>
+                </View>
+              )}
             </View>
-            <View style={[styles.statusIndicator, { backgroundColor: theme.success + "20" }]}>
-              <ThemedText type="small" style={{ color: theme.success }}>Configured</ThemedText>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.infoRow}>
-            <View style={styles.infoLabel}>
-              <Icon name="server" size={16} color={theme.textSecondary} />
-              <ThemedText type="small" style={{ color: theme.textSecondary }}>Update source</ThemedText>
-            </View>
-            <View style={[styles.statusIndicator, { backgroundColor: theme.warning + "20" }]}>
-              <ThemedText type="small" style={{ color: theme.warning }}>Not configured</ThemedText>
-            </View>
-          </View>
-        )}
+          );
+        })()}
 
-        {Platform.OS !== "android" ? (
+        {Platform.OS === "web" ? (
           <View style={[styles.platformNote, { backgroundColor: theme.backgroundSecondary }]}>
             <Icon name="info" size={14} color={theme.textSecondary} />
             <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
-              Automatic updates are only available on Android. Use GitHub to download updates manually.
+              Updates are not available on web. Use a mobile device to receive app updates.
+            </ThemedText>
+          </View>
+        ) : !getUpdateConfig() ? (
+          <View style={[styles.platformNote, { backgroundColor: theme.backgroundSecondary }]}>
+            <Icon name="info" size={14} color={theme.textSecondary} />
+            <ThemedText type="small" style={{ color: theme.textSecondary, flex: 1 }}>
+              {Platform.OS === "ios" 
+                ? "iOS update source not configured. Contact your administrator."
+                : "Android update source not configured. Contact your administrator."}
             </ThemedText>
           </View>
         ) : null}

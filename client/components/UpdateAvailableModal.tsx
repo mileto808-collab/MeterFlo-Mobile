@@ -14,7 +14,13 @@ import { ThemedView } from "./ThemedView";
 import { Icon } from "./Icons";
 import { useTheme } from "@/hooks/useTheme";
 import { Spacing, BorderRadius } from "@/constants/theme";
-import { UpdateInfo, formatFileSize, canInstallUpdate } from "@/lib/github-update-service";
+import { 
+  UpdateInfo, 
+  formatFileSize, 
+  applyUpdate, 
+  getUpdateActionLabel,
+  getUpdateSourceLabel,
+} from "@/lib/update-service";
 import * as FileSystem from "expo-file-system/legacy";
 import { startActivityAsync } from "expo-intent-launcher";
 
@@ -39,17 +45,47 @@ export function UpdateAvailableModal({
   if (!updateInfo) return null;
 
   const handleUpdate = async () => {
-    if (!updateInfo.apkDownloadUrl) {
-      Linking.openURL(updateInfo.releaseUrl);
+    if (updateInfo.source === "eas" && updateInfo.canInstallDirectly) {
+      setIsDownloading(true);
+      setError(null);
+      try {
+        console.log("[UpdateModal] Applying EAS update...");
+        const success = await applyUpdate(updateInfo);
+        if (!success) {
+          throw new Error("Failed to apply over-the-air update");
+        }
+      } catch (err) {
+        console.error("[UpdateModal] EAS update error:", err);
+        const errorMessage = err instanceof Error ? err.message : "Failed to apply update";
+        setError(errorMessage);
+        setIsDownloading(false);
+      }
       return;
     }
 
-    if (!canInstallUpdate()) {
-      Linking.openURL(updateInfo.releaseUrl);
+    if (updateInfo.source === "appstore") {
+      if (updateInfo.releaseUrl) {
+        await Linking.openURL(updateInfo.releaseUrl);
+      }
+      onClose();
       return;
     }
 
-    if (!updateInfo.apkDownloadUrl.startsWith("https://")) {
+    if (!updateInfo.downloadUrl) {
+      if (updateInfo.releaseUrl) {
+        Linking.openURL(updateInfo.releaseUrl);
+      }
+      return;
+    }
+
+    if (Platform.OS !== "android") {
+      if (updateInfo.releaseUrl) {
+        Linking.openURL(updateInfo.releaseUrl);
+      }
+      return;
+    }
+
+    if (!updateInfo.downloadUrl.startsWith("https://")) {
       setError("Update rejected: Download URL must use HTTPS for security.");
       return;
     }
@@ -62,11 +98,11 @@ export function UpdateAvailableModal({
       const fileName = `meterflo-${updateInfo.latestVersion}.apk`;
       const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
 
-      console.log("[UpdateModal] Starting download from:", updateInfo.apkDownloadUrl);
+      console.log("[UpdateModal] Starting download from:", updateInfo.downloadUrl);
       console.log("[UpdateModal] Saving to:", fileUri);
 
       const downloadResumable = FileSystem.createDownloadResumable(
-        updateInfo.apkDownloadUrl,
+        updateInfo.downloadUrl,
         fileUri,
         {},
         (downloadProgress) => {
@@ -86,7 +122,6 @@ export function UpdateAvailableModal({
 
       console.log("[UpdateModal] Download complete, file saved to:", result.uri);
       
-      // Verify file exists
       const fileInfo = await FileSystem.getInfoAsync(result.uri);
       console.log("[UpdateModal] File info:", JSON.stringify(fileInfo));
       
@@ -94,15 +129,13 @@ export function UpdateAvailableModal({
         throw new Error("Downloaded file does not exist");
       }
 
-      // Convert to content URI for Android package installer
       const contentUri = await FileSystem.getContentUriAsync(result.uri);
       console.log("[UpdateModal] Content URI for installer:", contentUri);
       
-      // Launch Android package installer
       console.log("[UpdateModal] Launching package installer...");
       await startActivityAsync("android.intent.action.VIEW", {
         data: contentUri,
-        flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+        flags: 1,
         type: "application/vnd.android.package-archive",
       });
       
@@ -161,14 +194,20 @@ export function UpdateAvailableModal({
                 {updateInfo.latestVersion}
               </ThemedText>
             </View>
-            {updateInfo.apkSize ? (
+            {updateInfo.fileSize ? (
               <View style={styles.versionRow}>
                 <ThemedText style={styles.versionLabel}>Size:</ThemedText>
                 <ThemedText style={styles.versionValue}>
-                  {formatFileSize(updateInfo.apkSize)}
+                  {formatFileSize(updateInfo.fileSize)}
                 </ThemedText>
               </View>
             ) : null}
+            <View style={styles.versionRow}>
+              <ThemedText style={styles.versionLabel}>Source:</ThemedText>
+              <ThemedText style={styles.versionValue}>
+                {getUpdateSourceLabel(updateInfo.source)}
+              </ThemedText>
+            </View>
           </View>
 
           <View style={styles.releaseNotesContainer}>
@@ -224,35 +263,23 @@ export function UpdateAvailableModal({
             </View>
           ) : (
             <View style={styles.actions}>
-              {Platform.OS === "android" && updateInfo.apkDownloadUrl ? (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.button,
-                    styles.primaryButton,
-                    { backgroundColor: theme.primary, opacity: pressed ? 0.8 : 1 },
-                  ]}
-                  onPress={handleUpdate}
-                >
-                  <Icon name="download" size={18} color="#FFFFFF" />
-                  <ThemedText style={styles.primaryButtonText}>
-                    Download & Install
-                  </ThemedText>
-                </Pressable>
-              ) : (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.button,
-                    styles.primaryButton,
-                    { backgroundColor: theme.primary, opacity: pressed ? 0.8 : 1 },
-                  ]}
-                  onPress={handleOpenInBrowser}
-                >
-                  <Icon name="external-link" size={18} color="#FFFFFF" />
-                  <ThemedText style={styles.primaryButtonText}>
-                    View on GitHub
-                  </ThemedText>
-                </Pressable>
-              )}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.button,
+                  styles.primaryButton,
+                  { backgroundColor: theme.primary, opacity: pressed ? 0.8 : 1 },
+                ]}
+                onPress={handleUpdate}
+              >
+                <Icon 
+                  name={updateInfo.canInstallDirectly ? "download" : "external-link"} 
+                  size={18} 
+                  color="#FFFFFF" 
+                />
+                <ThemedText style={styles.primaryButtonText}>
+                  {getUpdateActionLabel(updateInfo)}
+                </ThemedText>
+              </Pressable>
 
               <Pressable
                 style={({ pressed }) => [
