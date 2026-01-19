@@ -2355,6 +2355,9 @@ export default function NewWorkOrderWizardScreen() {
   };
 
   const getDisplayStepTitle = (): string => {
+    if (currentStep === "captureType") {
+      return isReadingOnlyMode ? "What are you reading?" : "What are you replacing?";
+    }
     if (currentStep === "oldIds") {
       if (isReadingOnlyMode) {
         if (hasOldSystem && hasOldModule) {

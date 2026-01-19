@@ -1,11 +1,11 @@
 {
-  "id": "901aa14d-983f-4d38-acc8-8ba180745cde",
-  "createdAt": "2026-01-19T02:55:17.764Z",
+  "id": "84f11f15-728c-468a-b6d5-1335c0ad0381",
+  "createdAt": "2026-01-19T03:19:24.775Z",
   "runtimeVersion": "exposdk:54.0.0",
   "launchAsset": {
-    "key": "bundle-1768791317764-10499",
+    "key": "bundle-1768792764775-12232",
     "contentType": "application/javascript",
-    "url": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/1768791317764-10499/_expo/static/js/ios/bundle.js"
+    "url": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/1768792764775-12232/_expo/static/js/ios/bundle.js"
   },
   "assets": [],
   "metadata": {},
