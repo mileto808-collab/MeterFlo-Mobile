@@ -646,8 +646,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               // Regular completion - use /complete endpoint
               completeEndpoint = `${serverUrl}/api/mobile/projects/${projectId}/work-orders/${serverWorkOrderId}/complete`;
               completePayload = {
-                oldGps: oldGpsValue,
-                newGps: newGpsValue,
+                old_gps: oldGpsValue,
+                new_gps: newGpsValue,
                 signatureData: offlineData.signatureData || null,
                 signatureName: offlineData.signatureName,
                 completedAt: offlineData.completedAt,
