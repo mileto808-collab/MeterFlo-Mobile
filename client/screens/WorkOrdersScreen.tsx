@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { View, FlatList, StyleSheet, Pressable, RefreshControl } from "react-native";
+import React, { useCallback, useMemo, useState, useRef, useEffect } from "react";
+import { View, FlatList, StyleSheet, Pressable, RefreshControl, TextInput } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -55,6 +55,68 @@ export default function WorkOrdersScreen() {
   const [showHIDScanner, setShowHIDScanner] = useState(false);
   const [showManualSearch, setShowManualSearch] = useState(false);
   const [scanConfirmResult, setScanConfirmResult] = useState<ScanResult | null>(null);
+  const [hidInitialValue, setHidInitialValue] = useState("");
+  
+  const hiddenInputRef = useRef<TextInput>(null);
+  const hidBufferRef = useRef("");
+  const hidTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastKeyTimeRef = useRef(0);
+
+  const isHidScannerEnabled = projectConfig.searchShowHidScanner;
+  const isAnyModalOpen = showSearchOptions || showHIDScanner || showManualSearch || scanConfirmResult !== null;
+
+  useEffect(() => {
+    if (isHidScannerEnabled && !isAnyModalOpen) {
+      setTimeout(() => {
+        hiddenInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isHidScannerEnabled, isAnyModalOpen]);
+
+  const handleHiddenInputChange = useCallback((text: string) => {
+    if (!isHidScannerEnabled) return;
+    
+    const now = Date.now();
+    const timeSinceLastKey = now - lastKeyTimeRef.current;
+    lastKeyTimeRef.current = now;
+
+    if (timeSinceLastKey < 100) {
+      hidBufferRef.current = text;
+    } else {
+      hidBufferRef.current = text;
+    }
+
+    if (hidTimeoutRef.current) {
+      clearTimeout(hidTimeoutRef.current);
+    }
+
+    hidTimeoutRef.current = setTimeout(() => {
+      const scannedValue = hidBufferRef.current.trim();
+      if (scannedValue.length >= 3) {
+        setHidInitialValue(scannedValue);
+        setShowHIDScanner(true);
+        hidBufferRef.current = "";
+        if (hiddenInputRef.current) {
+          hiddenInputRef.current.clear();
+        }
+      }
+    }, 150);
+  }, [isHidScannerEnabled]);
+
+  const handleHiddenInputKeyPress = useCallback((e: any) => {
+    if (e.nativeEvent.key === "Enter" && hidBufferRef.current.trim().length >= 3) {
+      if (hidTimeoutRef.current) {
+        clearTimeout(hidTimeoutRef.current);
+      }
+      const scannedValue = hidBufferRef.current.trim();
+      setHidInitialValue(scannedValue);
+      setShowHIDScanner(true);
+      hidBufferRef.current = "";
+      if (hiddenInputRef.current) {
+        hiddenInputRef.current.clear();
+      }
+    }
+  }, []);
 
   const filteredWorkOrders = useMemo(() => getFilteredWorkOrders(), [getFilteredWorkOrders]);
 
@@ -232,6 +294,7 @@ export default function WorkOrdersScreen() {
 
   const handleScanAgain = useCallback(() => {
     setScanConfirmResult(null);
+    setHidInitialValue("");
     setShowHIDScanner(true);
   }, []);
 
@@ -418,9 +481,27 @@ export default function WorkOrdersScreen() {
 
       <HIDScannerModal
         visible={showHIDScanner}
-        onClose={() => setShowHIDScanner(false)}
+        onClose={() => {
+          setShowHIDScanner(false);
+          setHidInitialValue("");
+        }}
         onScan={handleScanResult}
+        initialValue={hidInitialValue}
       />
+
+      {isHidScannerEnabled && !isAnyModalOpen ? (
+        <TextInput
+          ref={hiddenInputRef}
+          onChangeText={handleHiddenInputChange}
+          onKeyPress={handleHiddenInputKeyPress}
+          style={styles.hiddenInput}
+          autoCapitalize="none"
+          autoCorrect={false}
+          showSoftInputOnFocus={false}
+          caretHidden={true}
+          blurOnSubmit={false}
+        />
+      ) : null}
 
       <ManualSearchModal
         visible={showManualSearch}
@@ -544,5 +625,12 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
+  },
+  hiddenInput: {
+    position: "absolute",
+    opacity: 0,
+    width: 1,
+    height: 1,
+    top: -1000,
   },
 });
