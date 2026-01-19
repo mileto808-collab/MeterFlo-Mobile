@@ -16,6 +16,8 @@ interface HIDScannerModalProps {
   instructionsText?: string;
   /** Auto-close and submit immediately on scan (no manual submit needed). Default false */
   autoSubmitOnScan?: boolean;
+  /** Initial value to pre-fill (e.g., from HID scan that triggered modal open) */
+  initialValue?: string;
 }
 
 export function HIDScannerModal({ 
@@ -25,6 +27,7 @@ export function HIDScannerModal({
   submitButtonText = "Find Work Order",
   instructionsText = "Point your external barcode scanner at a system or module barcode. The scanned value will appear below.",
   autoSubmitOnScan = false,
+  initialValue = "",
 }: HIDScannerModalProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -32,20 +35,34 @@ export function HIDScannerModal({
   const [value, setValue] = useState("");
   const [lastKeyTime, setLastKeyTime] = useState(0);
   const submitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasProcessedInitialValue = useRef(false);
 
   useEffect(() => {
     if (visible) {
-      setValue("");
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
+      if (initialValue && !hasProcessedInitialValue.current) {
+        setValue(initialValue);
+        hasProcessedInitialValue.current = true;
+        setTimeout(() => {
+          inputRef.current?.focus();
+          if (initialValue.length >= 3) {
+            handleSubmit(initialValue);
+          }
+        }, 100);
+      } else {
+        setValue("");
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 100);
+      }
+    } else {
+      hasProcessedInitialValue.current = false;
     }
     return () => {
       if (submitTimeoutRef.current) {
         clearTimeout(submitTimeoutRef.current);
       }
     };
-  }, [visible]);
+  }, [visible, initialValue]);
 
   const handleChangeText = (text: string) => {
     const now = Date.now();
