@@ -22,6 +22,7 @@ import { SelectInput } from "@/components/SelectInput";
 import { SignaturePad } from "@/components/SignaturePad";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import { WorkflowModeModal, WorkflowModeChoice } from "@/components/WorkflowModeModal";
+import { HIDScannerModal } from "@/components/HIDScannerModal";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -208,6 +209,11 @@ export default function NewWorkOrderWizardScreen() {
   const [isCapturingGps, setIsCapturingGps] = useState(false);
   const [startTime, setStartTime] = useState<string | null>(null);
   
+  // HID Scanner modal state
+  const [showHidScannerModal, setShowHidScannerModal] = useState(false);
+  const [hidScannerLaunchedForStep, setHidScannerLaunchedForStep] = useState(false);
+  const [hidScannerTarget, setHidScannerTarget] = useState<"oldSystem" | "oldModule" | "newSystem" | "newModule">("oldSystem");
+  
   const [showWorkflowModeModal, setShowWorkflowModeModal] = useState(projectConfig.wizardMode === "user_choice");
   const [selectedWorkflowMode, setSelectedWorkflowMode] = useState<SelectedWorkflowMode>(
     projectConfig.wizardMode === "reading_only" ? "reading_only" : "changeout"
@@ -297,6 +303,39 @@ export default function NewWorkOrderWizardScreen() {
   const totalSteps = steps.length;
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;
+  
+  // Auto-launch HID scanner when it's the only enabled method for ID capture steps
+  useEffect(() => {
+    if (currentStep === "oldIds" || currentStep === "newIds") {
+      // Check what scan methods are enabled
+      const enabledMethods: string[] = [];
+      if (projectConfig.searchShowBarcodeScan) enabledMethods.push("barcode");
+      if (projectConfig.searchShowQrCodeScan) enabledMethods.push("qr");
+      if (projectConfig.searchShowManualEntry) enabledMethods.push("manual");
+      if (projectConfig.searchShowHidScanner) enabledMethods.push("hid");
+      
+      // Determine if we need to capture
+      const captureMode = currentStep === "oldIds" ? oldCaptureMode : newCaptureMode;
+      const needsCapture = captureMode !== "summary";
+      
+      // Only auto-launch if we need to capture something and HID is the only method
+      if (needsCapture && enabledMethods.length === 1 && enabledMethods[0] === "hid" && !hidScannerLaunchedForStep) {
+        // Set the target based on current step and capture mode
+        if (currentStep === "oldIds") {
+          setHidScannerTarget(captureMode === "module" ? "oldModule" : "oldSystem");
+        } else {
+          setHidScannerTarget(captureMode === "module" ? "newModule" : "newSystem");
+        }
+        setShowHidScannerModal(true);
+        setHidScannerLaunchedForStep(true);
+      }
+    }
+  }, [currentStep, oldCaptureMode, newCaptureMode, hidScannerLaunchedForStep, projectConfig]);
+  
+  // Reset HID scanner launched flag when step changes
+  useEffect(() => {
+    setHidScannerLaunchedForStep(false);
+  }, [currentStep]);
   
   // Track startTime when user makes canChange decision (clicks Proceed or Report Issue)
   useEffect(() => {
@@ -493,6 +532,55 @@ export default function NewWorkOrderWizardScreen() {
   const handleCancelScanner = () => {
     setShowScanner(false);
     setDetectedBarcode(null);
+  };
+  
+  // Handle HID scanner result
+  const handleHidScanResult = (scannedValue: string) => {
+    const trimmedValue = scannedValue.trim();
+    if (!trimmedValue) return;
+    
+    if (hidScannerTarget === "oldSystem") {
+      setFormData(prev => ({ ...prev, oldSystemId: trimmedValue }));
+      // Advance to module if needed, otherwise to summary
+      if (hasOldModule) {
+        setOldCaptureMode("module");
+        // Re-launch HID if it's the only option
+        if (projectConfig.searchShowHidScanner && 
+            !projectConfig.searchShowBarcodeScan && 
+            !projectConfig.searchShowQrCodeScan && 
+            !projectConfig.searchShowManualEntry) {
+          setHidScannerTarget("oldModule");
+          setTimeout(() => setShowHidScannerModal(true), 300);
+        }
+      } else {
+        setOldCaptureMode("summary");
+      }
+    } else if (hidScannerTarget === "oldModule") {
+      setFormData(prev => ({ ...prev, oldModuleId: trimmedValue }));
+      setOldCaptureMode("summary");
+    } else if (hidScannerTarget === "newSystem") {
+      setFormData(prev => ({ ...prev, newSystemId: trimmedValue }));
+      // Advance to module if needed, otherwise to summary
+      if (hasNewModule) {
+        setNewCaptureMode("module");
+        // Re-launch HID if it's the only option
+        if (projectConfig.searchShowHidScanner && 
+            !projectConfig.searchShowBarcodeScan && 
+            !projectConfig.searchShowQrCodeScan && 
+            !projectConfig.searchShowManualEntry) {
+          setHidScannerTarget("newModule");
+          setTimeout(() => setShowHidScannerModal(true), 300);
+        }
+      } else {
+        setNewCaptureMode("summary");
+      }
+    } else if (hidScannerTarget === "newModule") {
+      setFormData(prev => ({ ...prev, newModuleId: trimmedValue }));
+      setNewCaptureMode("summary");
+    }
+    
+    setShowHidScannerModal(false);
+    setIsIdInputFocused(false);
   };
 
   const captureGps = async () => {
@@ -804,6 +892,7 @@ export default function NewWorkOrderWizardScreen() {
         newModuleId: finalNewModuleId,
         newModuleReading: finalNewModuleReading,
         gpsCoordinates: formData.gpsCoordinates || null,
+        newGps: formData.gpsCoordinates || null,
         signatureData: formData.signatureData || null,
         signatureName: formData.signatureName,
         startTime: startTime || completedAt,
@@ -2395,6 +2484,17 @@ export default function NewWorkOrderWizardScreen() {
           navigation.goBack();
         }}
         onSelectMode={handleWorkflowModeSelect}
+      />
+
+      <HIDScannerModal
+        visible={showHidScannerModal}
+        onClose={() => setShowHidScannerModal(false)}
+        onScan={handleHidScanResult}
+        submitButtonText="Use This ID"
+        instructionsText={`Point your external barcode scanner at the ${
+          hidScannerTarget.includes("module") ? "module" : "system"
+        } barcode. The scanned value will be used automatically.`}
+        autoSubmitOnScan={true}
       />
     </View>
   );
