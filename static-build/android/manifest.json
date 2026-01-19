@@ -1,11 +1,11 @@
 {
-  "id": "c6ede9f6-f4af-4c3c-82cc-6c0bc9c1f1b6",
-  "createdAt": "2026-01-18T19:42:37.261Z",
+  "id": "60464bda-f8a3-419b-8445-9eb385d5d73d",
+  "createdAt": "2026-01-19T00:23:46.973Z",
   "runtimeVersion": "exposdk:54.0.0",
   "launchAsset": {
-    "key": "bundle-1768765357261-12958",
+    "key": "bundle-1768782226973-1543",
     "contentType": "application/javascript",
-    "url": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/1768765357261-12958/_expo/static/js/android/bundle.js"
+    "url": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/1768782226973-1543/_expo/static/js/android/bundle.js"
   },
   "assets": [],
   "metadata": {},
@@ -113,6 +113,6 @@
       },
       "mainModuleName": "client/index"
     },
-    "scopeKey": "@anonymous/meterflo-mobile-cae0fb3f-b246-447f-9fe6-7edf116612e3"
+    "scopeKey": "@anonymous/meterflo-mobile-0aecde8f-ca91-411b-b697-b9c6fd792477"
   }
 }
