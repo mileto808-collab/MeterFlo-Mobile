@@ -166,6 +166,7 @@ export interface ReferenceData {
 
 export type WizardMode = "changeout" | "reading_only" | "user_choice";
 export type WizardGpsMode = "automatic" | "manual" | "disabled";
+export type EquipmentType = "system" | "module" | "both" | "user_choice";
 
 export interface ProjectConfig {
   wizardMode: WizardMode;
@@ -179,6 +180,8 @@ export interface ProjectConfig {
   searchShowQrCodeScan: boolean;
   searchShowManualEntry: boolean;
   searchShowHidScanner: boolean;
+  changeoutEquipmentType: EquipmentType;
+  readingEquipmentType: EquipmentType;
   isActive: boolean;
 }
 
@@ -194,6 +197,8 @@ export const defaultProjectConfig: ProjectConfig = {
   searchShowQrCodeScan: true,
   searchShowManualEntry: true,
   searchShowHidScanner: false,
+  changeoutEquipmentType: "both",
+  readingEquipmentType: "both",
   isActive: true,
 };
 
@@ -973,11 +978,13 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
             searchShowQrCodeScan: projectData.searchShowQrCodeScan ?? defaultProjectConfig.searchShowQrCodeScan,
             searchShowManualEntry: projectData.searchShowManualEntry ?? defaultProjectConfig.searchShowManualEntry,
             searchShowHidScanner: projectData.searchShowHidScanner ?? defaultProjectConfig.searchShowHidScanner,
+            changeoutEquipmentType: projectData.changeoutEquipmentType || defaultProjectConfig.changeoutEquipmentType,
+            readingEquipmentType: projectData.readingEquipmentType || defaultProjectConfig.readingEquipmentType,
             isActive: projectData.isActive ?? defaultProjectConfig.isActive,
           };
           setProjectConfig(newProjectConfig);
           await AsyncStorage.setItem(STORAGE_KEYS.PROJECT_CONFIG, JSON.stringify(newProjectConfig));
-          console.log("[refreshWorkOrders] Project config updated:", newProjectConfig.wizardMode);
+          console.log("[refreshWorkOrders] Project config updated:", newProjectConfig.wizardMode, "changeout:", newProjectConfig.changeoutEquipmentType, "reading:", newProjectConfig.readingEquipmentType);
         }
       } catch (configErr) {
         console.warn("[refreshWorkOrders] Failed to fetch project config, using cached:", configErr);
