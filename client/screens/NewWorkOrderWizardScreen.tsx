@@ -11,7 +11,7 @@ import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-ca
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useTheme } from "@/hooks/useTheme";
-import { useWorkOrders, WizardMode } from "@/contexts/WorkOrderContext";
+import { useWorkOrders, WizardMode, EquipmentType } from "@/contexts/WorkOrderContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOffline } from "@/contexts/OfflineContext";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
@@ -77,13 +77,14 @@ interface NewWorkOrderData {
   notes: string;
 }
 
-const getChangeoutSteps = (captureType: CaptureType, projectConfig: { wizardShowBeforePhotosStep: boolean; wizardShowAfterPhotosStep: boolean; wizardShowGpsStep: boolean; wizardGpsMode: string; wizardShowNotesStep: boolean; wizardShowSignatureStep: boolean }): WizardStep[] => {
-  const steps: WizardStep[] = [
-    "captureType",
-    "oldIds",
-    "canChange",
-    "oldReading",
-  ];
+const getChangeoutSteps = (captureType: CaptureType, projectConfig: { wizardShowBeforePhotosStep: boolean; wizardShowAfterPhotosStep: boolean; wizardShowGpsStep: boolean; wizardGpsMode: string; wizardShowNotesStep: boolean; wizardShowSignatureStep: boolean }, showEquipmentTypeStep: boolean): WizardStep[] => {
+  const steps: WizardStep[] = [];
+  
+  if (showEquipmentTypeStep) {
+    steps.push("captureType");
+  }
+  
+  steps.push("oldIds", "canChange", "oldReading");
   
   if (projectConfig.wizardShowBeforePhotosStep) {
     steps.push("beforePhotos");
@@ -112,12 +113,14 @@ const getChangeoutSteps = (captureType: CaptureType, projectConfig: { wizardShow
   return steps;
 };
 
-const getReadingOnlySteps = (projectConfig: { wizardShowBeforePhotosStep: boolean; wizardShowAfterPhotosStep: boolean; wizardShowGpsStep: boolean; wizardGpsMode: string; wizardShowNotesStep: boolean; wizardShowSignatureStep: boolean }): WizardStep[] => {
-  const steps: WizardStep[] = [
-    "captureType",
-    "oldIds",
-    "canChange",
-  ];
+const getReadingOnlySteps = (projectConfig: { wizardShowBeforePhotosStep: boolean; wizardShowAfterPhotosStep: boolean; wizardShowGpsStep: boolean; wizardGpsMode: string; wizardShowNotesStep: boolean; wizardShowSignatureStep: boolean }, showEquipmentTypeStep: boolean): WizardStep[] => {
+  const steps: WizardStep[] = [];
+  
+  if (showEquipmentTypeStep) {
+    steps.push("captureType");
+  }
+  
+  steps.push("oldIds", "canChange");
   
   if (projectConfig.wizardShowBeforePhotosStep) {
     steps.push("beforePhotos");
@@ -146,15 +149,16 @@ const getReadingOnlySteps = (projectConfig: { wizardShowBeforePhotosStep: boolea
   return steps;
 };
 
-const getTroubleSteps = (selectedMode: SelectedWorkflowMode): WizardStep[] => {
-  // Both reading-only and changeout modes need captureType selection
-  return [
-    "captureType",
-    "oldIds",
-    "canChange",
-    "troubleCapture",
-    "troubleConfirm",
-  ];
+const getTroubleSteps = (selectedMode: SelectedWorkflowMode, showEquipmentTypeStep: boolean): WizardStep[] => {
+  const steps: WizardStep[] = [];
+  
+  if (showEquipmentTypeStep) {
+    steps.push("captureType");
+  }
+  
+  steps.push("oldIds", "canChange", "troubleCapture", "troubleConfirm");
+  
+  return steps;
 };
 
 const STEP_TITLES: Record<WizardStep, string> = {
@@ -221,8 +225,34 @@ export default function NewWorkOrderWizardScreen() {
   
   const isReadingOnlyMode = selectedWorkflowMode === "reading_only";
   
-  // Capture type selection (system/module/both)
-  const [captureType, setCaptureType] = useState<CaptureType>("both");
+  // Determine effective equipment type based on workflow mode
+  const effectiveEquipmentType: EquipmentType = isReadingOnlyMode 
+    ? projectConfig.readingEquipmentType 
+    : projectConfig.changeoutEquipmentType;
+  
+  // Show equipment type selection step only if configured as user_choice
+  const showEquipmentTypeStep = effectiveEquipmentType === "user_choice";
+  
+  // Capture type selection (system/module/both) - initialize from config if not user_choice
+  const getInitialCaptureType = (): CaptureType => {
+    if (effectiveEquipmentType === "user_choice") {
+      return "both"; // Default selection when user chooses
+    }
+    return effectiveEquipmentType as CaptureType;
+  };
+  
+  const [captureType, setCaptureType] = useState<CaptureType>(getInitialCaptureType());
+  
+  // Update captureType when workflow mode changes and equipment type is not user_choice
+  useEffect(() => {
+    const newEffectiveType = isReadingOnlyMode 
+      ? projectConfig.readingEquipmentType 
+      : projectConfig.changeoutEquipmentType;
+    
+    if (newEffectiveType !== "user_choice") {
+      setCaptureType(newEffectiveType as CaptureType);
+    }
+  }, [isReadingOnlyMode, projectConfig.readingEquipmentType, projectConfig.changeoutEquipmentType]);
   
   // Capture mode for ID capture screens (tracks which ID is being captured)
   const [oldCaptureMode, setOldCaptureMode] = useState<"system" | "module" | "summary">("system");
@@ -288,14 +318,14 @@ export default function NewWorkOrderWizardScreen() {
   // Determine steps based on canChange decision
   const getSteps = (): WizardStep[] => {
     if (formData.canChange === false) {
-      return getTroubleSteps(selectedWorkflowMode);
+      return getTroubleSteps(selectedWorkflowMode, showEquipmentTypeStep);
     }
     
     if (isReadingOnlyMode) {
-      return getReadingOnlySteps(projectConfig);
+      return getReadingOnlySteps(projectConfig, showEquipmentTypeStep);
     }
     
-    return getChangeoutSteps(captureType, projectConfig);
+    return getChangeoutSteps(captureType, projectConfig, showEquipmentTypeStep);
   };
   
   const steps = getSteps();
