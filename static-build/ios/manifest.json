@@ -1,11 +1,11 @@
 {
-  "id": "8cf5d287-517d-4d7c-b853-4142a11c61b4",
-  "createdAt": "2026-01-21T02:13:32.273Z",
+  "id": "87bcb805-6d95-4b86-ad53-5dff82efc478",
+  "createdAt": "2026-01-24T17:56:44.550Z",
   "runtimeVersion": "exposdk:54.0.0",
   "launchAsset": {
-    "key": "bundle-1768961612273-7714",
+    "key": "bundle-1769277404550-1545",
     "contentType": "application/javascript",
-    "url": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/1768961612273-7714/_expo/static/js/ios/bundle.js"
+    "url": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/1769277404550-1545/_expo/static/js/ios/bundle.js"
   },
   "assets": [],
   "metadata": {},
@@ -16,7 +16,7 @@
     "expoClient": {
       "name": "MeterFlo Mobile",
       "slug": "meterflo-mobile",
-      "version": "1.2.4",
+      "version": "2.1.1",
       "orientation": "default",
       "icon": "./assets/images/icon.png",
       "scheme": "meterflo",
@@ -113,6 +113,6 @@
       },
       "mainModuleName": "client/index"
     },
-    "scopeKey": "@anonymous/meterflo-mobile-8af0ffff-36d1-49ee-83db-687eaafa5e14"
+    "scopeKey": "@anonymous/meterflo-mobile-761ae2f2-1c23-4edc-9978-619bd6baea48"
   }
 }

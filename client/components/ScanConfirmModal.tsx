@@ -5,7 +5,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icons";
-import { WorkOrder } from "@/contexts/WorkOrderContext";
+import { WorkOrder, useWorkOrders } from "@/contexts/WorkOrderContext";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
 export type MatchSource = "local" | "server" | "none";
@@ -125,6 +125,7 @@ export function ScanConfirmModal({
 }: ScanConfirmModalProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const { getStatusColor } = useWorkOrders();
 
   const getTitle = () => {
     if (isSearching) return "Searching...";
@@ -299,7 +300,7 @@ export function ScanConfirmModal({
                 ) : null}
                 <View style={styles.infoRow}>
                   <ThemedText type="body" style={{ color: theme.textSecondary }}>Status:</ThemedText>
-                  <ThemedText type="body" style={{ fontWeight: "500", color: isAlreadyCompleted ? (theme.error || "#EF4444") : undefined }}>
+                  <ThemedText type="body" style={{ fontWeight: "500", color: isAlreadyCompleted ? (theme.error || "#EF4444") : getStatusColor(workOrder.status) }}>
                     {workOrder.status}
                   </ThemedText>
                 </View>
