@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Image, Pressable, ActivityIndicator, Alert, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Constants from "expo-constants";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { ThemedText } from "@/components/ThemedText";
 import { TextInput } from "@/components/TextInput";
@@ -9,6 +10,8 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
 import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
+
+const appVersion = Constants.expoConfig?.version || Constants.manifest?.version || "1.0.0";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -139,7 +142,7 @@ export default function LoginScreen() {
       </View>
 
       <ThemedText type="caption" style={[styles.version, { color: theme.textSecondary }]}>
-        Version 1.0.0
+        Version {appVersion}
       </ThemedText>
     </KeyboardAwareScrollViewCompat>
   );
