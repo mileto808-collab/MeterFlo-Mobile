@@ -2312,17 +2312,17 @@ export default function WorkflowWizardScreen() {
             <View style={[styles.summaryCard, { backgroundColor: theme.backgroundSecondary, padding: Spacing.lg }]}>
               <View style={styles.summaryRow}>
                 <Icon name="alert-triangle" size={20} color={theme.error} />
-                <ThemedText type="body">Trouble Code: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.troubleCode}</ThemedText></ThemedText>
+                <ThemedText type="body" style={{ flex: 1 }}>Trouble Code: <ThemedText type="body" style={{ fontWeight: "600" }}>{formData.troubleCode}</ThemedText></ThemedText>
               </View>
               {formData.troubleNote ? (
                 <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                   <Icon name="file-text" size={20} color={theme.primary} />
-                  <ThemedText type="body" numberOfLines={2}>Note: {formData.troubleNote}</ThemedText>
+                  <ThemedText type="body" style={{ flex: 1 }} numberOfLines={2}>Note: {formData.troubleNote}</ThemedText>
                 </View>
               ) : null}
               <View style={[styles.summaryRow, { marginTop: Spacing.md }]}>
                 <Icon name="camera" size={20} color={theme.primary} />
-                <ThemedText type="body">{formData.troublePhotos.length} Trouble Photo(s)</ThemedText>
+                <ThemedText type="body" style={{ flex: 1 }}>{formData.troublePhotos.length} Trouble Photo(s)</ThemedText>
               </View>
             </View>
           </View>
