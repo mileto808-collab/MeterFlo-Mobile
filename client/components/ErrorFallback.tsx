@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { reloadAppAsync } from "expo";
 import {
   StyleSheet,
+  Platform,
   View,
   Pressable,
   ScrollView,
@@ -185,13 +186,20 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing["2xl"],
     minWidth: 200,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    ...Platform.select({
+      web: {
+        boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+      },
+      default: {
+        shadowColor: "#000",
+        shadowOffset: {
+          width: 0,
+          height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+    }),
     elevation: 3,
   },
   buttonText: {
