@@ -2,3 +2,4 @@
 - [Parallel workflow restarts](parallel-workflow-status.md) — on restart, separate shell tasks may be joined with `&&`; concurrent servers need a single managed command.
 - [Expo desktop debugger in Nix](expo-desktop-debugger.md) — SDK 57's optional desktop debugger fails without GUI libraries; keep Preview independent of it.
 - [EAS lockfile portability](eas-lockfile-portability.md) — keep locked tarball URLs usable outside Replit while retaining local firewall protections.
+- [Expo session ownership](expo-session-ownership.md) — Preview startup can replace the Expo session used by EAS; verify account access before native builds.
