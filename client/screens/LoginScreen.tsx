@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Icon } from "@/components/Icons";
 import { Spacing, BorderRadius } from "@/constants/theme";
 
-const appVersion = Constants.expoConfig?.version || Constants.manifest?.version || "1.0.0";
+const appVersion = Constants.expoConfig?.version || "1.0.0";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();

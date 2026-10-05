@@ -2,7 +2,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Platform, AppState, AppStateStatus } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { useAuth } from "@/contexts/AuthContext";
-import { checkForUpdate, UpdateInfo } from "@/lib/github-update-service";
+import { checkForUpdate } from "@/lib/github-update-service";
+import type { UpdateInfo } from "@/lib/update-service";
 import { UpdateAvailableModal } from "./UpdateAvailableModal";
 
 const STORAGE_KEYS = {
@@ -89,7 +90,13 @@ export function AutoUpdateManager() {
       }
 
       console.log("[AutoUpdate] Update available:", info.latestVersion);
-      setUpdateInfo(info);
+      setUpdateInfo({
+        ...info,
+        source: "github",
+        downloadUrl: info.apkDownloadUrl,
+        fileSize: info.apkSize,
+        canInstallDirectly: Platform.OS === "android",
+      });
       setShowModal(true);
     } catch (error) {
       console.error("[AutoUpdate] Error checking for updates:", error);

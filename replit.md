@@ -9,7 +9,7 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend Architecture
-- **Framework**: React Native with Expo SDK 54 (new architecture enabled).
+- **Framework**: React Native with Expo SDK 57 (mandatory new architecture).
 - **Navigation**: React Navigation v7 with tab-based main navigation (Work Orders, Sync, Account) and native stack navigators. Modal screens are used for detailed views, filters, and workflow wizards.
 - **State Management**: React Context for global state (Auth, Offline, WorkOrders) and TanStack Query for server state.
 - **Styling**: Custom theming system supporting light/dark modes, consistent spacing, and typography.

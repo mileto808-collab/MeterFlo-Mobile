@@ -1,11 +1,11 @@
 {
-  "id": "8431630e-6141-4d97-8bb3-16985fb93112",
-  "createdAt": "2026-01-25T03:03:21.749Z",
-  "runtimeVersion": "exposdk:54.0.0",
+  "id": "6a7ec959-96cc-4eec-b0dc-4b075df81ad2",
+  "createdAt": "2026-10-05T02:26:45.257Z",
+  "runtimeVersion": "exposdk:57.0.0",
   "launchAsset": {
-    "key": "bundle-1769310201749-4769",
+    "key": "bundle-1791167205257-2392",
     "contentType": "application/javascript",
-    "url": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/1769310201749-4769/_expo/static/js/ios/bundle.js"
+    "url": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/1791167205257-2392/_expo/static/js/ios/bundle.js"
   },
   "assets": [],
   "metadata": {},
@@ -33,7 +33,6 @@
           "foregroundImageUrl": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/assets/./assets/images/android-icon-foreground.png",
           "backgroundImageUrl": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/assets/./assets/images/android-icon-background.png"
         },
-        "edgeToEdgeEnabled": true,
         "predictiveBackGestureEnabled": false,
         "package": "com.meterflo.mobile",
         "permissions": [
@@ -59,7 +58,12 @@
           }
         ],
         "expo-web-browser",
-        "expo-secure-store"
+        "expo-secure-store",
+        "expo-font",
+        "expo-image",
+        "expo-mail-composer",
+        "expo-sharing",
+        "expo-status-bar"
       ],
       "experiments": {
         "reactCompiler": true
@@ -78,27 +82,44 @@
         "pluginHistory": {
           "expo-splash-screen": {
             "name": "expo-splash-screen",
-            "version": "31.0.13"
+            "version": "57.0.9"
           },
           "expo-web-browser": {
             "name": "expo-web-browser",
-            "version": "15.0.10"
+            "version": "57.0.3"
           },
           "expo-secure-store": {
             "name": "expo-secure-store",
-            "version": "15.0.8"
+            "version": "57.0.4"
+          },
+          "expo-font": {
+            "name": "expo-font",
+            "version": "57.0.4"
+          },
+          "expo-image": {
+            "name": "expo-image",
+            "version": "57.0.5"
+          },
+          "expo-mail-composer": {
+            "name": "expo-mail-composer",
+            "version": "57.0.2"
+          },
+          "expo-sharing": {
+            "name": "expo-sharing",
+            "version": "57.0.22"
+          },
+          "expo-status-bar": {
+            "name": "expo-status-bar",
+            "version": "57.0.1"
           }
         }
       },
-      "sdkVersion": "54.0.0",
+      "sdkVersion": "57.0.0",
       "platforms": [
         "ios",
         "android",
         "web"
       ],
-      "androidStatusBar": {
-        "backgroundColor": "#0a0a14"
-      },
       "iconUrl": "https://50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/assets/./assets/images/icon.png",
       "hostUri": "50ec5502-23ec-445d-8b14-ec90302db6c6-00-22hm5s2vcpums.riker.replit.dev/ios"
     },
@@ -111,8 +132,9 @@
       "packagerOpts": {
         "dev": false
       },
-      "mainModuleName": "client/index"
+      "mainModuleName": "client/index",
+      "username": "replit-private-50ec5502-23ec-445d-8b14-ec90302db6c6"
     },
-    "scopeKey": "@anonymous/meterflo-mobile-761ae2f2-1c23-4edc-9978-619bd6baea48"
+    "scopeKey": "@anonymous/meterflo-mobile-9ec78974-54cf-49f1-adf1-fb97d654cb7c"
   }
 }
