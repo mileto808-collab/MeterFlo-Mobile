@@ -1,3 +1,4 @@
 - [APK upgrade requirement](apk-upgrade-requirement.md) — SDK upgrades must preserve future Android APK builds and distribution through the app’s GitHub updater.
 - [Parallel workflow restarts](parallel-workflow-status.md) — on restart, separate shell tasks may be joined with `&&`; concurrent servers need a single managed command.
 - [Expo desktop debugger in Nix](expo-desktop-debugger.md) — SDK 57's optional desktop debugger fails without GUI libraries; keep Preview independent of it.
+- [EAS lockfile portability](eas-lockfile-portability.md) — keep locked tarball URLs usable outside Replit while retaining local firewall protections.
