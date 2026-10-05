@@ -1,7 +1,7 @@
 {
   "name": "my-app",
   "main": "client/index.js",
-  "version": "2.1.2",
+  "version": "2.1.3",
   "scripts": {
     "expo:dev": "sh -c 'if [ -n \"$REPLIT_EXPO_SESSION_SECRET\" ]; then npx create-launch login --session \"$REPLIT_EXPO_SESSION_SECRET\" || true; fi' && EXPO_UNSTABLE_HEADLESS=1 EXPO_PACKAGER_PROXY_URL=https://$REPLIT_DEV_DOMAIN REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN:5000 npx expo start --host lan",
     "server:dev": "NODE_ENV=development tsx server/index.ts",
