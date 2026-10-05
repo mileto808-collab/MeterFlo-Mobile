@@ -1,0 +1,1 @@
+- [APK upgrade requirement](apk-upgrade-requirement.md) — SDK upgrades must preserve future Android APK builds and distribution through the app’s GitHub updater.
