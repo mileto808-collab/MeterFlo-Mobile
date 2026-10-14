@@ -1,3 +1,7 @@
+import { useReadingSettings } from "@/hooks/useReadingSettings";
+import { ReadingErrors } from "@/components/ReadingErrors";
+import { ProjectReadingStatus } from "@/components/ProjectReadingStatus";
+import { normalizeReading, readingError, assertReadingData } from "@/lib/reading-precision";
 import React, { useState, useEffect, useRef } from "react";
 import { View, StyleSheet, Alert, Platform, ActivityIndicator, Pressable, Image, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -206,6 +210,7 @@ export default function NewWorkOrderWizardScreen() {
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const readingSettings = useReadingSettings();
   const [showScanner, setShowScanner] = useState(false);
   const [scannerType, setScannerType] = useState<"barcode" | "qr">("barcode");
   const [scannerTarget, setScannerTarget] = useState<"oldSystem" | "oldModule" | "newSystem" | "newModule">("oldSystem");
@@ -219,6 +224,11 @@ export default function NewWorkOrderWizardScreen() {
   const [hidScannerTarget, setHidScannerTarget] = useState<"oldSystem" | "oldModule" | "newSystem" | "newModule">("oldSystem");
   
   const [showWorkflowModeModal, setShowWorkflowModeModal] = useState(projectConfig.wizardMode === "user_choice");
+  useEffect(() => {
+    if (!readingSettings.ready) return;
+    if (projectConfig.wizardMode === "user_choice") setShowWorkflowModeModal(true);
+    else setSelectedWorkflowMode(projectConfig.wizardMode === "reading_only" ? "reading_only" : "changeout");
+  }, [projectConfig.wizardMode, readingSettings.ready]);
   const [selectedWorkflowMode, setSelectedWorkflowMode] = useState<SelectedWorkflowMode>(
     projectConfig.wizardMode === "reading_only" ? "reading_only" : "changeout"
   );
@@ -687,36 +697,14 @@ export default function NewWorkOrderWizardScreen() {
   };
 
   const filterNumericInput = (value: string): string => {
-    let result = "";
-    let hasDecimal = false;
-    let decimalPlaces = 0;
-    for (const char of value) {
-      if (char >= "0" && char <= "9") {
-        if (hasDecimal) {
-          if (decimalPlaces < 3) {
-            result += char;
-            decimalPlaces++;
-          }
-        } else {
-          result += char;
-        }
-      } else if ((char === "." || char === ",") && !hasDecimal) {
-        result += ".";
-        hasDecimal = true;
-      }
-    }
-    return result;
+    return normalizeReading(value);
   };
 
-  const isValidNumeric = (value: string): boolean => {
-    const trimmed = value.trim();
-    if (!trimmed) return false;
-    // Use same logic as parseReading - if parseFloat returns a valid number, accept it
-    const parsed = parseFloat(trimmed);
-    return !Number.isNaN(parsed) && Number.isFinite(parsed);
-  };
+  const isValidNumeric = (value: string, module = false): boolean =>
+    !readingError(value, module ? projectConfig.moduleReadingDecimalPlaces : projectConfig.systemReadingDecimalPlaces);
   
   const isCurrentStepValid = (): boolean => {
+    if (!readingSettings.ready) return false;
     switch (currentStep) {
       case "captureType":
         return true;
@@ -731,7 +719,7 @@ export default function NewWorkOrderWizardScreen() {
         return formData.canChange !== null;
       case "oldReading": 
         const oldSysValid = !hasOldSystem || isValidNumeric(formData.oldSystemReading);
-        const oldModValid = !hasOldModule || isValidNumeric(formData.oldModuleReading);
+        const oldModValid = !hasOldModule || isValidNumeric(formData.oldModuleReading, true);
         return oldSysValid && oldModValid;
       case "beforePhotos":
         return formData.beforePhotos.length >= 1;
@@ -746,7 +734,7 @@ export default function NewWorkOrderWizardScreen() {
         return true;
       case "newReading": 
         const newSysValid = !hasNewSystem || isValidNumeric(formData.newSystemReading);
-        const newModValid = !hasNewModule || isValidNumeric(formData.newModuleReading);
+        const newModValid = !hasNewModule || isValidNumeric(formData.newModuleReading, true);
         return newSysValid && newModValid;
       case "afterPhotos":
         return formData.afterPhotos.length >= 1;
@@ -766,12 +754,12 @@ export default function NewWorkOrderWizardScreen() {
         const hasModuleForValidation = Boolean(formData.oldModuleId?.trim());
         if (hasSystemForValidation && hasModuleForValidation) {
           // Both: validate both readings
-          return isValidNumeric(formData.newSystemReading) && isValidNumeric(formData.newModuleReading);
+          return isValidNumeric(formData.newSystemReading) && isValidNumeric(formData.newModuleReading, true);
         } else if (hasSystemForValidation) {
           return isValidNumeric(formData.newSystemReading);
         } else {
           // Module only: reading stored in newSystemReading field
-          return isValidNumeric(formData.newSystemReading);
+          return isValidNumeric(formData.newSystemReading, true);
         }
       case "readingConfirm":
         return true;
@@ -811,11 +799,7 @@ export default function NewWorkOrderWizardScreen() {
 
     const completedAt = new Date().toISOString();
     
-    const parseReading = (value: string): number | null => {
-      if (!value.trim()) return null;
-      const parsed = parseFloat(value);
-      return Number.isNaN(parsed) ? null : parsed;
-    };
+    const parseReading = (value: string): string | null => value ? normalizeReading(value) : null;
 
     try {
       let beforePhotosBase64: string[] = [];
@@ -897,7 +881,7 @@ export default function NewWorkOrderWizardScreen() {
       
       // New system reading: send in changeout mode with new system, or reading-only with system
       const finalNewSystemReading = (hasSystemInReadingOnly || includeNewSystem) 
-        ? (parseReading(formData.newSystemReading) ?? 0) 
+        ? (parseReading(formData.newSystemReading) ?? undefined)
         : undefined;
       
       // New module reading: 
@@ -905,18 +889,18 @@ export default function NewWorkOrderWizardScreen() {
       // - Reading-only with module-only: use newSystemReading field (that's where wizard captures it)
       // - Reading-only with both system AND module: use newModuleReading field if populated
       const finalNewModuleReading = isModuleOnlyReadingOnly
-        ? (parseReading(formData.newSystemReading) ?? 0) // Module-only uses newSystemReading field
+        ? parseReading(formData.newSystemReading) // Module-only uses newSystemReading field
         : (hasModuleInReadingOnly || (!isReadingOnlyMode && includeNewModule))
-        ? (parseReading(formData.newModuleReading) ?? 0)
+        ? parseReading(formData.newModuleReading)
         : undefined;
       
       const offlineWorkOrderData = canChange ? {
         id: offlineWorkOrderId,
         projectId: Number(projectId),
         oldSystemId: includeOldSystem ? formData.oldSystemId : undefined,
-        oldSystemReading: (!isReadingOnlyMode && includeOldSystem) ? (parseReading(formData.oldSystemReading) ?? 0) : undefined,
+        oldSystemReading: (!isReadingOnlyMode && includeOldSystem) ? parseReading(formData.oldSystemReading) : undefined,
         oldModuleId: includeOldModule ? formData.oldModuleId : undefined,
-        oldModuleReading: (!isReadingOnlyMode && includeOldModule) ? (parseReading(formData.oldModuleReading) ?? 0) : undefined,
+        oldModuleReading: (!isReadingOnlyMode && includeOldModule) ? parseReading(formData.oldModuleReading) : undefined,
         newSystemId: finalNewSystemId,
         newSystemReading: finalNewSystemReading,
         newModuleId: finalNewModuleId,
@@ -940,9 +924,9 @@ export default function NewWorkOrderWizardScreen() {
         id: offlineWorkOrderId,
         projectId: Number(projectId),
         oldSystemId: includeOldSystem ? formData.oldSystemId : undefined,
-        oldSystemReading: (!isReadingOnlyMode && includeOldSystem) ? (parseReading(formData.oldSystemReading) ?? 0) : undefined,
+        oldSystemReading: (!isReadingOnlyMode && includeOldSystem) ? parseReading(formData.oldSystemReading) : undefined,
         oldModuleId: includeOldModule ? formData.oldModuleId : undefined,
-        oldModuleReading: (!isReadingOnlyMode && includeOldModule) ? (parseReading(formData.oldModuleReading) ?? 0) : undefined,
+        oldModuleReading: (!isReadingOnlyMode && includeOldModule) ? parseReading(formData.oldModuleReading) : undefined,
         troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
         notes: formData.troubleNote || null,
         troublePhotos: formatPhotosForStorage(troublePhotosBase64, 'trouble'),
@@ -955,6 +939,8 @@ export default function NewWorkOrderWizardScreen() {
         completedByUsername: user?.displayName || user?.username || null,
       };
       
+      if (!readingSettings.ready) throw new Error("Refresh project reading settings before saving.");
+      assertReadingData(offlineWorkOrderData, projectConfig);
       await addOfflineWorkOrder(offlineWorkOrderData);
       
       const photoCount = canChange 
@@ -2483,7 +2469,16 @@ export default function NewWorkOrderWizardScreen() {
           {getStepRequiredLabel()}
           
           <View style={styles.inputContainer}>
-            {renderStepInput()}
+            {readingSettings.ready ? renderStepInput() : null}
+            <ProjectReadingStatus settings={readingSettings} />
+            <ReadingErrors limits={projectConfig} data={{
+              ...(!isReadingOnlyMode && hasOldSystem ? { oldSystemReading: formData.oldSystemReading } : {}),
+              ...(!isReadingOnlyMode && hasOldModule ? { oldModuleReading: formData.oldModuleReading } : {}),
+              ...((isReadingOnlyMode ? hasOldSystem : hasNewSystem) ? { newSystemReading: formData.newSystemReading } : {}),
+              ...((isReadingOnlyMode ? hasOldModule : hasNewModule) ? {
+                newModuleReading: isReadingOnlyMode && !hasOldSystem ? formData.newSystemReading : formData.newModuleReading,
+              } : {}),
+            }} />
           </View>
         </View>
       </KeyboardAwareScrollViewCompat>

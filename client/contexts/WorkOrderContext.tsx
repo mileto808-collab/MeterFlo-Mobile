@@ -1,3 +1,5 @@
+import NetInfo from "@react-native-community/netinfo";
+import { captureProjectSettings, projectSettings, settingsKey } from "@/lib/project-settings";
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/contexts/AuthContext";
@@ -169,6 +171,9 @@ export type WizardGpsMode = "automatic" | "manual" | "disabled";
 export type EquipmentType = "system" | "module" | "both" | "user_choice";
 
 export interface ProjectConfig {
+  readingSettingsSource?: "server" | "cache";
+  systemReadingDecimalPlaces: number;
+  moduleReadingDecimalPlaces: number;
   wizardMode: WizardMode;
   wizardGpsMode: WizardGpsMode;
   wizardShowGpsStep: boolean;
@@ -186,6 +191,8 @@ export interface ProjectConfig {
 }
 
 export const defaultProjectConfig: ProjectConfig = {
+  systemReadingDecimalPlaces: 3,
+  moduleReadingDecimalPlaces: 3,
   wizardMode: "changeout",
   wizardGpsMode: "manual",
   wizardShowGpsStep: true,
@@ -420,13 +427,13 @@ export interface OfflineWorkOrderData {
   id: string;
   projectId: number;
   oldSystemId?: string;
-  oldSystemReading?: number | null;
+  oldSystemReading?: string | null;
   oldModuleId?: string | null;
-  oldModuleReading?: number | null;
+  oldModuleReading?: string | null;
   newSystemId?: string;
-  newSystemReading?: number;
+  newSystemReading?: string;
   newModuleId?: string | null;
-  newModuleReading?: number | null;
+  newModuleReading?: string | null;
   gpsCoordinates?: string | null;
   signatureData?: string | null;
   signatureName?: string;
@@ -444,6 +451,7 @@ export interface OfflineWorkOrderData {
 }
 
 interface WorkOrderContextType {
+  refreshProjectConfig: (online: boolean, allowOfflineFallback?: boolean) => Promise<ProjectConfig>;
   workOrders: WorkOrder[];
   referenceData: ReferenceData | null;
   projectConfig: ProjectConfig;
@@ -499,7 +507,6 @@ const WorkOrderContext = createContext<WorkOrderContextType | undefined>(undefin
 const STORAGE_KEYS = {
   WORK_ORDERS: "meterflo_work_orders",
   REFERENCE_DATA: "meterflo_reference_data",
-  PROJECT_CONFIG: "meterflo_project_config",
   SORT: "meterflo_sort",
   LAST_SYNC: "meterflo_last_sync",
 };
@@ -513,10 +520,37 @@ const defaultFilters: FilterConfig = {
 const defaultSort: SortConfig = [];
 
 export function WorkOrderProvider({ children }: { children: ReactNode }) {
-  const { serverUrl, projectId, isAuthenticated, user } = useAuth();
+  const { serverUrl, projectId, isAuthenticated, user, isOfflineSession } = useAuth();
   const [workOrders, setWorkOrdersState] = useState<WorkOrder[]>([]);
   const [referenceData, setReferenceData] = useState<ReferenceData | null>(null);
   const [projectConfig, setProjectConfig] = useState<ProjectConfig>(defaultProjectConfig);
+  const settingsSession = serverUrl && projectId && user
+    ? { serverUrl, projectId, userId: String(user.id) } : null;
+  const activeSettingsKey = settingsSession ? settingsKey(settingsSession) : "";
+  const settingsSessionRef = useRef(activeSettingsKey);
+  settingsSessionRef.current = activeSettingsKey;
+  const refreshProjectConfig = useCallback(async (online: boolean, allowOfflineFallback = false): Promise<ProjectConfig> => {
+    if (!settingsSession) throw new Error("Select a project before capturing readings.");
+    const data = allowOfflineFallback
+      ? await captureProjectSettings(settingsSession, online)
+      : { ...await projectSettings(settingsSession, online), readingSettingsSource: online ? "server" : "cache" };
+    const config = {
+      ...defaultProjectConfig,
+      ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== null && value !== undefined)),
+    } as ProjectConfig;
+    if (settingsSessionRef.current !== activeSettingsKey) throw new Error("The selected project changed. Reopen this wizard.");
+    setProjectConfig(config);
+    return config;
+  }, [activeSettingsKey]);
+  useEffect(() => {
+    setProjectConfig(defaultProjectConfig);
+    if (!settingsSession) return;
+    let cancelled = false;
+    void NetInfo.fetch().then(network => {
+      if (!cancelled) return refreshProjectConfig(Boolean(network.isConnected) && !isOfflineSession, true);
+    }).catch(error => console.warn("[ProjectSettings]", error.message));
+    return () => { cancelled = true; };
+  }, [refreshProjectConfig, isOfflineSession]);
   const [filters, setFiltersState] = useState<FilterConfig>(defaultFilters);
   const [sort, setSortState] = useState<SortConfig>(defaultSort);
   const [isLoading, setIsLoading] = useState(false);
@@ -575,13 +609,11 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.multiRemove([
       STORAGE_KEYS.WORK_ORDERS,
       STORAGE_KEYS.REFERENCE_DATA,
-      STORAGE_KEYS.PROJECT_CONFIG,
       STORAGE_KEYS.LAST_SYNC,
     ]);
     lastSyncTimeRef.current = null;
     setLastSyncTime(null);
     setReferenceData(null);
-    setProjectConfig(defaultProjectConfig);
     setWorkOrdersState([]);
     console.log("[WorkOrderContext] Cache cleared for session change");
   }, []);
@@ -621,10 +653,9 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
 
   const loadStoredData = async () => {
     try {
-      const [storedOrders, storedRefData, storedProjectConfig, storedSort, storedLastSync] = await Promise.all([
+      const [storedOrders, storedRefData, storedSort, storedLastSync] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.WORK_ORDERS),
         AsyncStorage.getItem(STORAGE_KEYS.REFERENCE_DATA),
-        AsyncStorage.getItem(STORAGE_KEYS.PROJECT_CONFIG),
         AsyncStorage.getItem(STORAGE_KEYS.SORT),
         AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC),
       ]);
@@ -697,14 +728,6 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         const normalizedRefData = normalizeStoredReferenceData(parsedRefData);
         setReferenceData(normalizedRefData);
         AsyncStorage.setItem(STORAGE_KEYS.REFERENCE_DATA, JSON.stringify(normalizedRefData));
-      }
-      if (storedProjectConfig) {
-        try {
-          const parsedConfig = JSON.parse(storedProjectConfig);
-          setProjectConfig({ ...defaultProjectConfig, ...parsedConfig });
-        } catch (e) {
-          console.warn("[WorkOrderContext] Failed to parse stored project config:", e);
-        }
       }
       if (storedSort) {
         const parsedSort = JSON.parse(storedSort);
@@ -951,44 +974,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         await AsyncStorage.setItem(STORAGE_KEYS.REFERENCE_DATA, JSON.stringify(newReferenceData));
       }
 
-      // Fetch project configuration
-      try {
-        const projectConfigUrl = `${serverUrl}/api/projects/${projectId}`;
-        const configResponse = await fetch(projectConfigUrl, {
-          method: "GET",
-          headers: {
-            "X-Requested-With": "XMLHttpRequest",
-            "Origin": serverUrl,
-            "Referer": `${serverUrl}/`,
-          },
-          credentials: "include",
-        });
-
-        if (configResponse.ok) {
-          const projectData = await configResponse.json();
-          const newProjectConfig: ProjectConfig = {
-            wizardMode: projectData.wizardMode || defaultProjectConfig.wizardMode,
-            wizardGpsMode: projectData.wizardGpsMode || defaultProjectConfig.wizardGpsMode,
-            wizardShowGpsStep: projectData.wizardShowGpsStep ?? defaultProjectConfig.wizardShowGpsStep,
-            wizardShowNotesStep: projectData.wizardShowNotesStep ?? defaultProjectConfig.wizardShowNotesStep,
-            wizardShowBeforePhotosStep: projectData.wizardShowBeforePhotosStep ?? defaultProjectConfig.wizardShowBeforePhotosStep,
-            wizardShowAfterPhotosStep: projectData.wizardShowAfterPhotosStep ?? defaultProjectConfig.wizardShowAfterPhotosStep,
-            wizardShowSignatureStep: projectData.wizardShowSignatureStep ?? defaultProjectConfig.wizardShowSignatureStep,
-            searchShowBarcodeScan: projectData.searchShowBarcodeScan ?? defaultProjectConfig.searchShowBarcodeScan,
-            searchShowQrCodeScan: projectData.searchShowQrCodeScan ?? defaultProjectConfig.searchShowQrCodeScan,
-            searchShowManualEntry: projectData.searchShowManualEntry ?? defaultProjectConfig.searchShowManualEntry,
-            searchShowHidScanner: projectData.searchShowHidScanner ?? defaultProjectConfig.searchShowHidScanner,
-            changeoutEquipmentType: projectData.changeoutEquipmentType || defaultProjectConfig.changeoutEquipmentType,
-            readingEquipmentType: projectData.readingEquipmentType || defaultProjectConfig.readingEquipmentType,
-            isActive: projectData.isActive ?? defaultProjectConfig.isActive,
-          };
-          setProjectConfig(newProjectConfig);
-          await AsyncStorage.setItem(STORAGE_KEYS.PROJECT_CONFIG, JSON.stringify(newProjectConfig));
-          console.log("[refreshWorkOrders] Project config updated:", newProjectConfig.wizardMode, "changeout:", newProjectConfig.changeoutEquipmentType, "reading:", newProjectConfig.readingEquipmentType);
-        }
-      } catch (configErr) {
-        console.warn("[refreshWorkOrders] Failed to fetch project config, using cached:", configErr);
-      }
+      await refreshProjectConfig(true);
 
       if (newServerTimestamp) {
         setLastSyncTime(newServerTimestamp);
@@ -1474,6 +1460,7 @@ export function WorkOrderProvider({ children }: { children: ReactNode }) {
         workOrders,
         referenceData,
         projectConfig,
+        refreshProjectConfig,
         filters,
         sort,
         isLoading,

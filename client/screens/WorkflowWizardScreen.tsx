@@ -1,3 +1,7 @@
+import { useReadingSettings } from "@/hooks/useReadingSettings";
+import { ReadingErrors } from "@/components/ReadingErrors";
+import { ProjectReadingStatus } from "@/components/ProjectReadingStatus";
+import { normalizeReading, readingError, assertReadingData, applyEquipmentScope, responseError, ReadingPrecisionError } from "@/lib/reading-precision";
 import React, { useState, useEffect, useRef } from "react";
 import { View, StyleSheet, Alert, Platform, ActivityIndicator, Pressable, Image, ScrollView, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -25,6 +29,7 @@ import { WorkflowModeModal } from "@/components/WorkflowModeModal";
 import { HIDScannerModal } from "@/components/HIDScannerModal";
 import { Spacing, BorderRadius } from "@/constants/theme";
 import { checkWorkOrderConflict } from "@/lib/conflict-check";
+import { isCaptureOnline } from "@/lib/project-settings-repository";
 
 type RouteProps = RouteProp<RootStackParamList, "WorkflowWizard">;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -103,14 +108,23 @@ export default function WorkflowWizardScreen() {
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavigationProp>();
   const { updateWorkOrder, referenceData, claimWorkOrder, deleteLocalWorkOrder, workOrders, projectConfig } = useWorkOrders();
-  const { serverUrl, projectId, user } = useAuth();
-  const { isOnline, addPendingAction, addDirectSubmissionHistory } = useOffline();
+  const { serverUrl, projectId, user, isOfflineSession } = useAuth();
+  const { isOnline: isNetworkOnline, addPendingAction, addDirectSubmissionHistory } = useOffline();
+  const isOnline = isCaptureOnline(isNetworkOnline, isOfflineSession, projectConfig.readingSettingsSource);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   // Look up fresh work order from context to get latest persisted data
   // Fall back to route params if not found (e.g., during initial navigation)
   const routeWorkOrder = route.params.workOrder;
-  const workOrder = workOrders.find(wo => wo.id === routeWorkOrder.id) || routeWorkOrder;
+  const sourceWorkOrder = workOrders.find(wo => wo.id === routeWorkOrder.id) || routeWorkOrder;
+  const [workflowMode, setWorkflowMode] = useState<"changeout" | "reading_only" | null>(null);
+  const equipmentScope = (workflowMode ?? projectConfig.wizardMode) === "reading_only"
+    ? projectConfig.readingEquipmentType : projectConfig.changeoutEquipmentType;
+  const workOrder = {
+    ...sourceWorkOrder,
+    ...(equipmentScope === "module" ? { oldSystemId: undefined, newSystemId: undefined } : {}),
+    ...(equipmentScope === "system" ? { oldModuleId: undefined, newModuleId: undefined } : {}),
+  };
   
   const isEditingTrouble = workOrder.status?.toLowerCase() === "trouble";
   const isEditingCompleted = workOrder.status?.toLowerCase() === "completed";
@@ -118,6 +132,7 @@ export default function WorkflowWizardScreen() {
   
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const readingSettings = useReadingSettings();
   const [isClaiming, setIsClaiming] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
@@ -134,7 +149,6 @@ export default function WorkflowWizardScreen() {
   const [scannerTargetField, setScannerTargetField] = useState<"system" | "module">("system");
   const [captureMode, setCaptureMode] = useState<"system" | "module" | "summary">("system");
   const [isIdInputFocused, setIsIdInputFocused] = useState(false);
-  const [workflowMode, setWorkflowMode] = useState<"changeout" | "reading_only" | null>(null);
   const [showWorkflowModeModal, setShowWorkflowModeModal] = useState(false);
   const [showHidScannerModal, setShowHidScannerModal] = useState(false);
   const [hidScannerLaunchedForStep, setHidScannerLaunchedForStep] = useState(false);
@@ -148,6 +162,7 @@ export default function WorkflowWizardScreen() {
   }, [showScanner, cameraPermission, requestCameraPermission]);
   
   useEffect(() => {
+    if (!readingSettings.ready) return;
     const serverWizardMode = projectConfig?.wizardMode || "changeout";
     console.log(`[WorkflowWizard] Setting workflowMode from projectConfig.wizardMode="${projectConfig?.wizardMode}", serverWizardMode="${serverWizardMode}"`);
     if (serverWizardMode === "user_choice") {
@@ -159,7 +174,7 @@ export default function WorkflowWizardScreen() {
       console.log(`[WorkflowWizard] Setting workflowMode to "changeout"`);
       setWorkflowMode("changeout");
     }
-  }, [projectConfig?.wizardMode]);
+  }, [projectConfig?.wizardMode, readingSettings.ready]);
   
   const handleWorkflowModeSelect = (mode: "changeout" | "reading_only") => {
     setWorkflowMode(mode);
@@ -193,7 +208,8 @@ export default function WorkflowWizardScreen() {
       oldModuleRead: workOrder.oldModuleRead || "",
       beforePhotos: isEditingStatus ? convertStoredPhotosToAssets(workOrder.beforePhotos) : [],
       newSystemId: workOrder.newSystemId || "",
-      newSystemReading: workOrder.newSystemReading || "",
+      newSystemReading: !sourceWorkOrder.oldSystemId && sourceWorkOrder.oldModuleId
+        ? sourceWorkOrder.newModuleRead || "" : workOrder.newSystemReading || "",
       newModuleId: workOrder.newModuleId || "",
       newModuleRead: workOrder.newModuleRead || "",
       afterPhotos: isEditingStatus ? convertStoredPhotosToAssets(workOrder.afterPhotos) : [],
@@ -362,6 +378,7 @@ export default function WorkflowWizardScreen() {
   };
 
   useEffect(() => {
+    if (!readingSettings.ready) return;
     const hasSystemOrModule = workOrder.oldSystemId || workOrder.oldModuleId;
     if (!workOrder.customerWoId || !hasSystemOrModule) {
       const missing: string[] = [];
@@ -383,7 +400,7 @@ export default function WorkflowWizardScreen() {
       return;
     }
     claimWorkOrderOnStart();
-  }, []);
+  }, [readingSettings.ready]);
   
   useEffect(() => {
     if (isEditingTrouble && workOrder.troubleCode && !formData.troubleCode.includes(" - ")) {
@@ -699,36 +716,15 @@ export default function WorkflowWizardScreen() {
   };
 
   const filterNumericInput = (value: string): string => {
-    let result = "";
-    let hasDecimal = false;
-    let decimalPlaces = 0;
-    for (const char of value) {
-      if (char >= "0" && char <= "9") {
-        if (hasDecimal) {
-          if (decimalPlaces < 3) {
-            result += char;
-            decimalPlaces++;
-          }
-        } else {
-          result += char;
-        }
-      } else if ((char === "." || char === ",") && !hasDecimal) {
-        result += ".";
-        hasDecimal = true;
-      }
-    }
-    return result;
+    readingSettings.setServerErrors([]);
+    return normalizeReading(value);
   };
 
-  const isValidNumeric = (value: string): boolean => {
-    const trimmed = value.trim();
-    if (!trimmed) return false;
-    // Use same logic as parseReading - if parseFloat returns a valid number, accept it
-    const parsed = parseFloat(trimmed);
-    return !Number.isNaN(parsed) && Number.isFinite(parsed);
-  };
+  const isValidNumeric = (value: string, module = false): boolean =>
+    !readingError(value, module ? projectConfig.moduleReadingDecimalPlaces : projectConfig.systemReadingDecimalPlaces);
 
   const isCurrentStepValid = (): boolean => {
+    if (!readingSettings.ready) return false;
     switch (currentStep) {
       case "canChange": 
         return formData.canChange !== null;
@@ -737,7 +733,7 @@ export default function WorkflowWizardScreen() {
         const hasModule = Boolean(workOrder.oldModuleId);
         // Require valid numeric values AND user must have touched/re-entered the reading (unless editing an existing completion)
         const systemReadingValid = !hasSystem || (isValidNumeric(formData.oldSystemReading) && (oldSystemReadingTouched || isEditing));
-        const moduleReadingValid = !hasModule || (isValidNumeric(formData.oldModuleRead) && (oldModuleReadingTouched || isEditing));
+        const moduleReadingValid = !hasModule || (isValidNumeric(formData.oldModuleRead, true) && (oldModuleReadingTouched || isEditing));
         return systemReadingValid && moduleReadingValid;
       }
       case "beforePhotos":
@@ -753,11 +749,11 @@ export default function WorkflowWizardScreen() {
         return systemValid && moduleValid;
       }
       case "newReading": {
-        const hasNewSystem = Boolean(formData.newSystemId.trim());
-        const hasNewModule = Boolean(formData.newModuleId.trim());
+        const hasNewSystem = equipmentScope !== "module" && Boolean(formData.newSystemId.trim());
+        const hasNewModule = equipmentScope !== "system" && Boolean(formData.newModuleId.trim());
         // Require valid numeric values AND user must have touched/re-entered the reading (unless editing an existing completion)
         const newSystemValid = !hasNewSystem || (isValidNumeric(formData.newSystemReading) && (newSystemReadingTouched || isEditing));
-        const newModuleValid = !hasNewModule || (isValidNumeric(formData.newModuleRead) && (newModuleReadingTouched || isEditing));
+        const newModuleValid = !hasNewModule || (isValidNumeric(formData.newModuleRead, true) && (newModuleReadingTouched || isEditing));
         return newSystemValid && newModuleValid;
       }
       case "afterPhotos":
@@ -778,12 +774,12 @@ export default function WorkflowWizardScreen() {
         const hasModuleForValidation = Boolean(workOrder.oldModuleId);
         if (hasSystemForValidation && hasModuleForValidation) {
           // Both: validate both readings
-          return isValidNumeric(formData.newSystemReading) && isValidNumeric(formData.newModuleRead);
+          return isValidNumeric(formData.newSystemReading) && isValidNumeric(formData.newModuleRead, true);
         } else if (hasSystemForValidation) {
           return isValidNumeric(formData.newSystemReading);
         } else {
           // Module only: reading stored in newSystemReading field
-          return isValidNumeric(formData.newSystemReading);
+          return isValidNumeric(formData.newSystemReading, true);
         }
       case "readingConfirm":
         return true;
@@ -840,11 +836,7 @@ export default function WorkflowWizardScreen() {
     
     console.log(`[WorkflowWizard] Submit: projectConfig.wizardMode="${projectConfig?.wizardMode}", workflowMode="${workflowMode}", isReadingOnlyMode=${isReadingOnlyMode}, canChange=${canChange}, isReadingOnlyCompletion=${isReadingOnlyCompletion}`);
     
-    const parseReading = (value: string): number | null => {
-      if (!value.trim()) return null;
-      const parsed = parseFloat(value);
-      return Number.isNaN(parsed) ? null : parsed;
-    };
+    const parseReading = (value: string): string | null => value ? normalizeReading(value) : null;
 
     try {
       let troublePhotosBase64: string[] = [];
@@ -932,10 +924,10 @@ export default function WorkflowWizardScreen() {
 
       const patchPayload = isReadingOnlyCompletion ? {
         status: "Completed",
-        new_system_reading: workOrder.oldSystemId ? (parseReading(formData.newSystemReading) ?? 0) : null,
+        new_system_reading: workOrder.oldSystemId ? parseReading(formData.newSystemReading) : null,
         new_system_id: workOrder.oldSystemId || null,
         new_module_id: workOrder.oldModuleId || null,
-        new_module_read: workOrder.oldModuleId ? (parseReading(formData.newSystemReading) ?? 0) : null,
+        new_module_read: workOrder.oldModuleId ? parseReading(workOrder.oldSystemId ? formData.newModuleRead : formData.newSystemReading) : null,
         new_gps: formData.gpsCoordinates || null,
         signature_data: formData.signatureData || null,
         signature_name: formData.signatureName || null,
@@ -949,8 +941,8 @@ export default function WorkflowWizardScreen() {
         after_photos: afterPhotosBase64.length > 0 ? afterPhotosBase64 : null,
       } : canChange ? {
         status: "Completed",
-        old_system_reading: parseReading(formData.oldSystemReading) ?? 0,
-        new_system_reading: parseReading(formData.newSystemReading) ?? 0,
+        old_system_reading: workOrder.oldSystemId ? parseReading(formData.oldSystemReading) : null,
+        new_system_reading: formData.newSystemId ? parseReading(formData.newSystemReading) : null,
         new_system_id: formData.newSystemId,
         old_module_id: workOrder.oldModuleId || null,
         old_module_read: parseReading(formData.oldModuleRead),
@@ -1013,12 +1005,12 @@ export default function WorkflowWizardScreen() {
           // System fields - only populate if system exists
           newSystemId: hasSystem ? workOrder.oldSystemId : null,
           newSystemType: hasSystem ? (workOrder.oldSystemType || null) : null,
-          newSystemReading: hasSystem ? (parseReading(formData.newSystemReading) ?? 0) : null,
+          newSystemReading: hasSystem ? parseReading(formData.newSystemReading) : null,
           // Module fields - only populate if module exists
           newModuleId: hasModule ? workOrder.oldModuleId : null,
           newModuleType: hasModule ? (workOrder.oldModuleType || null) : null,
           // For module reading: use newModuleRead if both exist, otherwise use newSystemReading (the single reading field)
-          newModuleReading: hasModule ? (parseReading(hasSystem ? formData.newModuleRead : formData.newSystemReading) ?? 0) : null,
+          newModuleReading: hasModule ? parseReading(hasSystem ? formData.newModuleRead : formData.newSystemReading) : null,
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName || null,
@@ -1029,13 +1021,13 @@ export default function WorkflowWizardScreen() {
           afterPhotos: formatPhotosForServer(afterPhotosBase64, 'after'),
         } : canChange ? {
           projectId: Number(projectId),
-          oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
+          oldSystemReading: workOrder.oldSystemId ? parseReading(formData.oldSystemReading) : null,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: workOrder.oldModuleId ? String(parseReading(formData.oldModuleRead) ?? 0) : null,
+          oldModuleReading: workOrder.oldModuleId ? parseReading(formData.oldModuleRead) : null,
           newSystemId: formData.newSystemId,
-          newSystemReading: parseReading(formData.newSystemReading) ?? 0,
+          newSystemReading: formData.newSystemId ? parseReading(formData.newSystemReading) : null,
           newModuleId: formData.newModuleId || null,
-          newModuleReading: formData.newModuleId ? String(parseReading(formData.newModuleRead) ?? 0) : null,
+          newModuleReading: formData.newModuleId ? parseReading(formData.newModuleRead) : null,
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
@@ -1048,13 +1040,16 @@ export default function WorkflowWizardScreen() {
           projectId: Number(projectId),
           troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
           notes: formData.troubleNote || null,
-          oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
+          oldSystemReading: workOrder.oldSystemId ? parseReading(formData.oldSystemReading) : null,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: workOrder.oldModuleId ? String(parseReading(formData.oldModuleRead) ?? 0) : null,
+          oldModuleReading: workOrder.oldModuleId ? parseReading(formData.oldModuleRead) : null,
           startTime: startTime || completedAt,
           photos: formatPhotosForServer(troublePhotosBase64, 'trouble'),
         };
         
+        applyEquipmentScope(mobilePayload, equipmentScope);
+        if (!readingSettings.ready) throw new Error("Refresh project reading settings before submitting.");
+        assertReadingData(mobilePayload, projectConfig);
         const payloadSize = JSON.stringify(mobilePayload).length;
         console.log(`[WorkflowWizard] Payload size: ${Math.round(payloadSize / 1024)}KB`);
         
@@ -1075,7 +1070,7 @@ export default function WorkflowWizardScreen() {
         if (!response.ok) {
           const errorText = await response.text();
           console.error("[WorkflowWizard] Server error response:", response.status, errorText?.substring(0, 500));
-          throw new Error(errorText || "Failed to complete work order");
+          throw responseError(errorText || "Failed to complete work order");
         }
 
         const result = await response.json();
@@ -1193,12 +1188,12 @@ export default function WorkflowWizardScreen() {
           // System fields - only populate if system exists
           newSystemId: offlineHasSystem ? workOrder.oldSystemId : null,
           newSystemType: offlineHasSystem ? (workOrder.oldSystemType || null) : null,
-          newSystemReading: offlineHasSystem ? (parseReading(formData.newSystemReading) ?? 0) : null,
+          newSystemReading: offlineHasSystem ? parseReading(formData.newSystemReading) : null,
           // Module fields - only populate if module exists
           newModuleId: offlineHasModule ? workOrder.oldModuleId : null,
           newModuleType: offlineHasModule ? (workOrder.oldModuleType || null) : null,
           // For module reading: use newModuleRead if both exist, otherwise use newSystemReading (the single reading field)
-          newModuleReading: offlineHasModule ? (parseReading(offlineHasSystem ? formData.newModuleRead : formData.newSystemReading) ?? 0) : null,
+          newModuleReading: offlineHasModule ? parseReading(offlineHasSystem ? formData.newModuleRead : formData.newSystemReading) : null,
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName || null,
@@ -1209,13 +1204,13 @@ export default function WorkflowWizardScreen() {
           afterPhotos: formatPhotosForOffline(afterPhotosBase64, 'after'),
         } : canChange ? {
           projectId: Number(projectId),
-          oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
+          oldSystemReading: workOrder.oldSystemId ? parseReading(formData.oldSystemReading) : null,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: workOrder.oldModuleId ? String(parseReading(formData.oldModuleRead) ?? 0) : null,
+          oldModuleReading: workOrder.oldModuleId ? parseReading(formData.oldModuleRead) : null,
           newSystemId: formData.newSystemId,
-          newSystemReading: parseReading(formData.newSystemReading) ?? 0,
+          newSystemReading: formData.newSystemId ? parseReading(formData.newSystemReading) : null,
           newModuleId: formData.newModuleId || null,
-          newModuleReading: formData.newModuleId ? String(parseReading(formData.newModuleRead) ?? 0) : null,
+          newModuleReading: formData.newModuleId ? parseReading(formData.newModuleRead) : null,
           gpsCoordinates: formData.gpsCoordinates || null,
           signatureData: formData.signatureData || null,
           signatureName: formData.signatureName,
@@ -1228,13 +1223,16 @@ export default function WorkflowWizardScreen() {
           projectId: Number(projectId),
           troubleCode: getTroubleCodeFromDisplay(formData.troubleCode),
           notes: formData.troubleNote || null,
-          oldSystemReading: parseReading(formData.oldSystemReading) ?? 0,
+          oldSystemReading: workOrder.oldSystemId ? parseReading(formData.oldSystemReading) : null,
           oldModuleId: workOrder.oldModuleId || null,
-          oldModuleReading: workOrder.oldModuleId ? String(parseReading(formData.oldModuleRead) ?? 0) : null,
+          oldModuleReading: workOrder.oldModuleId ? parseReading(formData.oldModuleRead) : null,
           startTime: startTime || completedAt,
           photos: formatPhotosForOffline(troublePhotosBase64, 'trouble'),
         };
         
+        applyEquipmentScope(offlineMobilePayload, equipmentScope);
+        if (!readingSettings.ready) throw new Error("Refresh project reading settings before submitting.");
+        assertReadingData(offlineMobilePayload, projectConfig);
         await addPendingAction({
           type: "complete",
           workOrderId: String(workOrder.id),
@@ -1302,6 +1300,7 @@ export default function WorkflowWizardScreen() {
         }],
       });
     } catch (error) {
+      if (error instanceof ReadingPrecisionError) readingSettings.setServerErrors(error.errors);
       const message = error instanceof Error ? error.message : "Failed to complete work order";
       
       if (isOnline && serverUrl && projectId) {
@@ -1916,8 +1915,8 @@ export default function WorkflowWizardScreen() {
         );
 
       case "newReading":
-        const hasNewSystemId = Boolean(formData.newSystemId.trim());
-        const hasNewModuleId = Boolean(formData.newModuleId.trim());
+        const hasNewSystemId = equipmentScope !== "module" && Boolean(formData.newSystemId.trim());
+        const hasNewModuleId = equipmentScope !== "system" && Boolean(formData.newModuleId.trim());
         const newSystemType = workOrder.newSystemType || (workOrder as any).new_system_type;
         const newModuleType = workOrder.newModuleType || (workOrder as any).new_module_type;
         const newReadingDescription = hasNewSystemId && hasNewModuleId 
@@ -2122,8 +2121,8 @@ export default function WorkflowWizardScreen() {
         const confirmNewModuleType = workOrder.newModuleType || (workOrder as any).new_module_type;
         const confirmHasOldSystem = Boolean(workOrder.oldSystemId || formData.oldSystemReading || confirmOldSystemType || workOrder.oldGps);
         const confirmHasOldModule = Boolean(workOrder.oldModuleId || formData.oldModuleRead || confirmOldModuleType);
-        const confirmHasNewSystem = Boolean(formData.newSystemId.trim() || formData.newSystemReading || confirmNewSystemType);
-        const confirmHasNewModule = Boolean(formData.newModuleId.trim() || formData.newModuleRead || confirmNewModuleType);
+        const confirmHasNewSystem = equipmentScope !== "module" && Boolean(formData.newSystemId.trim() || formData.newSystemReading || confirmNewSystemType);
+        const confirmHasNewModule = equipmentScope !== "system" && Boolean(formData.newModuleId.trim() || formData.newModuleRead || confirmNewModuleType);
         
         return (
           <View>
@@ -2650,7 +2649,16 @@ export default function WorkflowWizardScreen() {
           {getStepRequiredLabel()}
           
           <View style={styles.inputContainer}>
-            {renderStepInput()}
+            {readingSettings.ready ? renderStepInput() : null}
+            <ProjectReadingStatus settings={readingSettings} />
+            <ReadingErrors limits={projectConfig} errors={readingSettings.serverErrors} data={{
+              ...(workflowMode !== "reading_only" && workOrder.oldSystemId ? { oldSystemReading: formData.oldSystemReading } : {}),
+              ...(workflowMode !== "reading_only" && workOrder.oldModuleId ? { oldModuleRead: formData.oldModuleRead } : {}),
+              ...(equipmentScope !== "module" && (workflowMode === "reading_only" ? workOrder.oldSystemId : formData.newSystemId) ? { newSystemReading: formData.newSystemReading } : {}),
+              ...(equipmentScope !== "system" && (workflowMode === "reading_only" ? workOrder.oldModuleId : formData.newModuleId) ? {
+                newModuleRead: workflowMode === "reading_only" && !workOrder.oldSystemId ? formData.newSystemReading : formData.newModuleRead,
+              } : {}),
+            }} />
           </View>
         </View>
       </KeyboardAwareScrollViewCompat>

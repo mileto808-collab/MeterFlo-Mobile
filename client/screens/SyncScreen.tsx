@@ -1,3 +1,4 @@
+import { QueuedReadingCorrection } from "@/components/QueuedReadingCorrection";
 import React, { useState } from "react";
 import { View, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, Platform, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -269,6 +270,7 @@ export default function SyncScreen() {
           <View style={styles.pendingList}>
             {pendingActionsForCurrentProject.map(action => (
               <View key={action.id} style={[styles.pendingItem, { borderColor: theme.border }]}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing.sm }}>
                 <View style={styles.pendingItemContent}>
                   <View style={[styles.actionTypeBadge, { backgroundColor: theme.syncPending }]}>
                     <ThemedText type="caption" style={{ color: "#FFFFFF" }}>
@@ -297,6 +299,12 @@ export default function SyncScreen() {
                     <Icon name="x" size={16} color={theme.error} />
                   </Pressable>
                 </View>
+                </View>
+                {action.readingErrors?.length ? (
+                  <View style={{ marginTop: Spacing.md, gap: Spacing.sm }}>
+                    <QueuedReadingCorrection action={action} />
+                  </View>
+                ) : null}
               </View>
             ))}
           </View>
@@ -552,9 +560,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   pendingItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: "column",
+    alignItems: "stretch",
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
   },

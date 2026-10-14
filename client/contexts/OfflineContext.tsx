@@ -1,3 +1,6 @@
+import { correctReadingData, reconcileQueuedActions } from "@/lib/queued-readings";
+import { captureProjectSettings, projectSettings } from "@/lib/project-settings";
+import { assertReadingData, assertBatchSuccess, normalizeReadingData, normalizeReading, responseError, ReadingError, ReadingPrecisionError } from "@/lib/reading-precision";
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, ReactNode } from "react";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -5,6 +8,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { checkWorkOrderConflict } from "@/lib/conflict-check";
 
 interface PendingAction {
+  matchedWorkOrderId?: number;
+  readingErrors?: ReadingError[];
+  syncError?: string;
+  serverUrl?: string;
+  userId?: string;
   id: string;
   type: "update" | "complete" | "workflow" | "claim" | "offlineWorkOrder";
   workOrderId: string;
@@ -77,6 +85,7 @@ function isClaimConflictError(status: number, errorText: string): boolean {
 }
 
 interface OfflineContextType {
+  correctPendingReadings: (id: string, readings: Record<string, string>) => Promise<void>;
   isOnline: boolean;
   pendingActions: PendingAction[];
   pendingActionsForCurrentProject: PendingAction[];
@@ -92,7 +101,7 @@ interface OfflineContextType {
   addDirectSubmissionHistory: (entry: Omit<SyncHistoryEntry, "id" | "timestamp">) => Promise<void>;
 }
 
-export type { SyncHistoryEntry };
+export type { SyncHistoryEntry, PendingAction };
 
 const OfflineContext = createContext<OfflineContextType | undefined>(undefined);
 
@@ -104,9 +113,12 @@ const STORAGE_KEYS = {
 const MAX_SYNC_HISTORY = 20;
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
-  const { serverUrl, projectId, user } = useAuth();
+  const { serverUrl, projectId, user, isOfflineSession } = useAuth();
   const [isOnline, setIsOnline] = useState(true);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
+  const pendingActionsRef = useRef(pendingActions);
+  pendingActionsRef.current = pendingActions;
+  const syncingRef = useRef(false);
   const [syncHistory, setSyncHistory] = useState<SyncHistoryEntry[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const previousSessionRef = useRef<{ userId: string | null; projectId: number | null }>({ userId: null, projectId: null });
@@ -302,6 +314,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
           console.log("[OfflineContext] Migrated legacy pending actions to new format");
         }
         
+        pendingActionsRef.current = validActions;
         setPendingActions(validActions);
       }
       
@@ -321,6 +334,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   }, [syncHistory]);
 
   const addPendingAction = useCallback(async (action: Omit<PendingAction, "id" | "timestamp">) => {
+    const data = normalizeReadingData(action.data ?? {});
     if (!projectId) {
       console.error("[OfflineContext] Cannot add pending action without projectId - action will be rejected");
       throw new Error("Cannot queue offline action: no project selected");
@@ -328,31 +342,60 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     
     const newAction: PendingAction = {
       ...action,
+      data,
+      serverUrl: serverUrl ?? undefined,
+      userId: user ? String(user.id) : undefined,
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       timestamp: Date.now(),
       projectId: projectId,
     };
 
-    const updatedActions = [...pendingActions, newAction];
+    // Recompletion replaces the queued submission, not a second completion.
+    const updatedActions = [...pendingActionsRef.current.filter(existing =>
+      !(action.type === "complete" && existing.type === "complete" &&
+        existing.workOrderId === action.workOrderId && existing.projectId === projectId &&
+        existing.serverUrl === newAction.serverUrl && existing.userId === newAction.userId)), newAction];
+    pendingActionsRef.current = updatedActions;
     setPendingActions(updatedActions);
     await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(updatedActions));
-  }, [pendingActions, projectId]);
+  }, [projectId, serverUrl, user?.id]);
+
+  const correctPendingReadings = useCallback(async (id: string, readings: Record<string, string>) => {
+    if (syncingRef.current) throw new Error("Wait for the current sync to finish before correcting readings.");
+    if (!serverUrl || !projectId || !user) throw new Error("Select a project first.");
+    const settings = await captureProjectSettings({ serverUrl, projectId, userId: String(user.id) }, isOnline && !isOfflineSession);
+    const action = pendingActionsRef.current.find(item => item.id === id);
+    if (syncingRef.current) throw new Error("Wait for sync to finish before correcting readings.");
+    if (!action || (action.projectId !== undefined && action.projectId !== projectId) ||
+      (action.serverUrl && action.serverUrl !== serverUrl) ||
+      (action.userId && action.userId !== String(user.id))) throw new Error("This queued capture belongs to another session or project.");
+    const data = correctReadingData(action.data, readings, settings as any);
+    const updatedActions = pendingActionsRef.current.map(item => item.id === id
+      ? { ...item, data, readingErrors: undefined, syncError: undefined } : item);
+    pendingActionsRef.current = updatedActions;
+    setPendingActions(updatedActions);
+    await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(updatedActions));
+  }, [serverUrl, projectId, user?.id, isOnline, isOfflineSession]);
 
   const removePendingAction = useCallback(async (id: string) => {
-    const updatedActions = pendingActions.filter(a => a.id !== id);
+    if (syncingRef.current) throw new Error("Wait for sync to finish before removing a capture.");
+    const updatedActions = pendingActionsRef.current.filter(a => a.id !== id);
+    pendingActionsRef.current = updatedActions;
     setPendingActions(updatedActions);
     await AsyncStorage.setItem(STORAGE_KEYS.PENDING_ACTIONS, JSON.stringify(updatedActions));
   }, [pendingActions]);
 
   const syncPendingActions = useCallback(async (): Promise<SyncResult> => {
-    if (!isOnline || pendingActions.length === 0 || isSyncing || !serverUrl || !projectId) {
+    if (!isOnline || pendingActions.length === 0 || syncingRef.current || !serverUrl || !projectId || !user) {
       return { syncedWorkOrderIds: [], syncedOfflineWorkOrders: [], conflictedWorkOrderIds: [] };
     }
 
     // Filter pending actions to only sync those belonging to the current project
     // Actions without a projectId (legacy) or matching the current projectId will be synced
     const projectScopedActions = pendingActions.filter(action => 
-      action.projectId === undefined || action.projectId === projectId
+      (action.projectId === undefined || action.projectId === projectId) &&
+      (!action.serverUrl || action.serverUrl === serverUrl) &&
+      (!action.userId || action.userId === String(user.id))
     );
     
     if (projectScopedActions.length === 0) {
@@ -362,6 +405,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     
     console.log(`[syncPendingActions] Syncing ${projectScopedActions.length} of ${pendingActions.length} actions for project ${projectId}`);
 
+    syncingRef.current = true;
     setIsSyncing(true);
     const workOrderIds = projectScopedActions.map(a => a.workOrderId);
     const workOrderTitles = projectScopedActions.map(a => a.workOrderTitle);
@@ -374,10 +418,14 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     const offlineToServerIdMap: Map<string, number> = new Map();
     const syncedOfflineWorkOrders: SyncedOfflineWorkOrder[] = [];
     let lastError: string | undefined;
+    const rejections = new Map<string, { readingErrors?: ReadingError[]; syncError: string }>();
     
     try {
+      const settings = await projectSettings({ serverUrl, projectId, userId: String(user.id) }, true);
       for (const action of projectScopedActions) {
         try {
+          action.data = normalizeReadingData(action.data ?? {});
+          if (action.type !== "claim") assertReadingData(action.data, settings as any);
           if (action.type === "complete" && action.completionMode) {
             // Pre-flight check using shared helper
             if (user?.username) {
@@ -425,6 +473,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             if (!response.ok) {
               const errorText = await response.text();
+              const rejection = responseError(errorText);
+              if (rejection instanceof ReadingPrecisionError) throw rejection;
               console.error(`[syncPendingActions] Failed to sync WO ${action.workOrderId}:`, response.status, errorText?.substring(0, 200));
               
               if (isClaimConflictError(response.status, errorText)) {
@@ -491,7 +541,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             console.log(`[syncPendingActions] Syncing offline work order for old system: ${oldSystemId || 'none'}, old module: ${oldModuleId || 'none'}, new system: ${newSystemId || 'none'}, new module: ${newModuleId || 'none'}`);
             
-            let eligibleWorkOrder: any = null;
+            let eligibleWorkOrder: any = action.matchedWorkOrderId ? { id: action.matchedWorkOrderId } : null;
             
             // Server uses meterId parameter that searches across all ID fields (old_meter_id, new_meter_id, old_module_id, new_module_id)
             const searchByMeterId = async (id: string) => {
@@ -518,7 +568,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             // Search order: old system ID -> old module ID -> new system ID -> new module ID
             // All searches use the unified meterId parameter that searches across all ID fields
-            if (oldSystemId) {
+            if (!eligibleWorkOrder && oldSystemId) {
               console.log(`[syncPendingActions] Searching by old system ID: ${oldSystemId}`);
               const oldSystemResults = await searchByMeterId(oldSystemId);
               eligibleWorkOrder = findEligible(oldSystemResults);
@@ -548,6 +598,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             }
             
             const serverWorkOrderId = eligibleWorkOrder.id;
+            action.matchedWorkOrderId = serverWorkOrderId;
             
             // Pre-flight check using shared helper
             if (user?.username) {
@@ -600,9 +651,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             // Parse module readings to numeric strings, defaulting to "0" if module exists but reading is empty/invalid
             const parseModuleReading = (val: string | undefined | null): string | null => {
               if (val === undefined || val === null || val === "") return null;
-              const trimmed = String(val).trim();
-              const parsed = parseFloat(trimmed);
-              return isNaN(parsed) ? null : String(parsed);
+              return normalizeReading(String(val));
             };
             
             // Use snake_case field names to match server expectations
@@ -632,9 +681,9 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
                 projectId: Number(projectId),
                 troubleCode: offlineData.troubleCode,
                 notes: offlineData.notes || offlineData.troubleNote || null,
-                oldSystemReading: oldSystemReading ?? 0,
+                oldSystemReading: oldSystemId ? (oldSystemReading ?? null) : null,
                 oldModuleId: offlineData.oldModuleId || null,
-                oldModuleReading: offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? "0") : null,
+                oldModuleReading: offlineData.oldModuleId ? parseModuleReading(oldModuleReadRaw) : null,
                 startTime: offlineData.startTime || offlineData.completedAt,
                 photos: offlineData.troublePhotos || [],
               };
@@ -665,20 +714,20 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               // Add system fields if system exists
               if (hasSystem) {
                 completePayload.newSystemId = newSystemId;
-                completePayload.newSystemReading = newSystemReading ?? 0;
+                completePayload.newSystemReading = newSystemReading ?? null;
               }
               
               // Add module fields if module exists
               if (hasModule) {
                 completePayload.newModuleId = offlineData.newModuleId;
-                completePayload.newModuleReading = parseModuleReading(newModuleReadRaw) ?? "0";
+                completePayload.newModuleReading = parseModuleReading(newModuleReadRaw);
               }
               
               // Only include old reading fields in changeout mode (not Reading Only)
               if (!isReadingOnly) {
-                completePayload.oldSystemReading = oldSystemReading ?? 0;
+                completePayload.oldSystemReading = oldSystemId ? (oldSystemReading ?? null) : null;
                 completePayload.oldModuleId = offlineData.oldModuleId || null;
-                completePayload.oldModuleRead = offlineData.oldModuleId ? (parseModuleReading(oldModuleReadRaw) ?? "0") : null;
+                completePayload.oldModuleRead = offlineData.oldModuleId ? parseModuleReading(oldModuleReadRaw) : null;
               }
               
               // Log payload without sensitive data (photos/signature)
@@ -690,6 +739,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
               }));
             }
             
+            assertReadingData(completePayload, settings as any);
             const completeResponse = await fetch(completeEndpoint, {
               method: "POST",
               headers: { 
@@ -705,7 +755,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             if (!completeResponse.ok) {
               const errorText = await completeResponse.text();
               console.error(`[syncPendingActions] Failed to complete WO ${serverWorkOrderId}:`, completeResponse.status, errorText?.substring(0, 200));
-              throw new Error(errorText || `Failed to complete work order ${serverWorkOrderId}`);
+              throw responseError(errorText || `Failed to complete work order ${serverWorkOrderId}`);
             }
             
             let serverResponseData: any = null;
@@ -834,8 +884,9 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
             
             if (!batchResponse.ok) {
               const errorText = await batchResponse.text();
-              throw new Error(errorText || `Failed to sync work order ${action.workOrderId}`);
+              throw responseError(errorText || `Failed to sync work order ${action.workOrderId}`);
             }
+            assertBatchSuccess(await batchResponse.json());
             
             // Call time-tracking endpoint after successful sync if action has time data
             if (action.data?.startTime) {
@@ -870,13 +921,15 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
           console.error(`[syncPendingActions] Error syncing action ${action.id}:`, actionError);
           failedActionIds.push(action.id);
           lastError = actionError instanceof Error ? actionError.message : "Unknown error";
+          rejections.set(action.id, {
+            syncError: lastError,
+            readingErrors: actionError instanceof ReadingPrecisionError ? actionError.errors : undefined,
+          });
         }
       }
       
       // Remove successful (including legacy removals) and conflicted actions; failed actions retry
-      const remainingActions = pendingActions.filter(a => 
-        !successfulActionIds.includes(a.id) && !conflictedActionIds.includes(a.id)
-      );
+      let remainingActions = reconcileQueuedActions(pendingActionsRef.current, successfulActionIds, conflictedActionIds, rejections);
       const successCount = successfulActionIds.length;
       const failedCount = failedActionIds.length;
       const conflictCount = conflictedActionIds.length;
@@ -907,6 +960,9 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         errorMessage: lastError,
       });
       
+      // A technician may capture another work order while sync history is saved.
+      remainingActions = reconcileQueuedActions(pendingActionsRef.current, successfulActionIds, conflictedActionIds, rejections);
+      pendingActionsRef.current = remainingActions;
       if (remainingActions.length === 0) {
         setPendingActions([]);
         await AsyncStorage.removeItem(STORAGE_KEYS.PENDING_ACTIONS);
@@ -934,16 +990,20 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       
       return { syncedWorkOrderIds: [], syncedOfflineWorkOrders: [], conflictedWorkOrderIds: [] };
     } finally {
+      syncingRef.current = false;
       setIsSyncing(false);
     }
   }, [isOnline, pendingActions, isSyncing, serverUrl, projectId, user, addSyncHistoryEntry]);
 
   const clearAllPending = useCallback(async () => {
+    if (syncingRef.current) throw new Error("Wait for sync to finish before clearing queued captures.");
+    pendingActionsRef.current = [];
     setPendingActions([]);
     await AsyncStorage.removeItem(STORAGE_KEYS.PENDING_ACTIONS);
   }, []);
   
   const clearPendingForCurrentProject = useCallback(async () => {
+    if (syncingRef.current) throw new Error("Wait for sync to finish before clearing queued captures.");
     if (!projectId) {
       await clearAllPending();
       return;
@@ -952,6 +1012,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     const remainingActions = pendingActions.filter(action => 
       action.projectId !== undefined && action.projectId !== projectId
     );
+    pendingActionsRef.current = remainingActions;
     
     if (remainingActions.length === 0) {
       setPendingActions([]);
@@ -981,9 +1042,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const pendingActionsForCurrentProject = useMemo(() => {
     if (!projectId) return pendingActions;
     return pendingActions.filter(action => 
-      action.projectId === undefined || action.projectId === projectId
+      (action.projectId === undefined || action.projectId === projectId) &&
+      (!action.serverUrl || action.serverUrl === serverUrl) &&
+      (!action.userId || action.userId === String(user?.id))
     );
-  }, [pendingActions, projectId]);
+  }, [pendingActions, projectId, serverUrl, user?.id]);
   
   const pendingActionsForOtherProjects = useMemo(() => {
     if (!projectId) return [];
@@ -1002,6 +1065,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         syncHistory,
         isSyncing,
         addPendingAction,
+        correctPendingReadings,
         removePendingAction,
         syncPendingActions,
         clearAllPending,

@@ -10,6 +10,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useWorkOrders, WorkOrder } from "@/contexts/WorkOrderContext";
 import { useOffline } from "@/contexts/OfflineContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { isCaptureOnline } from "@/lib/project-settings-repository";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 import { ThemedText } from "@/components/ThemedText";
 import { SearchBar } from "@/components/SearchBar";
@@ -42,8 +43,9 @@ export default function WorkOrdersScreen() {
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const { filters, setFilters, getFilteredWorkOrders, workOrders, isLoading, refreshWorkOrders, error, searchWorkOrdersByMeterIdOnServer, projectConfig } = useWorkOrders();
-  const { isOnline } = useOffline();
-  const { projectId, projects } = useAuth();
+  const { isOnline: isNetworkOnline } = useOffline();
+  const { projectId, projects, isOfflineSession } = useAuth();
+  const isOnline = isCaptureOnline(isNetworkOnline, isOfflineSession, projectConfig.readingSettingsSource);
 
   const currentProjectName = useMemo(() => {
     if (!projectId || !projects.length) return null;

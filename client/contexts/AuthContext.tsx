@@ -1,3 +1,4 @@
+import { cacheProjectReadingLimits, captureProjectSettings } from "@/lib/project-settings";
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
@@ -15,6 +16,8 @@ export interface Project {
   id: number;
   name: string;
   description: string;
+  systemReadingDecimalPlaces?: number | null;
+  moduleReadingDecimalPlaces?: number | null;
 }
 
 type IosUpdateSource = "appstore" | "eas" | null;
@@ -389,6 +392,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const projectsData = await projectsResponse.json();
       const projects: Project[] = Array.isArray(projectsData) ? projectsData : projectsData.projects || [];
+      await Promise.all(projects.map(project => cacheProjectReadingLimits({
+        serverUrl: normalizedUrl, userId: String(user.id), projectId: project.id,
+      }, project)));
       
       // Extract mobileConfig update settings if provided by server
       const mobileConfig = projectsData?.mobileConfig;
@@ -480,6 +486,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const selectProject = useCallback(async (projectId: number) => {
+    let projectIsOffline = state.isOfflineSession;
+    if (state.serverUrl && state.user) {
+      const network = await NetInfo.fetch();
+      const settings = await captureProjectSettings({
+        serverUrl: state.serverUrl, userId: String(state.user.id), projectId,
+      }, !state.isOfflineSession && Boolean(network.isConnected));
+      projectIsOffline = settings.readingSettingsSource === "cache";
+    }
     await secureSet(STORAGE_KEYS.PROJECT_ID, String(projectId));
     
     const storedCreds = await getStoredCredentials();
@@ -490,10 +504,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState(prev => ({
       ...prev,
       projectId,
+      isOfflineSession: projectIsOffline,
       isAuthenticated: true,
       needsProjectSelection: false,
     }));
-  }, []);
+  }, [state.serverUrl, state.user?.id, state.isOfflineSession]);
 
   const logout = useCallback(async () => {
     const storedServerUrl = await secureGet(STORAGE_KEYS.SERVER_URL);

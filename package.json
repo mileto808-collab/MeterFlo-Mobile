@@ -13,6 +13,7 @@
     "lint": "npx expo lint",
     "lint:fix": "npx expo lint --fix",
     "check:types": "tsc --noEmit",
+    "test:reading-precision": "tsx --test tests/reading-precision.test.ts",
     "check:format": "prettier --check \"**/*.{js,ts,tsx,css,json}\"",
     "format": "prettier --write \"**/*.{js,ts,tsx,css,json}\"",
     "android": "expo run:android",
