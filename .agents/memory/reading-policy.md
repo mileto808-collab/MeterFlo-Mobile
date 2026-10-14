@@ -13,3 +13,9 @@ Network connectivity is not server availability. An authenticated offline sessio
 **Why:** The app supports offline login during a server outage; gating capture solely on the network connection would disable that supported workflow.
 
 **How to apply:** Honor authentication's offline-session state in wizard and correction settings gates. Only server unavailability permits an online-request fallback; authorization failures and invalid settings must remain explicit.
+
+Wizard reading entry should prevent adding excess decimal places without displaying a typing error. Maximum-decimal hints belong only on relevant reading-entry screens and must show only the applicable equipment limits.
+
+**Why:** The user explicitly corrected the global precision feedback after seeing red errors for future readings on ID capture and physical-changeout screens.
+
+**How to apply:** Scope hints and field feedback to the active reading fields, using the module policy for module-only capture even if an internal form slot is system-named. Prevent invalid additions without rounding or shortening existing captured values.
