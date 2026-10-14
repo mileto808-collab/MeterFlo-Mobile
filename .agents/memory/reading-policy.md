@@ -19,3 +19,15 @@ Wizard reading entry should prevent adding excess decimal places without display
 **Why:** The user explicitly corrected the global precision feedback after seeing red errors for future readings on ID capture and physical-changeout screens.
 
 **How to apply:** Scope hints and field feedback to the active reading fields, using the module policy for module-only capture even if an internal form slot is system-named. Prevent invalid additions without rounding or shortening existing captured values.
+
+Invalid pasted edits should be rejected whole, retaining the previous value; do not strip characters or clip fractional digits into a different reading. Allow normal intermediate typing and deletion while correcting an existing out-of-policy value.
+
+**Why:** Clipping a paste can silently record a measurement different from the one the technician supplied.
+
+**How to apply:** Keep input guarding separate from final submission validation, and preserve existing saved data until the technician explicitly corrects it.
+
+Avoid automatic select-all on focus for reading inputs.
+
+**Why:** React Native Web defers select-all with a timer. A fast-typing browser check lost leading characters when that selection ran after entry had begun.
+
+**How to apply:** Preserve the value and cursor on focus; technicians can select, clear, or replace readings explicitly. Verify rapid entry separately from delayed keystrokes if focus behavior changes.

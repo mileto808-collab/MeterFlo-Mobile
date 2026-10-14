@@ -25,6 +25,31 @@ export function readingLimits(project: Partial<ReadingLimits>): ReadingLimits {
 
 export const normalizeReading = (value: string): string => value.replace(/,/g, ".");
 
+/** Reject the proposed edit, not a shortened/rounded version of the reading. */
+export function guardReadingInput(previous: string, proposed: string, decimalPlaces: number): string {
+  const next = normalizeReading(proposed);
+  const pattern = decimalPlaces === 0
+    ? /^\d*$/
+    : new RegExp(`^(?:\\d+(?:\\.\\d{0,${decimalPlaces}})?)?$`);
+  if (pattern.test(next)) return next;
+
+  // Legacy readings may exceed a newly tightened policy. Allow deletion-only
+  // edits until valid, without allowing additions or silently changing the value.
+  const before = normalizeReading(previous);
+  if (!pattern.test(before) && next.length < before.length) {
+    let position = 0;
+    for (const character of before) if (character === next[position]) position++;
+    if (position === next.length) return next;
+  }
+  return previous;
+}
+
+export function matchingReadingError(errors: ReadingError[], field: string): ReadingError | undefined {
+  const key = (name: string) => name.replace(/_/g, "").toLowerCase()
+    .replace("meterreading", "systemreading").replace("modulereading", "moduleread");
+  return errors.find(error => key(error.field) === key(field));
+}
+
 export function readingError(value: string, decimalPlaces: number): string | null {
   if (!value) return "A reading is required.";
   if (!/^\d+(?:\.\d+)?$/.test(normalizeReading(value))) {

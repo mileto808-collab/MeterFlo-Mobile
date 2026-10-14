@@ -1,14 +1,115 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import ts from "typescript";
 import {
   readingLimits, normalizeReading, readingError, validateReadingData,
   normalizeReadingData, assertReadingData, assertBatchSuccess, ReadingPrecisionError,
-  responseError, applyEquipmentScope,
+  responseError, applyEquipmentScope, guardReadingInput, matchingReadingError,
 } from "../client/lib/reading-precision";
 import { cacheListedReadingLimits, captureSettings, createSettingsRepository, isCaptureOnline, settingsKey, SettingsUnavailableError } from "../client/lib/project-settings-repository";
 import { correctReadingData, reconcileQueuedActions } from "../client/lib/queued-readings";
 
 const independent = { systemReadingDecimalPlaces: 0, moduleReadingDecimalPlaces: 6 };
+
+for (const wizard of ["WorkflowWizardScreen", "NewWorkOrderWizardScreen"]) {
+  test(`${wizard} guards every reading field and places hints only on reading-entry steps`, () => {
+    const file = `client/screens/${wizard}.tsx`;
+    const source = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    let inputs = 0;
+    const visit = (node: ts.Node) => {
+      if (ts.isJsxSelfClosingElement(node) || ts.isJsxOpeningElement(node)) {
+        const value = node.attributes.properties.find(attribute =>
+          ts.isJsxAttribute(attribute) && attribute.name.getText(source) === "value");
+        const reading = value && ts.isJsxAttribute(value) && value.initializer &&
+          ts.isJsxExpression(value.initializer) && value.initializer.expression;
+        if (reading && /^formData\.(old|new)(SystemReading|ModuleRead(?:ing)?)$/.test(reading.getText(source))) {
+          inputs++;
+          assert.equal(node.tagName.getText(source), "ReadingInput");
+          assert.ok(node.attributes.properties.some(attribute =>
+            ts.isJsxAttribute(attribute) && attribute.name.getText(source) === "limits"));
+          assert.ok(!node.attributes.properties.some(attribute =>
+            ts.isJsxAttribute(attribute) && attribute.name.getText(source) === "selectTextOnFocus"),
+          "Deferred automatic selection must not overwrite characters typed immediately after focus");
+          let parent: ts.Node | undefined = node.parent;
+          while (parent && !ts.isCaseClause(parent)) parent = parent.parent;
+          assert.ok(parent && ts.isCaseClause(parent));
+          assert.ok(["oldReading", "newReading", "readingCapture"].includes(
+            (parent.expression as ts.StringLiteral).text));
+        }
+        assert.notEqual(node.tagName.getText(source), "ReadingErrors", "No shared whole-form error banner in the wizard");
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    assert.equal(inputs, 7, "Both old/new equipment fields and all reading-only branches are guarded");
+  });
+}
+
+for (const limit of [0, 1, 2, 3, 4, 5, 6]) {
+  test(`quiet entry honors ${limit} decimals and keeps valid strings unchanged`, () => {
+    assert.equal(guardReadingInput("", "000123", limit), "000123");
+    assert.equal(guardReadingInput("000123", "", limit), "");
+    const value = limit ? `000123.${"0".repeat(limit)}` : "000123";
+    assert.equal(guardReadingInput("", value, limit), value);
+    const excessive = `000123.${"0".repeat(limit + 1)}`;
+    assert.equal(guardReadingInput(value, excessive, limit), value);
+    assert.equal(guardReadingInput("", excessive, limit), "");
+    assert.equal(guardReadingInput(value, `${value}.`, limit), value);
+    assert.equal(guardReadingInput("123", "123,", limit), limit ? "123." : "123");
+  });
+}
+
+test("quiet entry allows intermediate separators and comma edits, but submission remains strict", () => {
+  assert.equal(guardReadingInput("000", "000.", 4), "000.");
+  assert.equal(guardReadingInput("000.", "000.0", 4), "000.0");
+  assert.equal(guardReadingInput("001", "001,230000", 6), "001.230000");
+  assert.equal(guardReadingInput("001.230000", "001.23000", 6), "001.23000");
+  assert.notEqual(readingError("000.", 4), null);
+  assert.equal(guardReadingInput("123", "123.", 0), "123");
+});
+
+test("invalid additions and pastes are rejected whole rather than stripped or shortened", () => {
+  for (const proposed of ["-1", "+1", "1e3", "1E-3", "1..2", "1,2,3", "12a", " 1", "1 ", ".2", "1.1234567"]) {
+    assert.equal(guardReadingInput("000.12", proposed, 6), "000.12", proposed);
+    assert.equal(guardReadingInput("", proposed, 6), "", proposed);
+  }
+  assert.equal(guardReadingInput("000.0035", "000.00354", 4), "000.0035");
+  assert.equal(guardReadingInput("000.0035", "000.0035.", 4), "000.0035");
+  assert.equal(guardReadingInput("1.2", ".2", 6), "1.2");
+});
+
+test("legacy out-of-policy readings survive unchanged and can be reduced, cleared or replaced", () => {
+  let value = "001.234567";
+  assert.equal(guardReadingInput(value, value, 3), value);
+  assert.equal(guardReadingInput(value, `${value}8`, 3), value);
+  for (const reduced of ["001.23456", "001.2345", "001.234"]) {
+    value = guardReadingInput(value, reduced, 3);
+    assert.equal(value, reduced);
+  }
+  assert.equal(readingError(value, 3), null);
+  assert.equal(guardReadingInput("001.234567", "", 0), "");
+  assert.equal(guardReadingInput("001.234567", "00012", 0), "00012");
+  assert.equal(guardReadingInput("1..2", "1.2", 3), "1.2");
+  assert.equal(guardReadingInput("12.3456", "12.345", 0), "12.345");
+  assert.equal(guardReadingInput("12.3456", "12.999", 0), "12.3456");
+});
+
+test("quiet input retains large integers and trailing zeros through capture serialization", () => {
+  const input = "009007199254740993.120000";
+  const data = { newModuleReading: guardReadingInput("", input, 6) };
+  assert.equal(JSON.parse(JSON.stringify(data)).newModuleReading, input);
+  assertReadingData(data, independent);
+});
+
+test("server errors match only their own reading field across server aliases", () => {
+  const error = { field: "old_meter_reading", decimalPlaces: 4, message: "Reconfirm the old system reading" };
+  const moduleError = { field: "new_module_reading", decimalPlaces: 6, message: "Reconfirm the module reading" };
+  assert.equal(matchingReadingError([error, moduleError], "oldSystemReading"), error);
+  assert.equal(matchingReadingError([error, moduleError], "newModuleRead"), moduleError);
+  assert.equal(matchingReadingError([error, moduleError], "newSystemReading"), undefined);
+  assert.equal(matchingReadingError([error, moduleError], "oldModuleRead"), undefined);
+});
 
 test("zero is preserved; missing and null values default independently to three", () => {
   assert.deepEqual(readingLimits(independent), independent);

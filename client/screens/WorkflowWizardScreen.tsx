@@ -1,5 +1,5 @@
 import { useReadingSettings } from "@/hooks/useReadingSettings";
-import { ReadingErrors } from "@/components/ReadingErrors";
+import { ReadingInput } from "@/components/ReadingInput";
 import { ProjectReadingStatus } from "@/components/ProjectReadingStatus";
 import { normalizeReading, readingError, assertReadingData, applyEquipmentScope, responseError, ReadingPrecisionError } from "@/lib/reading-precision";
 import React, { useState, useEffect, useRef } from "react";
@@ -220,6 +220,15 @@ export default function WorkflowWizardScreen() {
       notes: "",
     };
   });
+
+  // The single module-only reading input uses the system-named form slot.
+  // When async settings reveal that scope, initialize it from the module value,
+  // not a system value present in the imported work order.
+  useEffect(() => {
+    if (isReadingOnlyMode && !workOrder.oldSystemId && workOrder.oldModuleId && !newSystemReadingTouched) {
+      setFormData(previous => ({ ...previous, newSystemReading: previous.newModuleRead }));
+    }
+  }, [isReadingOnlyMode, equipmentScope]);
 
   const getSteps = (): WizardStep[] => {
     if (formData.canChange === false) {
@@ -1472,15 +1481,11 @@ export default function WorkflowWizardScreen() {
                 <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
                   Old System Final Reading
                 </ThemedText>
-                <TextInput
+                <ReadingInput field="oldSystemReading" limits={projectConfig} errors={readingSettings.serverErrors}
                   value={formData.oldSystemReading}
                   onChangeText={(text) => {
                     setFormData(prev => ({ ...prev, oldSystemReading: filterNumericInput(text) }));
                     setOldSystemReadingTouched(true);
-                  }}
-                  onFocus={() => {
-                    setFormData(prev => ({ ...prev, oldSystemReading: "" }));
-                    setOldSystemReadingTouched(false);
                   }}
                   placeholder="Enter reading (e.g., 12345)"
                   keyboardType="decimal-pad"
@@ -1488,7 +1493,7 @@ export default function WorkflowWizardScreen() {
                 />
                 {!oldSystemReadingTouched && formData.oldSystemReading.trim().length > 0 ? (
                   <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
-                    Tap to clear and re-enter the reading
+                    Select and re-enter the reading
                   </ThemedText>
                 ) : null}
               </>
@@ -1499,15 +1504,11 @@ export default function WorkflowWizardScreen() {
                 <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
                   Old Module Final Reading
                 </ThemedText>
-                <TextInput
+                <ReadingInput field="oldModuleRead" limits={projectConfig} errors={readingSettings.serverErrors}
                   value={formData.oldModuleRead}
                   onChangeText={(text) => {
                     setFormData(prev => ({ ...prev, oldModuleRead: filterNumericInput(text) }));
                     setOldModuleReadingTouched(true);
-                  }}
-                  onFocus={() => {
-                    setFormData(prev => ({ ...prev, oldModuleRead: "" }));
-                    setOldModuleReadingTouched(false);
                   }}
                   placeholder="Enter module reading"
                   keyboardType="decimal-pad"
@@ -1515,7 +1516,7 @@ export default function WorkflowWizardScreen() {
                 />
                 {!oldModuleReadingTouched && formData.oldModuleRead.trim().length > 0 ? (
                   <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
-                    Tap to clear and re-enter the reading
+                    Select and re-enter the reading
                   </ThemedText>
                 ) : null}
               </View>
@@ -1939,15 +1940,11 @@ export default function WorkflowWizardScreen() {
                 <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
                   New System Initial Reading
                 </ThemedText>
-                <TextInput
+                <ReadingInput field="newSystemReading" limits={projectConfig} errors={readingSettings.serverErrors}
                   value={formData.newSystemReading}
                   onChangeText={(text) => {
                     setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }));
                     setNewSystemReadingTouched(true);
-                  }}
-                  onFocus={() => {
-                    setFormData(prev => ({ ...prev, newSystemReading: "" }));
-                    setNewSystemReadingTouched(false);
                   }}
                   placeholder="Enter system reading (usually 0)"
                   keyboardType="decimal-pad"
@@ -1955,7 +1952,7 @@ export default function WorkflowWizardScreen() {
                 />
                 {!newSystemReadingTouched && formData.newSystemReading.trim().length > 0 ? (
                   <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
-                    Tap to clear and re-enter the reading
+                    Select and re-enter the reading
                   </ThemedText>
                 ) : null}
               </>
@@ -1966,15 +1963,11 @@ export default function WorkflowWizardScreen() {
                 <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
                   New Module Initial Reading
                 </ThemedText>
-                <TextInput
+                <ReadingInput field="newModuleRead" limits={projectConfig} errors={readingSettings.serverErrors}
                   value={formData.newModuleRead}
                   onChangeText={(text) => {
                     setFormData(prev => ({ ...prev, newModuleRead: filterNumericInput(text) }));
                     setNewModuleReadingTouched(true);
-                  }}
-                  onFocus={() => {
-                    setFormData(prev => ({ ...prev, newModuleRead: "" }));
-                    setNewModuleReadingTouched(false);
                   }}
                   placeholder="Enter module reading (usually 0)"
                   keyboardType="decimal-pad"
@@ -1982,7 +1975,7 @@ export default function WorkflowWizardScreen() {
                 />
                 {!newModuleReadingTouched && formData.newModuleRead.trim().length > 0 ? (
                   <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
-                    Tap to clear and re-enter the reading
+                    Select and re-enter the reading
                   </ThemedText>
                 ) : null}
               </View>
@@ -2348,15 +2341,11 @@ export default function WorkflowWizardScreen() {
                 <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
                   System Reading {workOrder.oldSystemId ? `(${workOrder.oldSystemId})` : ""}
                 </ThemedText>
-                <TextInput
+                <ReadingInput field="newSystemReading" limits={projectConfig} errors={readingSettings.serverErrors}
                   value={formData.newSystemReading}
                   onChangeText={(text) => {
                     setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }));
                     setNewSystemReadingTouched(true);
-                  }}
-                  onFocus={() => {
-                    setFormData(prev => ({ ...prev, newSystemReading: "" }));
-                    setNewSystemReadingTouched(false);
                   }}
                   placeholder="Enter system reading"
                   keyboardType="numeric"
@@ -2364,7 +2353,7 @@ export default function WorkflowWizardScreen() {
                 />
                 {!newSystemReadingTouched && formData.newSystemReading.trim().length > 0 ? (
                   <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
-                    Tap to clear and re-enter the reading
+                    Select and re-enter the reading
                   </ThemedText>
                 ) : null}
               </View>
@@ -2375,15 +2364,11 @@ export default function WorkflowWizardScreen() {
                 <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
                   Module Reading {workOrder.oldModuleId ? `(${workOrder.oldModuleId})` : ""}
                 </ThemedText>
-                <TextInput
+                <ReadingInput field="newModuleRead" limits={projectConfig} errors={readingSettings.serverErrors}
                   value={formData.newModuleRead}
                   onChangeText={(text) => {
                     setFormData(prev => ({ ...prev, newModuleRead: filterNumericInput(text) }));
                     setNewModuleReadingTouched(true);
-                  }}
-                  onFocus={() => {
-                    setFormData(prev => ({ ...prev, newModuleRead: "" }));
-                    setNewModuleReadingTouched(false);
                   }}
                   placeholder="Enter module reading"
                   keyboardType="numeric"
@@ -2391,7 +2376,7 @@ export default function WorkflowWizardScreen() {
                 />
                 {!newModuleReadingTouched && formData.newModuleRead.trim().length > 0 ? (
                   <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
-                    Tap to clear and re-enter the reading
+                    Select and re-enter the reading
                   </ThemedText>
                 ) : null}
               </View>
@@ -2402,15 +2387,11 @@ export default function WorkflowWizardScreen() {
                 <ThemedText type="body" style={{ fontWeight: "600", marginBottom: Spacing.xs }}>
                   Module Reading {workOrder.oldModuleId ? `(${workOrder.oldModuleId})` : ""}
                 </ThemedText>
-                <TextInput
+                <ReadingInput field="newModuleRead" limits={projectConfig} errors={readingSettings.serverErrors}
                   value={formData.newSystemReading}
                   onChangeText={(text) => {
                     setFormData(prev => ({ ...prev, newSystemReading: filterNumericInput(text) }));
                     setNewSystemReadingTouched(true);
-                  }}
-                  onFocus={() => {
-                    setFormData(prev => ({ ...prev, newSystemReading: "" }));
-                    setNewSystemReadingTouched(false);
                   }}
                   placeholder="Enter module reading"
                   keyboardType="numeric"
@@ -2418,7 +2399,7 @@ export default function WorkflowWizardScreen() {
                 />
                 {!newSystemReadingTouched && formData.newSystemReading.trim().length > 0 ? (
                   <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
-                    Tap to clear and re-enter the reading
+                    Select and re-enter the reading
                   </ThemedText>
                 ) : null}
               </View>
@@ -2651,14 +2632,6 @@ export default function WorkflowWizardScreen() {
           <View style={styles.inputContainer}>
             {readingSettings.ready ? renderStepInput() : null}
             <ProjectReadingStatus settings={readingSettings} />
-            <ReadingErrors limits={projectConfig} errors={readingSettings.serverErrors} data={{
-              ...(workflowMode !== "reading_only" && workOrder.oldSystemId ? { oldSystemReading: formData.oldSystemReading } : {}),
-              ...(workflowMode !== "reading_only" && workOrder.oldModuleId ? { oldModuleRead: formData.oldModuleRead } : {}),
-              ...(equipmentScope !== "module" && (workflowMode === "reading_only" ? workOrder.oldSystemId : formData.newSystemId) ? { newSystemReading: formData.newSystemReading } : {}),
-              ...(equipmentScope !== "system" && (workflowMode === "reading_only" ? workOrder.oldModuleId : formData.newModuleId) ? {
-                newModuleRead: workflowMode === "reading_only" && !workOrder.oldSystemId ? formData.newSystemReading : formData.newModuleRead,
-              } : {}),
-            }} />
           </View>
         </View>
       </KeyboardAwareScrollViewCompat>
