@@ -30,4 +30,10 @@ Avoid automatic select-all on focus for reading inputs.
 
 **Why:** React Native Web defers select-all with a timer. A fast-typing browser check lost leading characters when that selection ran after entry had begun.
 
-**How to apply:** Preserve the value and cursor on focus; technicians can select, clear, or replace readings explicitly. Verify rapid entry separately from delayed keystrokes if focus behavior changes.
+**How to apply:** Avoid deferred selection and verify rapid entry separately from delayed keystrokes if focus behavior changes. This does not prohibit the user-requested tap-to-clear behavior for prefilled old final-reading fields.
+
+Tapping a prefilled old system/module final-reading field in either wizard should clear the current reading for entry of the final reading.
+
+**Why:** The user reported that removing the previous tap-to-clear behavior forced technicians to manually delete the current reading.
+
+**How to apply:** Restore this behavior for prefilled old final readings without clearing technician-entered drafts on subsequent focus. Keep quiet precision enforcement; do not generalize this request to all reading fields.
