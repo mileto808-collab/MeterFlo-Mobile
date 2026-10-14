@@ -1,5 +1,6 @@
 import { useReadingSettings } from "@/hooks/useReadingSettings";
 import { ReadingInput } from "@/components/ReadingInput";
+import { createFinalReadingEntry } from "@/lib/final-reading-entry";
 import { ProjectReadingStatus } from "@/components/ProjectReadingStatus";
 import { normalizeReading, readingError, assertReadingData, applyEquipmentScope, responseError, ReadingPrecisionError } from "@/lib/reading-precision";
 import React, { useState, useEffect, useRef } from "react";
@@ -142,8 +143,10 @@ export default function WorkflowWizardScreen() {
   const [isCapturingGps, setIsCapturingGps] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [startTime, setStartTime] = useState<string | null>(null);
-  const [oldSystemReadingTouched, setOldSystemReadingTouched] = useState(false);
-  const [oldModuleReadingTouched, setOldModuleReadingTouched] = useState(false);
+  const preserveOldFinalReadings = isEditingCompleted || Boolean(workOrder.syncPending);
+  const oldFinalReadingEntry = useRef(createFinalReadingEntry(preserveOldFinalReadings));
+  const [oldSystemReadingTouched, setOldSystemReadingTouched] = useState(preserveOldFinalReadings);
+  const [oldModuleReadingTouched, setOldModuleReadingTouched] = useState(preserveOldFinalReadings);
   const [newSystemReadingTouched, setNewSystemReadingTouched] = useState(false);
   const [newModuleReadingTouched, setNewModuleReadingTouched] = useState(false);
   const [scannerTargetField, setScannerTargetField] = useState<"system" | "module">("system");
@@ -1483,7 +1486,14 @@ export default function WorkflowWizardScreen() {
                 </ThemedText>
                 <ReadingInput field="oldSystemReading" limits={projectConfig} errors={readingSettings.serverErrors}
                   value={formData.oldSystemReading}
+                  onFocus={() => {
+                    if (oldFinalReadingEntry.current.shouldClearOnFocus("system", formData.oldSystemReading)) {
+                      setFormData(prev => ({ ...prev, oldSystemReading: "" }));
+                      setOldSystemReadingTouched(true);
+                    }
+                  }}
                   onChangeText={(text) => {
+                    oldFinalReadingEntry.current.markEntered("system");
                     setFormData(prev => ({ ...prev, oldSystemReading: filterNumericInput(text) }));
                     setOldSystemReadingTouched(true);
                   }}
@@ -1493,7 +1503,7 @@ export default function WorkflowWizardScreen() {
                 />
                 {!oldSystemReadingTouched && formData.oldSystemReading.trim().length > 0 ? (
                   <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
-                    Select and re-enter the reading
+                    Tap to clear the current reading and enter the final reading
                   </ThemedText>
                 ) : null}
               </>
@@ -1506,7 +1516,14 @@ export default function WorkflowWizardScreen() {
                 </ThemedText>
                 <ReadingInput field="oldModuleRead" limits={projectConfig} errors={readingSettings.serverErrors}
                   value={formData.oldModuleRead}
+                  onFocus={() => {
+                    if (oldFinalReadingEntry.current.shouldClearOnFocus("module", formData.oldModuleRead)) {
+                      setFormData(prev => ({ ...prev, oldModuleRead: "" }));
+                      setOldModuleReadingTouched(true);
+                    }
+                  }}
                   onChangeText={(text) => {
+                    oldFinalReadingEntry.current.markEntered("module");
                     setFormData(prev => ({ ...prev, oldModuleRead: filterNumericInput(text) }));
                     setOldModuleReadingTouched(true);
                   }}
@@ -1516,7 +1533,7 @@ export default function WorkflowWizardScreen() {
                 />
                 {!oldModuleReadingTouched && formData.oldModuleRead.trim().length > 0 ? (
                   <ThemedText type="small" style={{ color: theme.warning, marginTop: Spacing.xs }}>
-                    Select and re-enter the reading
+                    Tap to clear the current reading and enter the final reading
                   </ThemedText>
                 ) : null}
               </View>

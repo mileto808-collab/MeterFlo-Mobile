@@ -9,6 +9,7 @@ import {
 } from "../client/lib/reading-precision";
 import { cacheListedReadingLimits, captureSettings, createSettingsRepository, isCaptureOnline, settingsKey, SettingsUnavailableError } from "../client/lib/project-settings-repository";
 import { correctReadingData, reconcileQueuedActions } from "../client/lib/queued-readings";
+import { createFinalReadingEntry } from "../client/lib/final-reading-entry";
 
 const independent = { systemReadingDecimalPlaces: 0, moduleReadingDecimalPlaces: 6 };
 
@@ -36,6 +37,18 @@ for (const wizard of ["WorkflowWizardScreen", "NewWorkOrderWizardScreen"]) {
           assert.ok(parent && ts.isCaseClause(parent));
           assert.ok(["oldReading", "newReading", "readingCapture"].includes(
             (parent.expression as ts.StringLiteral).text));
+          const focus = node.attributes.properties.find(attribute =>
+            ts.isJsxAttribute(attribute) && attribute.name.getText(source) === "onFocus");
+          if ((parent.expression as ts.StringLiteral).text === "oldReading") {
+            assert.ok(focus && ts.isJsxAttribute(focus) && focus.initializer);
+            assert.match(focus.initializer.getText(source), /oldFinalReadingEntry\.current\.shouldClearOnFocus/);
+            const change = node.attributes.properties.find(attribute =>
+              ts.isJsxAttribute(attribute) && attribute.name.getText(source) === "onChangeText");
+            assert.ok(change && ts.isJsxAttribute(change) && change.initializer);
+            assert.match(change.initializer.getText(source), /oldFinalReadingEntry\.current\.markEntered/);
+          } else {
+            assert.equal(focus, undefined, "Do not change initial-reading or reading-only focus behavior");
+          }
         }
         assert.notEqual(node.tagName.getText(source), "ReadingErrors", "No shared whole-form error banner in the wizard");
       }
@@ -45,6 +58,91 @@ for (const wizard of ["WorkflowWizardScreen", "NewWorkOrderWizardScreen"]) {
     assert.equal(inputs, 7, "Both old/new equipment fields and all reading-only branches are guarded");
   });
 }
+
+test("old final reading focus clears imported values once independently for each equipment field", () => {
+  const entry = createFinalReadingEntry();
+  assert.equal(entry.shouldClearOnFocus("system", "001.2300"), true);
+  assert.equal(entry.shouldClearOnFocus("system", ""), false);
+  assert.equal(entry.shouldClearOnFocus("system", "000.3400"), false);
+  assert.equal(entry.shouldClearOnFocus("module", "002.230000"), true);
+  assert.equal(entry.shouldClearOnFocus("module", "003.450000"), false);
+});
+
+test("empty old fields and technician-entered values never become a disposable prefill", () => {
+  const entry = createFinalReadingEntry();
+  assert.equal(entry.shouldClearOnFocus("system", ""), false);
+  assert.equal(entry.shouldClearOnFocus("system", "00123"), false);
+  entry.markEntered("module");
+  assert.equal(entry.shouldClearOnFocus("module", "002.230000"), false);
+});
+
+test("reopened captured drafts and completed old final readings are preserved on first focus", () => {
+  for (const reason of ["syncPending", "completed"]) {
+    const entry = createFinalReadingEntry(true);
+    assert.equal(entry.shouldClearOnFocus("system", "000123"), false, reason);
+    assert.equal(entry.shouldClearOnFocus("module", "002.230000"), false, reason);
+    entry.markEntered("system");
+    assert.equal(entry.shouldClearOnFocus("system", "000124"), false);
+  }
+  const source = readFileSync("client/screens/WorkflowWizardScreen.tsx", "utf8");
+  assert.match(source, /preserveOldFinalReadings = isEditingCompleted \|\| Boolean\(workOrder\.syncPending\)/);
+  assert.match(source, /useRef\(createFinalReadingEntry\(preserveOldFinalReadings\)\)/);
+  assert.match(readFileSync("client/screens/NewWorkOrderWizardScreen.tsx", "utf8"),
+    /useRef\(createFinalReadingEntry\(\)\)/);
+});
+
+test("first-focus clearing leaves required input invalid until entered and keeps fast entry exact", () => {
+  for (const limit of [0, 1, 2, 3, 4, 5, 6]) {
+    const entry = createFinalReadingEntry();
+    let value = "12345";
+    if (entry.shouldClearOnFocus("system", value)) value = "";
+    assert.notEqual(readingError(value, limit), null);
+    const final = limit ? `000123.${"0".repeat(limit)}` : "000123";
+    for (const character of final) {
+      value = guardReadingInput(value, value + character, limit);
+      entry.markEntered("system");
+    }
+    assert.equal(value, final);
+    assert.equal(readingError(value, limit), null);
+    assert.equal(entry.shouldClearOnFocus("system", value), false, "Back navigation or refocus keeps the entered value");
+    assert.equal(guardReadingInput(value, value + ".", limit), value);
+  }
+});
+
+test("offline final entry uses cached precision and keeps exact saved values on reopening", async () => {
+  for (const connected of [false, true]) {
+    const store = memoryStore();
+    await store.setItem(settingsKey(session), JSON.stringify(independent));
+    const repository = createSettingsRepository(store, async () => {
+      throw new Error("Offline-session capture must not contact the server");
+    });
+    const isOfflineSession = true;
+    const settings = await captureSettings(repository, session, connected && !isOfflineSession);
+    assert.equal(settings.readingSettingsSource, "cache");
+    for (const path of ["downloaded", "offline-created"]) {
+      const entry = createFinalReadingEntry();
+      let system = path === "downloaded" ? "12345" : "";
+      let module = path === "downloaded" ? "234.123456" : "";
+      if (entry.shouldClearOnFocus("system", system)) system = "";
+      if (entry.shouldClearOnFocus("module", module)) module = "";
+      system = guardReadingInput(system, "000123", settings.systemReadingDecimalPlaces as number);
+      module = guardReadingInput(module, "002,230000", settings.moduleReadingDecimalPlaces as number);
+      entry.markEntered("system");
+      entry.markEntered("module");
+      assert.equal(guardReadingInput(system, system + ".", 0), system);
+      assert.equal(guardReadingInput(module, module + "7", 6), module);
+      const saved = JSON.parse(JSON.stringify({
+        oldSystemReading: system, oldModuleReading: module, syncPending: true, status: "Completed",
+      }));
+      assertReadingData(saved, settings as any);
+      assert.equal(saved.oldSystemReading, "000123");
+      assert.equal(saved.oldModuleReading, "002.230000");
+      const reopened = createFinalReadingEntry(saved.syncPending || saved.status === "Completed");
+      assert.equal(reopened.shouldClearOnFocus("system", saved.oldSystemReading), false);
+      assert.equal(reopened.shouldClearOnFocus("module", saved.oldModuleReading), false);
+    }
+  }
+});
 
 for (const limit of [0, 1, 2, 3, 4, 5, 6]) {
   test(`quiet entry honors ${limit} decimals and keeps valid strings unchanged`, () => {

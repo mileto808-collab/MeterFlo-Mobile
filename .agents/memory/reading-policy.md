@@ -37,3 +37,9 @@ Tapping a prefilled old system/module final-reading field in either wizard shoul
 **Why:** The user reported that removing the previous tap-to-clear behavior forced technicians to manually delete the current reading.
 
 **How to apply:** Restore this behavior for prefilled old final readings without clearing technician-entered drafts on subsequent focus. Keep quiet precision enforcement; do not generalize this request to all reading fields.
+
+Treat old readings on reopened saved offline work and existing completions as captured final values, not disposable current-reading prefills.
+
+**Why:** A technician has already measured and saved those values; first-focus replacement must not erase previously captured work during correction or completion editing.
+
+**How to apply:** Apply tap-to-clear only to untouched current-reading prefills, with separate first-entry tracking for systems and modules that survives step navigation. Offline and online entry follow the same rule.

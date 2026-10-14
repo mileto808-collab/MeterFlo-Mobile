@@ -1,5 +1,6 @@
 import { useReadingSettings } from "@/hooks/useReadingSettings";
 import { ReadingInput } from "@/components/ReadingInput";
+import { createFinalReadingEntry } from "@/lib/final-reading-entry";
 import { ProjectReadingStatus } from "@/components/ProjectReadingStatus";
 import { normalizeReading, readingError, assertReadingData } from "@/lib/reading-precision";
 import React, { useState, useEffect, useRef } from "react";
@@ -272,6 +273,7 @@ export default function NewWorkOrderWizardScreen() {
   const [isIdInputFocused, setIsIdInputFocused] = useState(false);
   
   // Track if reading fields have been touched/re-entered
+  const oldFinalReadingEntry = useRef(createFinalReadingEntry());
   const [newSystemReadingTouched, setNewSystemReadingTouched] = useState(false);
   const [newModuleReadingTouched, setNewModuleReadingTouched] = useState(false);
   
@@ -1552,7 +1554,15 @@ export default function NewWorkOrderWizardScreen() {
                 </ThemedText>
                 <ReadingInput field="oldSystemReading" limits={projectConfig}
                   value={formData.oldSystemReading}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, oldSystemReading: filterNumericInput(text) }))}
+                  onFocus={() => {
+                    if (oldFinalReadingEntry.current.shouldClearOnFocus("system", formData.oldSystemReading)) {
+                      setFormData(prev => ({ ...prev, oldSystemReading: "" }));
+                    }
+                  }}
+                  onChangeText={(text) => {
+                    oldFinalReadingEntry.current.markEntered("system");
+                    setFormData(prev => ({ ...prev, oldSystemReading: filterNumericInput(text) }));
+                  }}
                   placeholder="Enter system reading"
                   keyboardType="decimal-pad"
                   style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
@@ -1567,7 +1577,15 @@ export default function NewWorkOrderWizardScreen() {
                 </ThemedText>
                 <ReadingInput field="oldModuleReading" limits={projectConfig}
                   value={formData.oldModuleReading}
-                  onChangeText={(text) => setFormData(prev => ({ ...prev, oldModuleReading: filterNumericInput(text) }))}
+                  onFocus={() => {
+                    if (oldFinalReadingEntry.current.shouldClearOnFocus("module", formData.oldModuleReading)) {
+                      setFormData(prev => ({ ...prev, oldModuleReading: "" }));
+                    }
+                  }}
+                  onChangeText={(text) => {
+                    oldFinalReadingEntry.current.markEntered("module");
+                    setFormData(prev => ({ ...prev, oldModuleReading: filterNumericInput(text) }));
+                  }}
                   placeholder="Enter module reading"
                   keyboardType="decimal-pad"
                   style={{ fontSize: 20, fontWeight: "600", textAlign: "center", paddingVertical: Spacing.md, minHeight: 50 }}
